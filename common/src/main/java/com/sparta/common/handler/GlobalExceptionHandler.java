@@ -1,8 +1,8 @@
-package com.sparta.delivhub.common.handler;
+package com.sparta.common.handler;
 
-import com.sparta.delivhub.common.dto.ErrorResponse;
-import com.sparta.delivhub.common.dto.BusinessException;
-import com.sparta.delivhub.common.dto.ErrorCode;
+import com.sparta.common.dto.ErrorResponse;
+import com.sparta.common.dto.BusinessException;
+import com.sparta.common.dto.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
