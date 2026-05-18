@@ -5,16 +5,34 @@ spring:
   cloud:
     gateway:
       routes:
-        - id: service-a-route
-          uri: lb://SERVICE-A
+        - id: user-service-route
+          uri: lb://USER-SERVICE
           predicates:
-            - Path=/service-a/**
+            - Path=/user/**
           filters:
             - StripPrefix=1
-        - id: service-b-route
-          uri: lb://SERVICE-B
+        - id: order-service-route
+          uri: lb://ORDER-SERVICE
           predicates:
-            - Path=/service-b/**
+            - Path=/order/**
+          filters:
+            - StripPrefix=1
+        - id: company-service-route
+          uri: lb://COMPANY-SERVICE
+          predicates:
+            - Path=/company/**
+          filters:
+            - StripPrefix=1
+        - id: delivery-service-route
+          uri: lb://DELIVERY-SERVICE
+          predicates:
+            - Path=/delivery/**
+          filters:
+            - StripPrefix=1
+        - id: hub-service-route
+          uri: lb://HUB-SERVICE
+          predicates:
+            - Path=/hub/**
           filters:
             - StripPrefix=1
 

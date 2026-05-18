@@ -1,5 +1,0 @@
-spring:
-  application:
-    name: service-a         # config-server에서 service-a.yml 파일을 찾는 기준
-  config:
-    import: optional:configserver:http://localhost:8888
