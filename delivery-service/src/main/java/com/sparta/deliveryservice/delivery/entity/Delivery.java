@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.deliveries.entity;
+package com.sparta.deliveryservice.delivery.entity;
 
 import com.sparta.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -6,11 +6,14 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.SQLRestriction;
+
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
 @Entity
+@SQLRestriction("deleted_at IS NULL")
 @Table(name = "p_deliveries")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Delivery extends BaseEntity {
@@ -76,6 +79,20 @@ public class Delivery extends BaseEntity {
         this.recipientSlackId = recipientSlackId;
         this.deliveryManagerId = deliveryManagerId;
         this.finalDispatchDeadlineAt = finalDispatchDeadlineAt;
+    }
+
+    public void updateDelivery(UUID deliveryManagerId, String memo, String deliveryAddress,
+                               String recipientName, String recipientSlackId, LocalDateTime finalDispatchDeadlineAt) {
+        this.deliveryManagerId = deliveryManagerId;
+        this.memo = memo;
+        this.deliveryAddress = deliveryAddress;
+        this.recipientName = recipientName;
+        this.recipientSlackId = recipientSlackId;
+        this.finalDispatchDeadlineAt = finalDispatchDeadlineAt;
+    }
+
+    public void updateStatus(DeliveryStatus status) {
+        this.status = status;
     }
 
     public void startDelivery(String trackingNumber) {
