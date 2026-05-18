@@ -4,10 +4,20 @@ import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
 public abstract class BaseArchitectureTest {
-    // [가장 단순한 테스트] presentation 패키지 안의 클래스는 이름이 Controller로 끝나야 함
+
+    // 의존성 규칙
+    @ArchTest
+    static final ArchRule common_module_dependency_rule =
+            noClasses().that().resideInAPackage("..common..")
+                    .should().dependOnClassesThat().resideInAPackage("..service..") // 💡 특정 서비스가 아닌 모든 *service 모듈 차단
+                    .as("공통(common) 모듈은 상위 서비스 모듈들을 참조할 수 없습니다.");
+
+    // 네이밍 규칙
+    // presentation 패키지 안의 클래스는 이름이 Controller로 끝나야 함
     @ArchTest
     public static final ArchRule 컨트롤러_네이밍_규칙 = classes()
             .that().resideInAPackage("..presentation..")
@@ -17,7 +27,7 @@ public abstract class BaseArchitectureTest {
 
 
 
-    // 규칙: 노션 가이드에 맞춘 4계층 의존성 검증
+    // 4계층 의존성 검증
     @ArchTest
     public static final ArchRule 네계층_클린_아키텍처_규칙 = layeredArchitecture()
             .consideringAllDependencies()
