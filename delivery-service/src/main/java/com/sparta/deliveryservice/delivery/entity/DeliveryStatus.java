@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.deliveries.entity;
+package com.sparta.deliveryservice.delivery.entity;
 
 public enum DeliveryStatus {
     PENDING,
