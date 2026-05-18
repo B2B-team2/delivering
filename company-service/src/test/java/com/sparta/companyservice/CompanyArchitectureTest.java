@@ -16,5 +16,5 @@ import com.tngtech.archunit.lang.ArchRule;
 )
 public class CompanyArchitectureTest extends BaseArchitectureTest {
         @ArchTest
-        public static final ArchRule 유저_도메인_네이밍_종합_규칙 = 도메인_클래스_네이밍_종합_검증("Company");
+        public static final ArchRule 컴퍼니_도메인_네이밍_규칙 = domain_prefix_naming_rule("Company");
 }
