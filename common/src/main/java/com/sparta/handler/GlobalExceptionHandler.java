@@ -1,8 +1,8 @@
-package com.sparta.delivhub.common.handler;
+package com.sparta.handler;
 
-import com.sparta.delivhub.common.dto.ErrorResponse;
-import com.sparta.delivhub.common.dto.BusinessException;
-import com.sparta.delivhub.common.dto.ErrorCode;
+import com.sparta.dto.BusinessException;
+import com.sparta.dto.ErrorCode;
+import com.sparta.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+
 import java.util.List;
 
 @Slf4j
@@ -28,7 +29,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(errorCode.getHttpStatus()).body(response);
     }
 
-    // 2. 입력값 검증 실패 시 (@Valid 에러)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) {
         List<ErrorResponse.FieldErrorDetail> fieldErrors = e.getBindingResult().getFieldErrors().stream()

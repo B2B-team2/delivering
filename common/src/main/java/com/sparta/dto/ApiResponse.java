@@ -1,4 +1,5 @@
-package com.sparta.delivhub.common.dto;
+package com.sparta.dto;
+
 
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import lombok.AccessLevel;

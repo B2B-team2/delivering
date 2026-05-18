@@ -1,4 +1,4 @@
-package com.sparta.delivhub.common.dto;
+package com.sparta.dto;
 
 import lombok.Getter;
 
