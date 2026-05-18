@@ -2,6 +2,9 @@ package com.sparta.common.architecture;
 
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import com.tngtech.archunit.lang.CompositeArchRule;
+
+import java.util.List;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
@@ -31,8 +34,35 @@ public abstract class BaseArchitectureTest {
             .allowEmptyShould(true)
             .as("컨트롤러 네이밍 규칙을 위반했습니다.");
 
-    //TODO
-    //다른 네이밍 규칙 추가필요
+    
+    public static ArchRule 도메인_클래스_네이밍_종합_검증(String prefix) {
+        String lowerPrefix = prefix.toLowerCase(); // 예: "User" -> "user"
+
+        // 🎯 List.of(...)로 규칙들을 한 묶음으로 감싸서 전달합니다!
+        return CompositeArchRule.of(List.of(
+                        // 1. Controller 검증
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".presentation..")
+                                .and().haveSimpleNameEndingWith("Controller")
+                                .should().haveSimpleNameStartingWith(prefix),
+
+                        // 2. Service 검증
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".application..")
+                                .and().haveSimpleNameEndingWith("Service")
+                                .should().haveSimpleNameStartingWith(prefix),
+
+                        // 3. Repository 인터페이스 검증
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain..")
+                                .and().haveSimpleNameEndingWith("Repository")
+                                .should().haveSimpleNameStartingWith(prefix),
+
+                        // 4. Repository 구현체 검증
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".infrastructure..")
+                                .and().haveSimpleNameEndingWith("RepositoryImpl")
+                                .should().haveSimpleNameStartingWith(prefix)
+                ))
+                .allowEmptyShould(true)
+                .as(prefix + " 도메인 패키지 내 핵심 클래스들은 반드시 '" + prefix + "' 접두사로 시작해야 합니다.");
+    }
 
 
 

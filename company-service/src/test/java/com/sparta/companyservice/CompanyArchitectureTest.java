@@ -4,6 +4,8 @@ package com.sparta.companyservice;
 import com.sparta.common.architecture.BaseArchitectureTest;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
+import com.tngtech.archunit.junit.ArchTest;
+import com.tngtech.archunit.lang.ArchRule;
 
 // 💡 중요: 여기서는 com.sparta.companyservice 패키지만 긁어오라고 대상을 바꿔줍니다!
 @AnalyzeClasses(packages = "com.sparta.companyservice",
@@ -13,5 +15,6 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
         }
 )
 public class CompanyArchitectureTest extends BaseArchitectureTest {
-    // 공통 규칙(컨트롤러 네이밍 등)을 그대로 이어받으므로 여기도 텅 비워둡니다.
+        @ArchTest
+        public static final ArchRule 유저_도메인_네이밍_종합_규칙 = 도메인_클래스_네이밍_종합_검증("Company");
 }
