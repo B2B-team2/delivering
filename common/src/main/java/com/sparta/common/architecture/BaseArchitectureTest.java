@@ -9,12 +9,18 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 
 public abstract class BaseArchitectureTest {
 
-    // 의존성 규칙
+    // common 의존성 규칙
     @ArchTest
     static final ArchRule common_module_dependency_rule =
             noClasses().that().resideInAPackage("..common..")
                     .should().dependOnClassesThat().resideInAPackage("..service..") // 💡 특정 서비스가 아닌 모든 *service 모듈 차단
+                    .allowEmptyShould(true)
                     .as("공통(common) 모듈은 상위 서비스 모듈들을 참조할 수 없습니다.");
+
+
+
+
+    // 패키지 구조 규칙
 
     // 네이밍 규칙
     // presentation 패키지 안의 클래스는 이름이 Controller로 끝나야 함
@@ -25,7 +31,36 @@ public abstract class BaseArchitectureTest {
             .allowEmptyShould(true)
             .as("컨트롤러 네이밍 규칙을 위반했습니다.");
 
+    //TODO
+    //다른 네이밍 규칙 추가필요
 
+
+
+    // @ 규칙
+    // @Service는 반드시 application 내부 또는 하위에 위치
+    @ArchTest
+    static final ArchRule service_package_rule =
+            classes().that().areAnnotatedWith(org.springframework.stereotype.Service.class)
+                    .should().resideInAPackage("..application..")
+                    .allowEmptyShould(true)
+                    .as("@Service 어노테이션이 붙은 클래스는 반드시 application 패키지 내부에 위치해야 합니다.");
+
+    // 인터페이스 구현 규칙: Repository 인터페이스는 반드시 'Domain'에 위치 (DIP 준수)
+    @ArchTest
+    static final ArchRule repository_interface_location_rule =
+            classes().that().areInterfaces()
+                    .and().haveSimpleNameEndingWith("Repository")
+                    .should().resideInAPackage("..domain..")
+                    .allowEmptyShould(true)
+                    .as("Repository 인터페이스(껍데기)는 순수 비즈니스 레이어인 ..domain.. 패키지에 위치해야 합니다.");
+
+    // Repository 실제 구현체(Impl)는 반드시 'Infrastructure'에 위치
+    @ArchTest
+    static final ArchRule repository_implementation_location_rule =
+            classes().that().haveSimpleNameEndingWith("RepositoryImpl")
+                    .should().resideInAPackage("..infrastructure..")
+                    .allowEmptyShould(true)
+                    .as("Repository의 실제 JPA/QueryDSL 구현체(Impl)는 ..infrastructure.. 패키지에 위치해야 합니다.");
 
     // 4계층 의존성 검증
     @ArchTest
