@@ -1,6 +1,10 @@
+-- PostGIS 확장 활성화 (보통 public 스키마에 설치됨)
+CREATE EXTENSION IF NOT EXISTS postgis;
+
 -- company 스키마 생성 및 검색 경로 설정
 CREATE SCHEMA IF NOT EXISTS company;
-SET search_path TO company;
+-- geometry 타입을 찾기 위해 public을 검색 경로에 포함해야 함
+SET search_path TO company, public;
 
 -- p_product_categories (상품 분류)
 CREATE TABLE p_product_categories (
@@ -24,8 +28,8 @@ CREATE TABLE p_companies (
     description TEXT,
     business_number VARCHAR(20) NOT NULL,
     hub_id UUID NOT NULL,
-    latitude DOUBLE PRECISION NOT NULL,
-    longitude DOUBLE PRECISION NOT NULL,
+    latitude GEOMETRY(Point, 4326) NOT NULL,
+    longitude GEOMETRY(Point, 4326) NOT NULL,
     address TEXT,
     logo_url VARCHAR(500),
     created_at TIMESTAMP NOT NULL DEFAULT NOW(),
