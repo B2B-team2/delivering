@@ -13,15 +13,18 @@
   - Gateway aggregated Swagger path: `/swagger-ui/index.html`.
 - **Postman**: 
   - Shared workspace: `jojo Workspace`.
-  - All collection request URLs must point to the Gateway (8080) with appropriate service prefixes.
+  - All collection request URLs must point to the Gateway (8080) with the format **`http://localhost:8080/api/v1/{resource}`**.
+  - **Service-specific prefixes (e.g., `/company/api/v1`) are strictly forbidden** in Postman URLs.
 
 ## AI Automated Tasks & Rules
 1. **Adding New Service**:
    - Always add `spring-boot-starter-security` and the `SecurityConfig` bypass class.
    - Add `springdoc-openapi-starter-webmvc-ui`.
-   - Update `api-gateway.yml` in Config Server to include the new service's Swagger URL.
+   - Update `api-gateway.yml` in Config Server to:
+     - Add resource paths to the `predicates` of the new service.
+     - Add a `RewritePath` filter for the documentation endpoint: `/{service}/v3/api-docs`.
 2. **Postman Updates**:
-   - When updating or creating Postman requests, ensure the base URL is `http://localhost:8080/{service-prefix}`.
-   - Use the OpenAPI JSON URL (`http://localhost:8080/{service-prefix}/v3/api-docs`) to import or sync collections directly in Postman.
+   - When updating or creating Postman requests, ensure the base URL is **`http://localhost:8080/api/v1/{resource}`**.
+   - Use the individual service's doc URL (e.g., `http://localhost:8080/{service}/v3/api-docs`) to import or sync collections.
 3. **Build Validation**:
    - After any change to `build.gradle` or configuration classes, run `./gradlew :<module-name>:classes` to verify the build.
