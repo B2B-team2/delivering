@@ -1,6 +1,6 @@
 package com.sparta.companyservice.company.domain.repository;
 
-import com.sparta.companyservice.company.domain.entity.Company;
+import com.sparta.companyservice.company.domain.core.Company;
 
 import java.util.Optional;
 import java.util.UUID;

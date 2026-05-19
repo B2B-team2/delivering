@@ -1,4 +1,4 @@
-package com.sparta.companyservice.company.domain.entity;
+package com.sparta.companyservice.company.domain.core;
 
 import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.*;

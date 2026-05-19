@@ -1,6 +1,6 @@
 package com.sparta.companyservice.company.infrastructure.repository;
 
-import com.sparta.companyservice.company.domain.entity.Company;
+import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;

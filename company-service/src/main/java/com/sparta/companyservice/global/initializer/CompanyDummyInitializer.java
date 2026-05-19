@@ -1,6 +1,6 @@
 package com.sparta.companyservice.global.initializer;
 
-import com.sparta.companyservice.company.domain.entity.Company;
+import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
