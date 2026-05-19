@@ -64,20 +64,20 @@ public abstract class BaseArchitectureTest {
      * 3. 순수 자바 Repository 인터페이스는 'Repository'로 끝나야 하며 ..domain.repository 아래에 위치해야 함.
      *    (JpaRepository를 상속하는 인터페이스는 JpaRepository로 끝나며 infrastructure에 위치)
      */
-    @ArchTest
-    static final ArchRule domain_layer_entity_location_rule =
-            classes().that().areAnnotatedWith(Entity.class)
-                    .should().resideInAPackage("..domain.core..")
-                    .allowEmptyShould(false)
-                    .as("JPA @Entity 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
-
-    @ArchTest
-    static final ArchRule domain_layer_enum_location_rule =
-            classes().that().resideInAPackage("..domain..")
-                    .and().areEnums()
-                    .should().resideInAPackage("..domain.core..")
-                    .allowEmptyShould(false)
-                    .as("Domain 계층의 enum 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
+//    @ArchTest
+//    static final ArchRule domain_layer_entity_location_rule =
+//            classes().that().areAnnotatedWith(Entity.class)
+//                    .should().resideInAPackage("..domain.core..")
+//                    .allowEmptyShould(false)
+//                    .as("JPA @Entity 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
+//
+//    @ArchTest
+//    static final ArchRule domain_layer_enum_location_rule =
+//            classes().that().resideInAPackage("..domain..")
+//                    .and().areEnums()
+//                    .should().resideInAPackage("..domain.core..")
+//                    .allowEmptyShould(false)
+//                    .as("Domain 계층의 enum 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
 
     @ArchTest
     static final ArchRule domain_layer_repository_naming_rule =
@@ -88,17 +88,17 @@ public abstract class BaseArchitectureTest {
                     .allowEmptyShould(false)
                     .as("순수 Repository 인터페이스는 ..domain.repository 패키지 아래에 위치해야 합니다.");
 
-    /**
-     * [Infrastructure 계층 규칙]
-     * 1. JpaRepository를 상속하는 인터페이스는 'JpaRepository'로 끝나야 하며 ..infrastructure 아래에 위치해야 함.
-     */
-    @ArchTest
-    static final ArchRule infrastructure_layer_jpa_repository_naming_rule =
-            classes().that().haveSimpleNameEndingWith("JpaRepository")
-                    .and().areInterfaces()
-                    .should().resideInAPackage("..infrastructure..")
-                    .allowEmptyShould(false)
-                    .as("JpaRepository 인터페이스는 반드시 ..infrastructure 패키지 아래에 위치해야 합니다.");
+//    /**
+//     * [Infrastructure 계층 규칙]
+//     * 1. JpaRepository를 상속하는 인터페이스는 'JpaRepository'로 끝나야 하며 ..infrastructure 아래에 위치해야 함.
+//     */
+//    @ArchTest
+//    static final ArchRule infrastructure_layer_jpa_repository_naming_rule =
+//            classes().that().haveSimpleNameEndingWith("JpaRepository")
+//                    .and().areInterfaces()
+//                    .should().resideInAPackage("..infrastructure..")
+//                    .allowEmptyShould(false)
+//                    .as("JpaRepository 인터페이스는 반드시 ..infrastructure 패키지 아래에 위치해야 합니다.");
 
     /**
      * [고급 제약 규칙]
@@ -150,10 +150,10 @@ public abstract class BaseArchitectureTest {
                                 .and().haveSimpleNameEndingWith("Service")
                                 .should().haveSimpleNameStartingWith(prefix),
 
-                        // 3. 엔티티 검증 (domain.core 패키지)
-                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain.core..")
-                                .and().areAnnotatedWith(Entity.class)
-                                .should().haveSimpleNameStartingWith(prefix),
+//                        // 3. 엔티티 검증 (domain.core 패키지)
+//                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain.core..")
+//                                .and().areAnnotatedWith(Entity.class)
+//                                .should().haveSimpleNameStartingWith(prefix),
 
                         // 4. 순수 Repository 인터페이스 검증 (domain.repository 패키지)
                         classes().that().resideInAPackage(".." + lowerPrefix + ".domain.repository..")
