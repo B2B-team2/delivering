@@ -23,7 +23,7 @@ spring:
       ddl-auto: create
     properties:
       hibernate:
-        default_schema: ORDER
+        default_schema: order-db
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     show-sql: false         # SQL 출력 비활성화 (debug 로깅으로 제어)

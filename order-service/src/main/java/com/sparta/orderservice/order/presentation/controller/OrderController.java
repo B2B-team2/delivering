@@ -30,7 +30,7 @@ public class OrderController {
                 .body(ApiResponse.created(orderService.createOrder(request, requesterId)));
     }
 
-    // 주문 단건 조회
+    // 전체 주문 조회
     @GetMapping
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrders(
         @RequestHeader("X-User-Id") UUID requesterId
@@ -38,6 +38,7 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrders(requesterId)));
     }
 
+    // 주문 단건 상세 조회
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@PathVariable UUID orderId) {
         return ResponseEntity.ok(ApiResponse.success(orderService.getOrder(orderId)));
