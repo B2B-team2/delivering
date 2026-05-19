@@ -1,9 +1,11 @@
 package com.sparta.companyservice.company.domain.core;
-
 import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 
 import java.util.UUID;
 
@@ -12,8 +14,9 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
 public class Company extends BaseEntity {
+
+    private static final GeometryFactory geometryFactory = new GeometryFactory(new PrecisionModel(), 4326);
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -24,7 +27,7 @@ public class Company extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private CompanyType companyType;
+    private CompanyTypeEnum companyType;
 
     private String phone;
 
@@ -44,9 +47,23 @@ public class Company extends BaseEntity {
 
     private String address;
 
-    private String logo_url;
+    @Column(name = "logo_url")
+    private String logoUrl;
 
-    public enum CompanyType {
-        PRODUCER, RECEIVER
+    @Builder
+    public Company(UUID companyId, String companyName, CompanyTypeEnum companyType, String phone, 
+                  String description, String businessNumber, UUID hubId, Double latitude, 
+                  Double longitude, String address, String logoUrl) {
+        this.companyId = companyId;
+        this.companyName = companyName;
+        this.companyType = companyType;
+        this.phone = phone;
+        this.description = description;
+        this.businessNumber = businessNumber;
+        this.hubId = hubId;
+        this.latitude = latitude != null ? geometryFactory.createPoint(new Coordinate(0, latitude)) : null;
+        this.longitude = longitude != null ? geometryFactory.createPoint(new Coordinate(longitude, 0)) : null;
+        this.address = address;
+        this.logoUrl = logoUrl;
     }
 }

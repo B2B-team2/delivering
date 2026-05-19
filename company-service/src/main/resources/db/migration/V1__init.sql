@@ -1,5 +1,5 @@
--- PostGIS 확장 활성화 (보통 public 스키마에 설치됨)
-CREATE EXTENSION IF NOT EXISTS postgis;
+-- PostGIS 확장 활성화 (public 스키마에 설치 권장)
+CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;
 
 -- company 스키마 생성 및 검색 경로 설정
 CREATE SCHEMA IF NOT EXISTS company;
