@@ -1,9 +1,10 @@
 package com.sparta.companyservice.company.presentation.dto;
 
-import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
+import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -12,13 +13,14 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class CompanyCreateRequest {
 
-    @NotBlank(message = "업체 이름은 필수 입력 항목입니다.")
+    @NotBlank(message = "업체명은 필수입니다.")
     private String companyName;
 
-    @NotNull(message = "업체 타입은 'PRODUCER' 또는 'RECEIVER' 중 하나여야 합니다.")
-    private CompanyTypeEnum companyType;
+    @NotBlank(message = "업체 타입은 필수입니다.")
+    private String companyType; // Domain Enum을 직접 사용하지 않음
 
     private String phone;
 
@@ -39,4 +41,19 @@ public class CompanyCreateRequest {
     private String address;
 
     private String logoUrl;
+
+    public CompanyCreateCommand toCommand() {
+        return CompanyCreateCommand.builder()
+                .companyName(companyName)
+                .companyType(companyType)
+                .phone(phone)
+                .description(description)
+                .businessNumber(businessNumber)
+                .hubId(hubId)
+                .latitude(latitude)
+                .longitude(longitude)
+                .address(address)
+                .logoUrl(logoUrl)
+                .build();
+    }
 }

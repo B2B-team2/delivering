@@ -1,6 +1,7 @@
 package com.sparta.companyservice.company.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
@@ -20,7 +21,7 @@ public class CompanyController {
 
     @PostMapping
     public ApiResponse<CompanyResponse> createCompany(@RequestBody @Valid CompanyCreateRequest request) {
-        CompanyResponse response = companyService.createCompany(request);
-        return ApiResponse.created(response);
+        CompanyDto resultDto = companyService.createCompany(request.toCommand());
+        return ApiResponse.created(CompanyResponse.from(resultDto));
     }
 }
