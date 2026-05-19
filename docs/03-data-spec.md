@@ -421,7 +421,7 @@ erDiagram
 |---|---|---|---|
 | `hub_id` | UUID | PK, Not Null | 물류허브 식별자 |
 | `name` | VARCHAR(100) | Not Null | 허브명 |
-| `hub_type` | VARCHAR(30) | - | REGIONAL / LOCAL / CENTRAL |
+| `hub_type` | VARCHAR(30) | - | REGIONAL / CENTRAL |
 | `address` | TEXT | Not Null | 주소 |
 | `latitude` | GEOMETRY(Point,4326) | Not Null | 위도 |
 | `longitude` | GEOMETRY(Point,4326) | Not Null | 경도 |
@@ -453,7 +453,7 @@ erDiagram
 | 16 | 부산광역시 센터 | REGIONAL | 부산 동구 중앙대로 206 |
 | 17 | 울산광역시 센터 | REGIONAL | 울산 남구 중앙로 201 |
 
-> `CENTRAL` (경기남부·대전·대구): 지리적으로 전국 중앙에 위치하여 200km 이상 배송 시 자연스럽게 중간 경유지로 선택되는 거점. 라우팅 알고리즘에서 강제 경유가 아닌 **최적 경유 후보**로 활용된다.
+> `CENTRAL` (경기남부·대전·대구): 지리적으로 전국 중앙에 위치하여 200km 이상 배송 시 자연스럽게 중간 경유지로 선택되는 거점. 라우팅 알고리즘에서 강제 경유가 아닌 **최적 경유 후보**로 활용된다. 중앙허브와 일반허브 역할 모두 수행한다.
 
 ##### 허브 경로 모델 — P2P + Hub to Hub Relay
 
