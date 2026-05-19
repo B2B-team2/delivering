@@ -1,4 +1,4 @@
-package com.sparta.companyservice.global.initializer;
+package com.sparta.companyservice.company.application.initializer;
 
 import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
