@@ -2,6 +2,7 @@ package com.sparta.common.handler;
 
 import com.sparta.common.dto.ErrorResponse;
 import com.sparta.common.dto.BusinessException;
+import com.sparta.common.dto.CommonErrorCode;
 import com.sparta.common.dto.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -73,10 +74,10 @@ public class GlobalExceptionHandler {
     // 5. 역할에 따른 접근 권한 제한 시
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException e) {
-        ErrorCode errorCode = ErrorCode.ACCESS_DENIED;
+        ErrorCode errorCode = CommonErrorCode.ACCESS_DENIED;
         ErrorResponse response = ErrorResponse.builder()
                 .status(errorCode.getHttpStatus().value())
-                .message(errorCode.name())
+                .message(errorCode.getMessage())
                 .build();
 
         return ResponseEntity
