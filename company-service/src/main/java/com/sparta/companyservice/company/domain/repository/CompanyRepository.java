@@ -1,4 +1,16 @@
 package com.sparta.companyservice.company.domain.repository;
 
+import com.sparta.companyservice.company.domain.entity.Company;
+
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Domain Repository Interface (순수 Java 인터페이스)
+ * 기술 세부사항(Spring Data JPA 등)에 의존하지 않음
+ */
 public interface CompanyRepository {
+    Company save(Company company);
+    Optional<Company> findById(UUID id);
+    long count();
 }

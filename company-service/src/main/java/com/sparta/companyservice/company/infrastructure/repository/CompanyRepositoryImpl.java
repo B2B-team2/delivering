@@ -1,4 +1,35 @@
 package com.sparta.companyservice.company.infrastructure.repository;
 
-public class CompanyRepositoryImpl {
+import com.sparta.companyservice.company.domain.entity.Company;
+import com.sparta.companyservice.company.domain.repository.CompanyRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+import java.util.UUID;
+
+/**
+ * Domain Repository 구현체 (Infrastructure 계층)
+ * Domain의 포트(인터페이스)를 구현하여 DIP 적용
+ */
+@Repository
+@RequiredArgsConstructor
+public class CompanyRepositoryImpl implements CompanyRepository {
+
+    private final CompanyJpaRepository jpaRepository;
+
+    @Override
+    public Company save(Company company) {
+        return jpaRepository.save(company);
+    }
+
+    @Override
+    public Optional<Company> findById(UUID id) {
+        return jpaRepository.findById(id);
+    }
+
+    @Override
+    public long count() {
+        return jpaRepository.count();
+    }
 }
