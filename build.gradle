@@ -37,6 +37,9 @@ subprojects {
         testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        implementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
+
 
     }
 

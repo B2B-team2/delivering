@@ -1,6 +1,6 @@
 package com.sparta.deliveryservice.deliveryRoute.entity;
 
-import com.sparta.entity.BaseEntity;
+import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
