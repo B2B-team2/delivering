@@ -19,18 +19,18 @@ public abstract class BaseArchitectureTest {
      * [Presentation 계층 규칙]
      * 1. 클래스는 'Controller'로 끝나야 함.
      * 2. @RestController 어노테이션 필수, @Controller 사용 금지.
-     * 3. 별도의 서브 패키지 없이 ..presentation 바로 아래에 위치해야 함.
+     * 3. ..presentation.controller 패키지 아래에 위치해야 함.
      */
     @ArchTest
     static final ArchRule presentation_layer_naming_rule =
             classes().that().haveSimpleNameEndingWith("Controller")
-                    .should().resideInAPackage("..controller")
+                    .should().resideInAPackage("..presentation.controller..")
                     .allowEmptyShould(true)
-                    .as("Controller 클래스는 반드시 ..controller 패키지 바로 아래에 위치해야 합니다.");
+                    .as("Controller 클래스는 반드시 ..presentation.controller 패키지 아래에 위치해야 합니다.");
 
     @ArchTest
     static final ArchRule presentation_layer_annotation_rule =
-            classes().that().resideInAPackage("..controller")
+            classes().that().resideInAPackage("..presentation.controller..")
                     .should().beAnnotatedWith(RestController.class)
                     .andShould().notBeAnnotatedWith(org.springframework.stereotype.Controller.class)
                     .allowEmptyShould(true)
@@ -40,14 +40,14 @@ public abstract class BaseArchitectureTest {
      * [Application 계층 규칙]
      * 1. 클래스는 'Service'로 끝나야 함.
      * 2. 클래스명이 Service로 끝나면 @Service 어노테이션 필수.
-     * 3. 별도의 서브 패키지 없이 ..application 바로 아래에 위치해야 함.
+     * 3. ..application.service 패키지 아래에 위치해야 함.
      */
     @ArchTest
     static final ArchRule application_layer_naming_rule =
             classes().that().haveSimpleNameEndingWith("Service")
-                    .should().resideInAPackage("..service")
+                    .should().resideInAPackage("..application.service..")
                     .allowEmptyShould(true)
-                    .as("Service 클래스는 반드시 ..service 패키지 바로 아래에 위치해야 합니다.");
+                    .as("Service 클래스는 반드시 ..application.service 패키지 아래에 위치해야 합니다.");
 
     @ArchTest
     static final ArchRule application_layer_annotation_rule =
@@ -58,15 +58,15 @@ public abstract class BaseArchitectureTest {
 
     /**
      * [Domain 계층 규칙]
-     * 1. 레포지토리 인터페이스는 'Repository'로 끝나야 하며 ..domain 바로 아래에 위치해야 함.
+     * 1. 레포지토리 인터페이스는 'Repository'로 끝나야 하며 ..domain.repository 패키지 아래에 위치해야 함.
      */
     @ArchTest
     static final ArchRule domain_layer_repository_naming_rule =
             classes().that().haveSimpleNameEndingWith("Repository")
                     .and().areInterfaces()
-                    .should().resideInAPackage("..domain")
+                    .should().resideInAPackage("..domain.repository..")
                     .allowEmptyShould(true)
-                    .as("Repository 인터페이스는 ..domain 패키지 바로 아래에 위치해야 합니다.");
+                    .as("Repository 인터페이스는 ..domain.repository 패키지 아래에 위치해야 합니다.");
 
     /**
      * [고급 제약 규칙]
@@ -109,23 +109,24 @@ public abstract class BaseArchitectureTest {
         String lowerPrefix = prefix.toLowerCase();
         return CompositeArchRule.of(List.of(
                         // 1. Controller 검증
-                        classes().that().resideInAPackage(".." + lowerPrefix + ".presentation..")
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".presentation.controller..")
                                 .and().haveSimpleNameEndingWith("Controller")
                                 .should().haveSimpleNameStartingWith(prefix),
 
                         // 2. Service 검증
-                        classes().that().resideInAPackage(".." + lowerPrefix + ".application..")
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".application.service..")
                                 .and().haveSimpleNameEndingWith("Service")
                                 .should().haveSimpleNameStartingWith(prefix),
 
                         // 3. Repository 인터페이스 검증
-                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain..")
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain.repository..")
                                 .and().haveSimpleNameEndingWith("Repository")
                                 .should().haveSimpleNameStartingWith(prefix),
 
                         // 4. Repository 구현체 검증
-                        classes().that().resideInAPackage(".." + lowerPrefix + ".infrastructure..")
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".infrastructure.repository..")
                                 .and().haveSimpleNameEndingWith("RepositoryImpl")
+                                .or().haveSimpleNameEndingWith("JpaRepository")
                                 .should().haveSimpleNameStartingWith(prefix)
                 ))
                 .allowEmptyShould(true)
