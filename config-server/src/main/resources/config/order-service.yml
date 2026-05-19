@@ -11,3 +11,24 @@ management:
     web:
       exposure:
         include: health
+
+spring:
+  datasource:
+    url: ${ORDER_DB_URL}
+    username: ${ORDER_DB_USERNAME}
+    password: ${ORDER_DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        default_schema: ORDER
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: false         # SQL 출력 비활성화 (debug 로깅으로 제어)
+
+logging:
+  level:
+    org.hibernate.SQL: DEBUG                        # SQL 쿼리 (debug 모드에서만 출력)
+    org.hibernate.orm.jdbc.bind: TRACE              # 바인딩 파라미터 값
