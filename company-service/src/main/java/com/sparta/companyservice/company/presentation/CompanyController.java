@@ -1,4 +1,4 @@
-package com.sparta.companyservice.company.presentation.controller;
+package com.sparta.companyservice.company.presentation;
 
 import org.springframework.web.bind.annotation.RestController;
 
