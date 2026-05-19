@@ -3,3 +3,14 @@ spring:
     name: delivery-service
   config:
     import: optional:configserver:http://localhost:8888
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/delivering?currentSchema=DELIVERY
+    username: postgres
+    password: password
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: USER
