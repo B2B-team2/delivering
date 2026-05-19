@@ -24,13 +24,13 @@ public abstract class BaseArchitectureTest {
     @ArchTest
     static final ArchRule presentation_layer_naming_rule =
             classes().that().haveSimpleNameEndingWith("Controller")
-                    .should().resideInAPackage("..presentation")
+                    .should().resideInAPackage("..controller")
                     .allowEmptyShould(true)
                     .as("Controller 클래스는 반드시 ..presentation 패키지 바로 아래에 위치해야 합니다.");
 
     @ArchTest
     static final ArchRule presentation_layer_annotation_rule =
-            classes().that().resideInAPackage("..presentation..")
+            classes().that().resideInAPackage("..controller")
                     .should().beAnnotatedWith(RestController.class)
                     .andShould().notBeAnnotatedWith(org.springframework.stereotype.Controller.class)
                     .allowEmptyShould(true)
@@ -45,7 +45,7 @@ public abstract class BaseArchitectureTest {
     @ArchTest
     static final ArchRule application_layer_naming_rule =
             classes().that().haveSimpleNameEndingWith("Service")
-                    .should().resideInAPackage("..application")
+                    .should().resideInAPackage("..service")
                     .allowEmptyShould(true)
                     .as("Service 클래스는 반드시 ..application 패키지 바로 아래에 위치해야 합니다.");
 

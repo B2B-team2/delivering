@@ -1,4 +1,4 @@
-package com.sparta.companyservice.company.application;
+package com.sparta.companyservice.company.application.service;
 
 import org.springframework.stereotype.Service;
 
