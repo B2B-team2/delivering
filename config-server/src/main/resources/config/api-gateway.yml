@@ -49,3 +49,10 @@ management:
   endpoint:
     gateway:
       enabled: true
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: Company Service
+        url: /company/v3/api-docs
+    path: /swagger-ui/index.html
