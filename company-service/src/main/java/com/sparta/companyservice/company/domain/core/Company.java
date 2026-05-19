@@ -66,4 +66,12 @@ public class Company extends BaseEntity {
         this.address = address;
         this.logoUrl = logoUrl;
     }
+
+    public Double getLatitude() {
+        return latitude != null ? latitude.getY() : null;
+    }
+
+    public Double getLongitude() {
+        return longitude != null ? longitude.getX() : null;
+    }
 }
