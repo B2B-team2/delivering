@@ -3,6 +3,7 @@ package com.sparta.common.architecture;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.CompositeArchRule;
+import jakarta.persistence.Entity;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RestController;
@@ -58,15 +59,46 @@ public abstract class BaseArchitectureTest {
 
     /**
      * [Domain 계층 규칙]
-     * 1. 레포지토리 인터페이스는 'Repository'로 끝나야 하며 ..domain.repository 패키지 아래에 위치해야 함.
+     * 1. JPA 엔티티(@Entity)는 반드시 ..domain.core 아래에 위치해야 함.
+     * 2. ..domain 패키지 내 enum 클래스는 반드시 ..domain.core 아래에 위치해야 함.
+     * 3. 순수 자바 Repository 인터페이스는 'Repository'로 끝나야 하며 ..domain.repository 아래에 위치해야 함.
+     *    (JpaRepository를 상속하는 인터페이스는 JpaRepository로 끝나며 infrastructure에 위치)
      */
+    @ArchTest
+    static final ArchRule domain_layer_entity_location_rule =
+            classes().that().areAnnotatedWith(Entity.class)
+                    .should().resideInAPackage("..domain.core..")
+                    .allowEmptyShould(false)
+                    .as("JPA @Entity 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
+
+    @ArchTest
+    static final ArchRule domain_layer_enum_location_rule =
+            classes().that().resideInAPackage("..domain..")
+                    .and().areEnums()
+                    .should().resideInAPackage("..domain.core..")
+                    .allowEmptyShould(false)
+                    .as("Domain 계층의 enum 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
+
     @ArchTest
     static final ArchRule domain_layer_repository_naming_rule =
             classes().that().haveSimpleNameEndingWith("Repository")
                     .and().areInterfaces()
+                    .and().haveSimpleNameNotContaining("Jpa")
                     .should().resideInAPackage("..domain.repository..")
                     .allowEmptyShould(false)
-                    .as("Repository 인터페이스는 ..domain.repository 패키지 아래에 위치해야 합니다.");
+                    .as("순수 Repository 인터페이스는 ..domain.repository 패키지 아래에 위치해야 합니다.");
+
+    /**
+     * [Infrastructure 계층 규칙]
+     * 1. JpaRepository를 상속하는 인터페이스는 'JpaRepository'로 끝나야 하며 ..infrastructure 아래에 위치해야 함.
+     */
+    @ArchTest
+    static final ArchRule infrastructure_layer_jpa_repository_naming_rule =
+            classes().that().haveSimpleNameEndingWith("JpaRepository")
+                    .and().areInterfaces()
+                    .should().resideInAPackage("..infrastructure..")
+                    .allowEmptyShould(false)
+                    .as("JpaRepository 인터페이스는 반드시 ..infrastructure 패키지 아래에 위치해야 합니다.");
 
     /**
      * [고급 제약 규칙]
@@ -118,12 +150,18 @@ public abstract class BaseArchitectureTest {
                                 .and().haveSimpleNameEndingWith("Service")
                                 .should().haveSimpleNameStartingWith(prefix),
 
-                        // 3. Repository 인터페이스 검증
-                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain.repository..")
-                                .and().haveSimpleNameEndingWith("Repository")
+                        // 3. 엔티티 검증 (domain.core 패키지)
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain.core..")
+                                .and().areAnnotatedWith(Entity.class)
                                 .should().haveSimpleNameStartingWith(prefix),
 
-                        // 4. Repository 구현체 검증
+                        // 4. 순수 Repository 인터페이스 검증 (domain.repository 패키지)
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".domain.repository..")
+                                .and().haveSimpleNameEndingWith("Repository")
+                                .and().areInterfaces()
+                                .should().haveSimpleNameStartingWith(prefix),
+
+                        // 5. Repository 구현체 검증
                         classes().that().resideInAPackage(".." + lowerPrefix + ".infrastructure.repository..")
                                 .and().haveSimpleNameEndingWith("RepositoryImpl")
                                 .or().haveSimpleNameEndingWith("JpaRepository")
