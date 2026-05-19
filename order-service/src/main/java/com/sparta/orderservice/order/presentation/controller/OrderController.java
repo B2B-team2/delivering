@@ -1,12 +1,17 @@
 package com.sparta.orderservice.order.presentation.controller;
 
+import com.sparta.common.dto.ApiResponse;
 import com.sparta.orderservice.order.application.service.OrderService;
+import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import com.sparta.orderservice.order.presentation.dto.OrderCreateRequest;
 import com.sparta.orderservice.order.presentation.dto.OrderResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -17,40 +22,64 @@ public class OrderController {
 
     // 주문 생성
     @PostMapping
-    public ResponseEntity<OrderResponse> createOrder(
-        @RequestBody OrderCreateRequest request,
-        @RequestHeader("X-User-Id") UUID requesterId  // Gateway에서 JWT 파싱 후 헤더로 전달
+    public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
+        @RequestBody @Valid OrderCreateRequest request,
+        @RequestHeader("X-User-Id") UUID requesterId
     ) {
-        return ResponseEntity.ok(orderService.createOrder(request, requesterId));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(orderService.createOrder(request, requesterId)));
     }
 
     // 주문 단건 조회
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrders(
+        @RequestHeader("X-User-Id") UUID requesterId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getOrders(requesterId)));
+    }
+
     @GetMapping("/{orderId}")
-    public ResponseEntity<OrderResponse> getOrder(@PathVariable UUID orderId) {
-        return ResponseEntity.ok(orderService.getOrder(orderId));
+    public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@PathVariable UUID orderId) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getOrder(orderId)));
     }
 
     // 주문 취소
-    @DeleteMapping("/{orderId}")
-    public ResponseEntity<Void> cancelOrder(
+    @PatchMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelOrder(
         @PathVariable UUID orderId,
         @RequestHeader("X-User-Id") UUID requesterId
     ) {
         orderService.cancelOrder(orderId, requesterId);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.success());
     }
 
-    // 출고 준비 (허브 관리자가 확인)
-    @PutMapping("/company-orders/{companyOrderId}/prepare")
-    public ResponseEntity<Void> prepareShipment(@PathVariable UUID companyOrderId) {
-        orderService.prepareShipment(companyOrderId);
-        return ResponseEntity.ok().build();
+    // 서브 주문 상세 조회
+    @GetMapping("/company/{companyOrderId}")
+    public ResponseEntity<ApiResponse<CompanyOrderResponse>> getCompanyOrder(
+        @PathVariable UUID companyOrderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(orderService.getCompanyOrder(companyOrderId)));
     }
 
-    // 출고 완료 (재고 차감 + SHIPPED 상태 변경)
-    @PutMapping("/company-orders/{companyOrderId}/ship")
-    public ResponseEntity<Void> completeShipment(@PathVariable UUID companyOrderId) {
-        orderService.completeShipment(companyOrderId);
-        return ResponseEntity.ok().build();
+    // 서브 주문 부분 취소
+    @PatchMapping("/company/{companyOrderId}/cancel")
+    public ResponseEntity<ApiResponse<Void>> cancelCompanyOrder(
+        @PathVariable UUID companyOrderId,
+        @RequestHeader("X-User-Id") UUID requesterId
+    ) {
+        orderService.cancelCompanyOrder(companyOrderId, requesterId);
+        return ResponseEntity.ok(ApiResponse.success());
     }
+
+//    // todo 출고 준비
+//    @Put? Patch?
+//    public ResponseEntity<Void> prepareShipment(@PathVariable UUID companyOrderId) {
+//    }
+//
+//    // 출고 완료 (재고 차감 + SHIPPED 상태 변경)
+//    @Put? Patch?
+//    public ResponseEntity<Void> completeShipment(@PathVariable UUID companyOrderId) {
+//        orderService.completeShipment(companyOrderId);
+//        return ResponseEntity.ok().build();
+//    }
 }

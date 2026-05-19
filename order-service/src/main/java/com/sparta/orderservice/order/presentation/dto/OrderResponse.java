@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+// GET /orders, GET /orders/{order_id} 응답
 public record OrderResponse(
         UUID orderId,
         UUID requesterCompanyId,
@@ -22,10 +23,11 @@ public record OrderResponse(
         BigDecimal deliveryFee,
         BigDecimal finalPrice,
         OrderStatus status,
-        List<CompanyOrderSummary> companyOrders,
+        List<CompanyOrderSummary> companyOrders, // 해당 주문에 속한 업체별 주문 요약 목록
         LocalDateTime createdAt
 ) {
 
+    // OrderResponse 안에 업체별 주문 요약 (OrderItem 목록 미포함)
     public record CompanyOrderSummary(
             UUID companyOrderId,
             UUID companyId,
