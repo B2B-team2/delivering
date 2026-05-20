@@ -17,8 +17,12 @@ public class CompanyService {
 
     @Transactional
     public CompanyDto createCompany(CompanyCreateCommand command) {
-        // Application 레이어에서 String -> Domain Enum 변환 (Mapping)
-        CompanyTypeEnum type = CompanyTypeEnum.valueOf(command.getCompanyType());
+        CompanyTypeEnum type;
+        try {
+            type = CompanyTypeEnum.valueOf(command.getCompanyType());
+        } catch (IllegalArgumentException e) {
+            throw new com.sparta.common.dto.BusinessException(com.sparta.companyservice.global.exception.CompanyErrorCode.INVALID_COMPANY_TYPE);
+        }
 
         Company company = Company.builder()
                 .companyName(command.getCompanyName())
