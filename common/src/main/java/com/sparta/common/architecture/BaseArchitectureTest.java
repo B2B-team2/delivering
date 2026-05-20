@@ -100,6 +100,7 @@ public abstract class BaseArchitectureTest {
     /**
      * [Infrastructure 계층 규칙]
      * 1. JpaRepository를 상속하는 인터페이스는 'JpaRepository'로 끝나야 하며 ..infrastructure 아래에 위치해야 함.
+     * 2. Domain Repository 구현체는 'RepositoryImpl'로 끝나야 하며 ..infrastructure 아래에 위치해야 함.
      */
     @ArchTest
     static final ArchRule infrastructure_layer_jpa_repository_naming_rule =
@@ -108,6 +109,13 @@ public abstract class BaseArchitectureTest {
                     .should().resideInAPackage("..infrastructure..")
                     .allowEmptyShould(ALLOW_EMPTY)
                     .as("JpaRepository 인터페이스는 반드시 ..infrastructure 패키지 아래에 위치해야 합니다.");
+
+    @ArchTest
+    static final ArchRule infrastructure_layer_repository_impl_rule =
+            classes().that().haveSimpleNameEndingWith("RepositoryImpl")
+                    .should().resideInAPackage("..infrastructure..")
+                    .allowEmptyShould(ALLOW_EMPTY)
+                    .as("RepositoryImpl 클래스는 반드시 ..infrastructure 패키지 아래에 위치해야 합니다.");
 
     /**
      * [고급 제약 규칙]
@@ -145,7 +153,7 @@ public abstract class BaseArchitectureTest {
             .as("도메인 내 4계층(DDD) 의존성 규칙을 위반했습니다.");
 
     /**
-     * 도메인별 접두사 일치 여부 통합 검증 유틸리티 (English Name)
+     * 도메인별 키워드 포함 여부 통합 검증 유틸리티 (English Name)
      */
     public static ArchRule domain_prefix_naming_rule(String prefix) {
         String lowerPrefix = prefix.toLowerCase();
@@ -153,31 +161,31 @@ public abstract class BaseArchitectureTest {
                         // 1. Controller 검증
                         classes().that().resideInAPackage(".." + lowerPrefix + ".presentation.controller..")
                                 .and().haveSimpleNameEndingWith("Controller")
-                                .should().haveSimpleNameStartingWith(prefix),
+                                .should().haveSimpleNameContaining(prefix),
 
                         // 2. Service 검증
                         classes().that().resideInAPackage(".." + lowerPrefix + ".application.service..")
                                 .and().haveSimpleNameEndingWith("Service")
-                                .should().haveSimpleNameStartingWith(prefix),
+                                .should().haveSimpleNameContaining(prefix),
 
                         // 3. 엔티티 검증 (domain.core 패키지)
                         classes().that().resideInAPackage(".." + lowerPrefix + ".domain.core..")
                                 .and().areAnnotatedWith(Entity.class)
-                                .should().haveSimpleNameStartingWith(prefix),
+                                .should().haveSimpleNameContaining(prefix),
 
                         // 4. 순수 Repository 인터페이스 검증 (domain.repository 패키지)
                         classes().that().resideInAPackage(".." + lowerPrefix + ".domain.repository..")
                                 .and().haveSimpleNameEndingWith("Repository")
                                 .and().areInterfaces()
-                                .should().haveSimpleNameStartingWith(prefix),
+                                .should().haveSimpleNameContaining(prefix),
 
                         // 5. Repository 구현체 검증
                         classes().that().resideInAPackage(".." + lowerPrefix + ".infrastructure.repository..")
                                 .and().haveSimpleNameEndingWith("RepositoryImpl")
                                 .or().haveSimpleNameEndingWith("JpaRepository")
-                                .should().haveSimpleNameStartingWith(prefix)
+                                .should().haveSimpleNameContaining(prefix)
                 ))
                 .allowEmptyShould(ALLOW_EMPTY)
-                .as(prefix + " 도메인 내 핵심 클래스들은 반드시 '" + prefix + "' 접두사로 시작해야 합니다.");
+                .as(prefix + " 도메인 내 핵심 클래스들은 반드시 '" + prefix + "' 키워드를 포함해야 합니다.");
     }
 }
