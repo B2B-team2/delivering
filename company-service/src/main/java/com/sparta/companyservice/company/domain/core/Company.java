@@ -1,7 +1,18 @@
 package com.sparta.companyservice.company.domain.core;
 import com.sparta.common.entity.BaseEntity;
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.Point;
@@ -51,8 +62,8 @@ public class Company extends BaseEntity {
     private String logoUrl;
 
     @Builder
-    public Company(UUID companyId, String companyName, CompanyTypeEnum companyType, String phone, 
-                  String description, String businessNumber, UUID hubId, Double latitude, 
+    public Company(UUID companyId, String companyName, CompanyTypeEnum companyType, String phone,
+                  String description, String businessNumber, UUID hubId, Double latitude,
                   Double longitude, String address, String logoUrl) {
         this.companyId = companyId;
         this.companyName = companyName;
