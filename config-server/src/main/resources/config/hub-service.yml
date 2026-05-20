@@ -22,6 +22,8 @@ spring:
     show-sql: true
   flyway:
     schemas: hub-db
+  cache:
+    type: none  # Redis 연결 전 임시 비활성화 — Redis 연결 시 삭제 예정
   data:
     redis:
       host: localhost
