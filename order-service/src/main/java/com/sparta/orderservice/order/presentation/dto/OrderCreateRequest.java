@@ -1,5 +1,6 @@
 package com.sparta.orderservice.order.presentation.dto;
 
+import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
@@ -30,4 +31,32 @@ public record OrderCreateRequest(
             @Positive int quantity,                     // 구매 수량
             @NotNull @Positive BigDecimal unitPrice     // 구매 시점 단가
     ) {}
+
+    // Presentation → Application 변환 (Application 계층을 참조하는 방향은 허용)
+    public CreateOrderCommand toCommand() {
+        List<CreateOrderCommand.CompanyOrderCommand> companyOrderCommands = companyOrders.stream()
+                .map(co -> new CreateOrderCommand.CompanyOrderCommand(
+                        co.companyId(),
+                        co.orderItems().stream()
+                                .map(item -> new CreateOrderCommand.OrderItemCommand(
+                                        item.productOptionId(),
+                                        item.quantity(),
+                                        item.unitPrice()
+                                ))
+                                .toList()
+                ))
+                .toList();
+
+        return new CreateOrderCommand(
+                requesterCompanyId,
+                receiverCompanyId,
+                recipientName,
+                phone,
+                slackId,
+                address,
+                dueDate,
+                requestMemo,
+                companyOrderCommands
+        );
+    }
 }

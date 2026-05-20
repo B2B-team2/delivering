@@ -1,7 +1,6 @@
 package com.sparta.orderservice.order.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
-import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.service.OrderService;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import com.sparta.orderservice.order.presentation.dto.OrderCreateRequest;
@@ -28,7 +27,7 @@ public class OrderController {
         @RequestHeader("X-User-Id") UUID requesterId
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(OrderResponse.from(orderService.createOrder(CreateOrderCommand.from(request), requesterId))));
+                .body(ApiResponse.created(OrderResponse.from(orderService.createOrder(request.toCommand(), requesterId))));
     }
 
     // 전체 주문 조회

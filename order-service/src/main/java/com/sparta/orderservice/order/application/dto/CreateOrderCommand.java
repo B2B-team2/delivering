@@ -1,7 +1,5 @@
 package com.sparta.orderservice.order.application.dto;
 
-import com.sparta.orderservice.order.presentation.dto.OrderCreateRequest;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,31 +27,4 @@ public record CreateOrderCommand(
             int quantity,
             BigDecimal unitPrice
     ) {}
-
-    public static CreateOrderCommand from(OrderCreateRequest request) {
-        List<CompanyOrderCommand> companyOrders = request.companyOrders().stream()
-                .map(co -> new CompanyOrderCommand(
-                        co.companyId(),
-                        co.orderItems().stream()
-                                .map(item -> new OrderItemCommand(
-                                        item.productOptionId(),
-                                        item.quantity(),
-                                        item.unitPrice()
-                                ))
-                                .toList()
-                ))
-                .toList();
-
-        return new CreateOrderCommand(
-                request.requesterCompanyId(),
-                request.receiverCompanyId(),
-                request.recipientName(),
-                request.phone(),
-                request.slackId(),
-                request.address(),
-                request.dueDate(),
-                request.requestMemo(),
-                companyOrders
-        );
-    }
 }
