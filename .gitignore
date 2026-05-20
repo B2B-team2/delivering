@@ -38,3 +38,6 @@ out/
 
 ### Docker Volumes ###
 .docker-volumes/
+
+# Local Plan
+plan.md
