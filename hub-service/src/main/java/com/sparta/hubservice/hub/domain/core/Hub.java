@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_logistics_hubs", schema = "HUB")
+@Table(name = "p_logistics_hubs", schema = "hub-db")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Hub extends BaseEntity {
