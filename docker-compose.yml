@@ -1,0 +1,112 @@
+services:
+  # ── 인프라 ──────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:15-3.3
+    container_name: postgres
+    environment:
+      POSTGRES_DB: delivering
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./.docker-volumes/postgres:/var/lib/postgresql/data
+
+  # redis:
+  #   image: redis:7
+  #   container_name: redis
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - ./.docker-volumes/redis:/data
+
+  # zookeeper:
+  #   image: confluentinc/cp-zookeeper:7.5.0
+  #   container_name: zookeeper
+  #   environment:
+  #     ZOOKEEPER_CLIENT_PORT: 2181
+  #   ports:
+  #     - "2181:2181"
+
+  # kafka:
+  #   image: confluentinc/cp-kafka:7.5.0
+  #   container_name: kafka
+  #   depends_on: [zookeeper]
+  #   environment:
+  #     KAFKA_BROKER_ID: 1
+  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+  #   ports:
+  #     - "9092:9092"
+
+  # zipkin:
+  #   image: openzipkin/zipkin
+  #   container_name: zipkin
+  #   ports:
+  #     - "9411:9411"
+
+  # # ── Spring 인프라 ────────────────────────────────────
+  # config-server:
+  #   build: ./config-server
+  #   container_name: config-server
+  #   ports:
+  #     - "8888:8888"
+  #   depends_on: [postgres]
+
+  # eureka-server:
+  #   build: ./eureka-server
+  #   container_name: eureka-server
+  #   ports:
+  #     - "8761:8761"
+  #   depends_on: [config-server]
+
+  # api-gateway:
+  #   build: ./api-gateway
+  #   container_name: api-gateway
+  #   ports:
+  #     - "8080:8080"
+  #   depends_on: [eureka-server]
+
+  # # ── 마이크로서비스 ────────────────────────────────────
+  # user-service:
+  #   build: ./user-service
+  #   container_name: user-service
+  #   ports:
+  #     - "19091:19091"
+  #   depends_on: [postgres, kafka, eureka-server]
+
+  # company-service:
+  #   build: ./company-service
+  #   container_name: company-service
+  #   ports:
+  #     - "19092:19092"
+  #   depends_on: [postgres, kafka, eureka-server]
+
+  # hub-service:
+  #   build: ./hub-service
+  #   container_name: hub-service
+  #   ports:
+  #     - "19093:19093"
+  #   depends_on: [postgres, redis, kafka, eureka-server]
+
+  # order-service:
+  #   build: ./order-service
+  #   container_name: order-service
+  #   ports:
+  #     - "19094:19094"
+  #   depends_on: [postgres, kafka, eureka-server]
+
+  # delivery-service:
+  #   build: ./delivery-service
+  #   container_name: delivery-service
+  #   ports:
+  #     - "19095:19095"
+  #   depends_on: [postgres, kafka, eureka-server]
+
+  # operations-service:
+  #   build: ./operations-service
+  #   container_name: operations-service
+  #   ports:
+  #     - "19096:19096"
+  #   depends_on: [postgres, kafka, eureka-server]

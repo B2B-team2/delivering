@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Docker Volumes ###
+.docker-volumes/
+
+# Local Plan
+plan.md
+GEMINI.md
