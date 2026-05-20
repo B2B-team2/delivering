@@ -6,7 +6,7 @@ import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
 import com.sparta.orderservice.order.domain.core.Order;
-import com.sparta.orderservice.order.domain.core.OrderErrorCode;
+import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
