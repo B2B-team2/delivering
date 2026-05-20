@@ -17,6 +17,12 @@ import static com.tngtech.archunit.library.Architectures.layeredArchitecture;
 public abstract class BaseArchitectureTest {
 
     /**
+     * 아직 모든 도메인이 구현되지 않은 개발 초기 단계에서는 true로 설정하여
+     * 특정 레이어의 클래스가 없더라도 테스트를 통과(skip)하도록 관리합니다.
+     */
+    protected static final boolean ALLOW_EMPTY = true;
+
+    /**
      * [Presentation 계층 규칙]
      * 1. 클래스는 'Controller'로 끝나야 함.
      * 2. @RestController 어노테이션 필수, @Controller 사용 금지.
@@ -29,7 +35,7 @@ public abstract class BaseArchitectureTest {
                     // allowEmptyShould
                     // -> true: 조건에 매칭되는 클래스가 없을 때 테스트 통과 (초기 구현 단계에서 true 설정 -> skip처럼 동작)
                     // -> false: 누락 강제 확인
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("Controller 클래스는 반드시 ..presentation.controller 패키지 아래에 위치해야 합니다.");
 
     @ArchTest
@@ -37,7 +43,7 @@ public abstract class BaseArchitectureTest {
             classes().that().resideInAPackage("..presentation.controller..")
                     .should().beAnnotatedWith(RestController.class)
                     .andShould().notBeAnnotatedWith(org.springframework.stereotype.Controller.class)
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("Presentation 계층의 controller는 @RestController를 사용해야 하며, @Controller는 금지됩니다.");
 
     /**
@@ -50,14 +56,14 @@ public abstract class BaseArchitectureTest {
     static final ArchRule application_layer_naming_rule =
             classes().that().haveSimpleNameEndingWith("Service")
                     .should().resideInAPackage("..application.service..")
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("Service 클래스는 반드시 ..application.service 패키지 아래에 위치해야 합니다.");
 
     @ArchTest
     static final ArchRule application_layer_annotation_rule =
             classes().that().haveSimpleNameEndingWith("Service")
                     .should().beAnnotatedWith(Service.class)
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("Service 파일은 @Service 어노테이션이 필수입니다.");
 
     /**
@@ -71,7 +77,7 @@ public abstract class BaseArchitectureTest {
     static final ArchRule domain_layer_entity_location_rule =
             classes().that().areAnnotatedWith(Entity.class)
                     .should().resideInAPackage("..domain.core..")
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("JPA @Entity 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
 
     @ArchTest
@@ -79,7 +85,7 @@ public abstract class BaseArchitectureTest {
             classes().that().resideInAPackage("..domain..")
                     .and().areEnums()
                     .should().resideInAPackage("..domain.core..")
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("Domain 계층의 enum 클래스는 반드시 ..domain.core 패키지 아래에 위치해야 합니다.");
 
     @ArchTest
@@ -88,7 +94,7 @@ public abstract class BaseArchitectureTest {
                     .and().areInterfaces()
                     .and().haveSimpleNameNotContaining("Jpa")
                     .should().resideInAPackage("..domain.repository..")
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("순수 Repository 인터페이스는 ..domain.repository 패키지 아래에 위치해야 합니다.");
 
     /**
@@ -100,7 +106,7 @@ public abstract class BaseArchitectureTest {
             classes().that().haveSimpleNameEndingWith("JpaRepository")
                     .and().areInterfaces()
                     .should().resideInAPackage("..infrastructure..")
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("JpaRepository 인터페이스는 반드시 ..infrastructure 패키지 아래에 위치해야 합니다.");
 
     /**
@@ -111,7 +117,7 @@ public abstract class BaseArchitectureTest {
     static final ArchRule no_transactional_in_presentation_rule =
             noClasses().that().resideInAPackage("..presentation..")
                     .should().beAnnotatedWith(Transactional.class)
-                    .allowEmptyShould(false)
+                    .allowEmptyShould(ALLOW_EMPTY)
                     .as("Presentation 계층(Controller)에서는 @Transactional을 사용할 수 없습니다.");
 
     /**
@@ -135,7 +141,7 @@ public abstract class BaseArchitectureTest {
             // Infrastructure: 도메인 로직을 실행하는 Application 또는 Global에서 접근 가능. Domain은 인터페이스만 가지며 Infra를 호출하지 않음
             .whereLayer("Infrastructure").mayOnlyBeAccessedByLayers("Application", "Domain")
             
-            .allowEmptyShould(false)
+            .allowEmptyShould(ALLOW_EMPTY)
             .as("도메인 내 4계층(DDD) 의존성 규칙을 위반했습니다.");
 
     /**
@@ -171,7 +177,7 @@ public abstract class BaseArchitectureTest {
                                 .or().haveSimpleNameEndingWith("JpaRepository")
                                 .should().haveSimpleNameStartingWith(prefix)
                 ))
-                .allowEmptyShould(false)
+                .allowEmptyShould(ALLOW_EMPTY)
                 .as(prefix + " 도메인 내 핵심 클래스들은 반드시 '" + prefix + "' 접두사로 시작해야 합니다.");
     }
 }
