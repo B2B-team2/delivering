@@ -41,12 +41,13 @@ public class Payment extends BaseEntity {
     private String pgTransactionId;                 // 거래 ID (실제 PG 연동 X, mock UUID 자동 생성)
 
     /**
-     * 결제 요청 생성 (PENDING 상태)
-     * 결제 금액은 이 시점에 확정되며, 거래 ID는 confirm 단계에서 자동 생성됨
+     * 결제 생성 (PENDING 상태)
+     * 결제 금액·결제 수단은 이 시점에 확정되며, 거래 ID는 confirm 단계에서 자동 생성됨
      */
-    public static Payment ready(UUID orderId, BigDecimal amount) {
+    public static Payment ready(UUID orderId, PaymentMethod paymentMethod, BigDecimal amount) {
         Payment payment = new Payment();
         payment.orderId = orderId;
+        payment.paymentMethod = paymentMethod;
         payment.amount = amount;
         return payment;
     }
@@ -67,13 +68,17 @@ public class Payment extends BaseEntity {
     }
 
     /**
-     * 결제 취소/환불: PENDING 또는 COMPLETED → CANCELLED
+     * 결제 취소: PENDING → CANCELLED
+     * COMPLETED 상태(결제 완료)는 취소 불가
      */
-    public void cancel(String deletedBy) {
+    public void cancel(String cancelledBy) {
         if (this.status == PaymentStatus.CANCELLED) {
             throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
         }
+        if (this.status == PaymentStatus.COMPLETED) {
+            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_COMPLETED);
+        }
         this.status = PaymentStatus.CANCELLED;
-        this.softDelete(deletedBy);
+        this.softDelete(cancelledBy);
     }
 }
