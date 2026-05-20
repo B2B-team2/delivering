@@ -1,33 +1,38 @@
 package com.sparta.hubservice.hub.presentation.dto;
 
-import com.sparta.hubservice.hub.domain.core.Hub;
-import com.sparta.hubservice.hub.domain.core.HubStatus;
-import com.sparta.hubservice.hub.domain.core.HubType;
+import com.sparta.hubservice.hub.application.dto.HubDto;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
 
-import java.io.Serializable;
 import java.util.UUID;
 
-public record HubResponse(
-        UUID hubId,
-        String name,
-        HubType hubType,
-        String address,
-        Double latitude,
-        Double longitude,
-        String contactPhone,
-        HubStatus status
-) implements Serializable {
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class HubResponse {
 
-    public static HubResponse from(Hub hub) {
-        return new HubResponse(
-                hub.getHubId(),
-                hub.getName(),
-                hub.getHubType(),
-                hub.getAddress(),
-                hub.getLatitude(),
-                hub.getLongitude(),
-                hub.getContactPhone(),
-                hub.getStatus()
-        );
+    private UUID hubId;
+    private String name;
+    private String hubType;
+    private String address;
+    private Double latitude;
+    private Double longitude;
+    private String contactPhone;
+    private String status;
+
+    public static HubResponse from(HubDto dto) {
+        return HubResponse.builder()
+                .hubId(dto.getHubId())
+                .name(dto.getName())
+                .hubType(dto.getHubType())
+                .address(dto.getAddress())
+                .latitude(dto.getLatitude())
+                .longitude(dto.getLongitude())
+                .contactPhone(dto.getContactPhone())
+                .status(dto.getStatus())
+                .build();
     }
 }

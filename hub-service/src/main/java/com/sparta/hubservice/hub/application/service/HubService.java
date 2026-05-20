@@ -2,12 +2,13 @@ package com.sparta.hubservice.hub.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.hubservice.global.exception.ErrorCode;
+import com.sparta.hubservice.hub.application.dto.HubCreateCommand;
+import com.sparta.hubservice.hub.application.dto.HubDto;
+import com.sparta.hubservice.hub.application.dto.HubUpdateCommand;
 import com.sparta.hubservice.hub.domain.core.Hub;
 import com.sparta.hubservice.hub.domain.core.HubStatus;
+import com.sparta.hubservice.hub.domain.core.HubType;
 import com.sparta.hubservice.hub.domain.repository.HubRepository;
-import com.sparta.hubservice.hub.presentation.dto.HubCreateRequest;
-import com.sparta.hubservice.hub.presentation.dto.HubResponse;
-import com.sparta.hubservice.hub.presentation.dto.HubUpdateRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
@@ -25,41 +26,42 @@ public class HubService {
     private final HubRepository hubRepository;
 
     @Transactional
-    public HubResponse createHub(HubCreateRequest request) {
+    public HubDto createHub(HubCreateCommand command) {
         Hub hub = Hub.builder()
-                .name(request.name())
-                .hubType(request.hubType())
-                .address(request.address())
-                .latitude(request.latitude())
-                .longitude(request.longitude())
-                .contactPhone(request.contactPhone())
+                .name(command.getName())
+                .hubType(HubType.valueOf(command.getHubType()))
+                .address(command.getAddress())
+                .latitude(command.getLatitude())
+                .longitude(command.getLongitude())
+                .contactPhone(command.getContactPhone())
                 .status(HubStatus.ACTIVE)
                 .build();
-        return HubResponse.from(hubRepository.save(hub));
+        return HubDto.from(hubRepository.save(hub));
     }
 
     @Cacheable(value = "hubs", key = "'all'")
-    public List<HubResponse> getAllHubs() {
+    public List<HubDto> getAllHubs() {
         return hubRepository.findAll().stream()
-                .map(HubResponse::from)
+                .map(HubDto::from)
                 .toList();
     }
 
     @Cacheable(value = "hubs", key = "#hubId")
-    public HubResponse getHub(UUID hubId) {
+    public HubDto getHub(UUID hubId) {
         Hub hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HUB_NOT_FOUND));
-        return HubResponse.from(hub);
+        return HubDto.from(hub);
     }
 
     @Transactional
     @CacheEvict(value = "hubs", allEntries = true)
-    public HubResponse updateHub(UUID hubId, HubUpdateRequest request) {
+    public HubDto updateHub(UUID hubId, HubUpdateCommand command) {
         Hub hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HUB_NOT_FOUND));
-        hub.update(request.name(), request.address(), request.latitude(), request.longitude(),
-                request.contactPhone(), request.status());
-        return HubResponse.from(hub);
+        HubStatus status = command.getStatus() != null ? HubStatus.valueOf(command.getStatus()) : null;
+        hub.update(command.getName(), command.getAddress(), command.getLatitude(),
+                command.getLongitude(), command.getContactPhone(), status);
+        return HubDto.from(hub);
     }
 
     @Transactional

@@ -1,6 +1,7 @@
 package com.sparta.hubservice.hub.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.hubservice.hub.application.dto.HubDto;
 import com.sparta.hubservice.hub.application.service.HubService;
 import com.sparta.hubservice.hub.presentation.dto.HubCreateRequest;
 import com.sparta.hubservice.hub.presentation.dto.HubResponse;
@@ -32,26 +33,32 @@ public class HubController {
     @PostMapping
     public ResponseEntity<ApiResponse<HubResponse>> createHub(
             @Valid @RequestBody HubCreateRequest request) {
+        HubDto dto = hubService.createHub(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(hubService.createHub(request)));
+                .body(ApiResponse.created(HubResponse.from(dto)));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<HubResponse>>> getAllHubs() {
-        return ResponseEntity.ok(ApiResponse.success(hubService.getAllHubs()));
+        List<HubResponse> responses = hubService.getAllHubs().stream()
+                .map(HubResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
     @GetMapping("/{hub_id}")
     public ResponseEntity<ApiResponse<HubResponse>> getHub(
             @PathVariable UUID hub_id) {
-        return ResponseEntity.ok(ApiResponse.success(hubService.getHub(hub_id)));
+        HubDto dto = hubService.getHub(hub_id);
+        return ResponseEntity.ok(ApiResponse.success(HubResponse.from(dto)));
     }
 
     @PatchMapping("/{hub_id}")
     public ResponseEntity<ApiResponse<HubResponse>> updateHub(
             @PathVariable UUID hub_id,
             @RequestBody HubUpdateRequest request) {
-        return ResponseEntity.ok(ApiResponse.success(hubService.updateHub(hub_id, request)));
+        HubDto dto = hubService.updateHub(hub_id, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(HubResponse.from(dto)));
     }
 
     @DeleteMapping("/{hub_id}")
