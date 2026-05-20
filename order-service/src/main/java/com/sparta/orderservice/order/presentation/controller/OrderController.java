@@ -1,6 +1,7 @@
 package com.sparta.orderservice.order.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.service.OrderService;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import com.sparta.orderservice.order.presentation.dto.OrderCreateRequest;
@@ -27,7 +28,7 @@ public class OrderController {
         @RequestHeader("X-User-Id") UUID requesterId
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(orderService.createOrder(request, requesterId)));
+                .body(ApiResponse.created(OrderResponse.from(orderService.createOrder(CreateOrderCommand.from(request), requesterId))));
     }
 
     // 전체 주문 조회
@@ -35,13 +36,16 @@ public class OrderController {
     public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrders(
         @RequestHeader("X-User-Id") UUID requesterId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getOrders(requesterId)));
+        List<OrderResponse> responses = orderService.getOrders(requesterId).stream()
+                .map(OrderResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
     // 주문 단건 상세 조회
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@PathVariable UUID orderId) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getOrder(orderId)));
+        return ResponseEntity.ok(ApiResponse.success(OrderResponse.from(orderService.getOrder(orderId))));
     }
 
     // 주문 취소
@@ -59,7 +63,7 @@ public class OrderController {
     public ResponseEntity<ApiResponse<CompanyOrderResponse>> getCompanyOrder(
         @PathVariable UUID companyOrderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(orderService.getCompanyOrder(companyOrderId)));
+        return ResponseEntity.ok(ApiResponse.success(CompanyOrderResponse.from(orderService.getCompanyOrder(companyOrderId))));
     }
 
     // 서브 주문 부분 취소

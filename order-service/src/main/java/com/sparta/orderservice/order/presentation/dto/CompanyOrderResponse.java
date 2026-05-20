@@ -1,8 +1,6 @@
 package com.sparta.orderservice.order.presentation.dto;
 
-import com.sparta.orderservice.order.domain.core.CompanyOrder;
-import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
-import com.sparta.orderservice.order.domain.core.OrderItem;
+import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -14,37 +12,34 @@ public record CompanyOrderResponse(
         UUID companyId,
         BigDecimal subtotalPrice,
         BigDecimal subtotalDeliveryFee,
-        CompanyOrderStatus status,
+        String status,
         List<OrderItemSummary> orderItems
 ) {
-
     // CompanyOrderResponse 안에 포함되는 주문 항목 요약
     public record OrderItemSummary(
             UUID orderItemId,
             UUID productOptionId,
             Integer quantity,
             BigDecimal unitPrice
-    ) {
-        public static OrderItemSummary from(OrderItem item) {
-            return new OrderItemSummary(
-                    item.getOrderItemId(),
-                    item.getProductOptionId(),
-                    item.getQuantity(),
-                    item.getUnitPrice()
-            );
-        }
-    }
+    ) {}
 
-    public static CompanyOrderResponse from(CompanyOrder co) {
-        List<OrderItemSummary> items = co.getOrderItems().stream()
-                .map(OrderItemSummary::from)
+    // Application DTO(CompanyOrderResult)로부터 변환 — 도메인 직접 의존 없음
+    public static CompanyOrderResponse from(CompanyOrderResult result) {
+        List<OrderItemSummary> items = result.orderItems().stream()
+                .map(item -> new OrderItemSummary(
+                        item.orderItemId(),
+                        item.productOptionId(),
+                        item.quantity(),
+                        item.unitPrice()
+                ))
                 .toList();
+
         return new CompanyOrderResponse(
-                co.getCompanyOrderId(),
-                co.getCompanyId(),
-                co.getSubtotalPrice(),
-                co.getSubtotalDeliveryFee(),
-                co.getStatus(),
+                result.companyOrderId(),
+                result.companyId(),
+                result.subtotalPrice(),
+                result.subtotalDeliveryFee(),
+                result.status(),
                 items
         );
     }
