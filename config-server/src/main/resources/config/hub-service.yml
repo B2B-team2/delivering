@@ -29,6 +29,14 @@ spring:
       host: localhost
       port: 6379
 
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui/index.html
+
 management:
   endpoints:
     web:
