@@ -1,7 +1,6 @@
 package com.sparta.orderservice.order.domain.core;
 
 import com.sparta.common.entity.BaseEntity;
-//import com.sparta.orderservice.order.domain.CompanyOrder;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,6 +8,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -61,8 +62,8 @@ public class Order extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
 
-//    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
-//    private List<CompanyOrder> companyOrders = new ArrayList<>();
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<CompanyOrder> companyOrders = new ArrayList<>();
 
     public static Order of(
             UUID requesterCompanyId,
