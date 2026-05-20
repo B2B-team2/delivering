@@ -1,4 +1,4 @@
-package com.sparta.orderservice.order.domain.core;
+package com.sparta.orderservice.global.exception;
 
 import com.sparta.common.dto.ErrorCode;
 import lombok.Getter;

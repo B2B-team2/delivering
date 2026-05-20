@@ -1,8 +1,6 @@
 package com.sparta.orderservice.order.presentation.dto;
 
-import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
-import com.sparta.orderservice.order.domain.core.Order;
-import com.sparta.orderservice.order.domain.core.OrderStatus;
+import com.sparta.orderservice.order.application.dto.OrderResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -22,46 +20,46 @@ public record OrderResponse(
         BigDecimal totalPrice,
         BigDecimal deliveryFee,
         BigDecimal finalPrice,
-        OrderStatus status,
+        String status,
         List<CompanyOrderSummary> companyOrders, // 해당 주문에 속한 업체별 주문 요약 목록
         LocalDateTime createdAt
 ) {
-
     // OrderResponse 안에 업체별 주문 요약 (OrderItem 목록 미포함)
     public record CompanyOrderSummary(
             UUID companyOrderId,
             UUID companyId,
             BigDecimal subtotalPrice,
             BigDecimal subtotalDeliveryFee,
-            CompanyOrderStatus status
+            String status
     ) {}
 
-    public static OrderResponse from(Order order) {
-        List<CompanyOrderSummary> companySummaries = order.getCompanyOrders().stream()
+    // Application DTO(OrderResult)로부터 변환
+    public static OrderResponse from(OrderResult result) {
+        List<CompanyOrderSummary> summaries = result.companyOrders().stream()
                 .map(co -> new CompanyOrderSummary(
-                        co.getCompanyOrderId(),
-                        co.getCompanyId(),
-                        co.getSubtotalPrice(),
-                        co.getSubtotalDeliveryFee(),
-                        co.getStatus()
+                        co.companyOrderId(),
+                        co.companyId(),
+                        co.subtotalPrice(),
+                        co.subtotalDeliveryFee(),
+                        co.status()
                 ))
                 .toList();
 
         return new OrderResponse(
-                order.getOrderId(),
-                order.getRequesterCompanyId(),
-                order.getReceiverCompanyId(),
-                order.getRecipientName(),
-                order.getPhone(),
-                order.getAddress(),
-                order.getDueDate(),
-                order.getRequestMemo(),
-                order.getTotalPrice(),
-                order.getDeliveryFee(),
-                order.getFinalPrice(),
-                order.getStatus(),
-                companySummaries,
-                order.getCreatedAt()
+                result.orderId(),
+                result.requesterCompanyId(),
+                result.receiverCompanyId(),
+                result.recipientName(),
+                result.phone(),
+                result.address(),
+                result.dueDate(),
+                result.requestMemo(),
+                result.totalPrice(),
+                result.deliveryFee(),
+                result.finalPrice(),
+                result.status(),
+                summaries,
+                result.createdAt()
         );
     }
 }

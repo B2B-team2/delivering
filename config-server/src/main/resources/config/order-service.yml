@@ -6,12 +6,6 @@ eureka:
     service-url:
       defaultZone: http://localhost:8761/eureka/
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health
-
 spring:
   datasource:
     url: ${ORDER_DB_URL}
@@ -20,15 +14,24 @@ spring:
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: validate    # Flyway가 스키마 관리, JPA는 검증
     properties:
       hibernate:
         default_schema: order-db
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     show-sql: false         # SQL 출력 비활성화 (debug 로깅으로 제어)
+  flyway:
+    schemas: order-db       # Flyway가 관리할 스키마
+    locations: classpath:db/migration # 마이그레이션 파일 위치
 
 logging:
   level:
     org.hibernate.SQL: DEBUG                        # SQL 쿼리 (debug 모드에서만 출력)
     org.hibernate.orm.jdbc.bind: TRACE              # 바인딩 파라미터 값
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
