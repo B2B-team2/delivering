@@ -8,27 +8,45 @@ spring:
         - id: user-service-route
           uri: lb://USER-SERVICE
           predicates:
-            - Path=/api/v1/users/**,/api/v1/auth/**,/api/v1/delivery-managers/**,/api/v1/admin/**
+            - Path=/api/v1/auth/**, /api/v1/users/**, /api/v1/admin/**, /api/v1/delivery-managers/**, /user/v3/api-docs
+          filters:
+            - RewritePath=/user/v3/api-docs, /v3/api-docs
+
         - id: order-service-route
           uri: lb://ORDER-SERVICE
           predicates:
-            - Path=/api/v1/orders/**,/api/v1/drafts/**,/api/v1/payments/**
+            - Path=/api/v1/drafts/**, /api/v1/orders/**, /api/v1/payments/**, /order/v3/api-docs
+          filters:
+            - RewritePath=/order/v3/api-docs, /v3/api-docs
+
         - id: company-service-route
           uri: lb://COMPANY-SERVICE
           predicates:
-            - Path=/api/v1/companies/**,/api/v1/products/**,/api/v1/categories/**,/api/v1/product-options/**
+            - Path=/api/v1/companies/**, /api/v1/categories/**, /api/v1/products/**, /api/v1/product-options/**, /company/v3/api-docs
+          filters:
+            - RewritePath=/company/v3/api-docs, /v3/api-docs
+
         - id: delivery-service-route
           uri: lb://DELIVERY-SERVICE
           predicates:
-            - Path=/api/v1/deliveries/**,/api/v1/delivery-addresses/**
+            - Path=/api/v1/deliveries/**, /api/v1/delivery-addresses/**, /delivery/v3/api-docs
+          filters:
+            - RewritePath=/delivery/v3/api-docs, /v3/api-docs
+
         - id: hub-service-route
           uri: lb://HUB-SERVICE
           predicates:
-            - Path=/api/v1/hubs/**,/api/v1/warehouses/**,/api/v1/inventory/**,/api/v1/hub-routes/**
+            - Path=/api/v1/hubs/**, /api/v1/hub-routes/**, /api/v1/warehouses/**, /api/v1/inventory/**, /hub/v3/api-docs
+          filters:
+            - RewritePath=/hub/v3/api-docs, /v3/api-docs
+
         - id: operations-service-route
           uri: lb://OPERATIONS-SERVICE
           predicates:
-            - Path=/api/v1/claims/**,/api/v1/slack/**,/api/v1/ai/**
+            - Path=/api/v1/claims/**, /api/v1/slack/**, /api/v1/ai/**, /operations/v3/api-docs
+          filters:
+            - RewritePath=/operations/v3/api-docs, /v3/api-docs
+
 eureka:
   client:
     service-url:
@@ -42,3 +60,20 @@ management:
   endpoint:
     gateway:
       enabled: true
+
+springdoc:
+  swagger-ui:
+    urls:
+      - name: User Service
+        url: /user/v3/api-docs
+      - name: Company Service
+        url: /company/v3/api-docs
+      - name: Order Service
+        url: /order/v3/api-docs
+      - name: Delivery Service
+        url: /delivery/v3/api-docs
+      - name: Hub Service
+        url: /hub/v3/api-docs
+      - name: Operations Service
+        url: /operations/v3/api-docs
+    path: /swagger-ui/index.html
