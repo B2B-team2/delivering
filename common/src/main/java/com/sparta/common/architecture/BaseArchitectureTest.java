@@ -179,10 +179,15 @@ public abstract class BaseArchitectureTest {
                                 .and().areInterfaces()
                                 .should().haveSimpleNameContaining(prefix),
 
-                        // 5. Repository 구현체 검증
+                        // 5-1. RepositoryImpl 구현체 검증
+                        //     (.or() 는 앞의 패키지 필터를 무시하므로 JpaRepository 와 분리하여 별도 규칙으로 정의)
                         classes().that().resideInAPackage(".." + lowerPrefix + ".infrastructure.repository..")
                                 .and().haveSimpleNameEndingWith("RepositoryImpl")
-                                .or().haveSimpleNameEndingWith("JpaRepository")
+                                .should().haveSimpleNameContaining(prefix),
+
+                        // 5-2. JpaRepository 인터페이스 검증
+                        classes().that().resideInAPackage(".." + lowerPrefix + ".infrastructure.repository..")
+                                .and().haveSimpleNameEndingWith("JpaRepository")
                                 .should().haveSimpleNameContaining(prefix)
                 ))
                 .allowEmptyShould(ALLOW_EMPTY)
