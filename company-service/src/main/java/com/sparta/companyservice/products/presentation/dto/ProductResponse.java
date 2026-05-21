@@ -1,5 +1,6 @@
 package com.sparta.companyservice.products.presentation.dto;
 
+import com.sparta.companyservice.products.application.dto.ProductDto;
 import com.sparta.companyservice.products.domain.core.ProductStatusEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -22,4 +23,17 @@ public class ProductResponse {
     private String description;
     private String thumbnailUrl;
     private ProductStatusEnum status;
+
+    public static ProductResponse from(ProductDto dto) {
+        return ProductResponse.builder()
+                .productId(dto.getProductId())
+                .companyId(dto.getCompanyId())
+                .categoryId(dto.getCategoryId())
+                .name(dto.getName())
+                .price(dto.getPrice())
+                .description(dto.getDescription())
+                .thumbnailUrl(dto.getThumbnailUrl())
+                .status(dto.getStatus())
+                .build();
+    }
 }

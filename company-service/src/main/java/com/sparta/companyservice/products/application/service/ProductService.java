@@ -2,6 +2,8 @@ package com.sparta.companyservice.products.application.service;
 
 import com.sparta.companyservice.products.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.products.application.dto.ProductDto;
+import com.sparta.companyservice.products.domain.core.Product;
+import com.sparta.companyservice.products.domain.core.ProductStatusEnum;
 import com.sparta.companyservice.products.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -20,8 +22,18 @@ public class ProductService {
 
     @Transactional
     public ProductDto createProduct(ProductCreateCommand command) {
-        // TODO: 구현 예정
-        return null;
+        Product product = Product.builder()
+                .companyId(command.getCompanyId())
+                .categoryId(command.getCategoryId())
+                .name(command.getName())
+                .price(command.getPrice())
+                .description(command.getDescription())
+                .thumbnailUrl(command.getThumbnailUrl())
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        Product savedProduct = productRepository.save(product);
+        return ProductDto.from(savedProduct);
     }
 
     public ProductDto getProduct(UUID productId) {

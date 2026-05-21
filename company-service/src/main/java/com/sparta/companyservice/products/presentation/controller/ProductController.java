@@ -1,11 +1,15 @@
 package com.sparta.companyservice.products.presentation.controller;
 
+import com.sparta.common.dto.ApiResponse;
+import com.sparta.companyservice.products.application.dto.ProductDto;
 import com.sparta.companyservice.products.application.service.ProductService;
 import com.sparta.companyservice.products.presentation.dto.ProductCreateRequest;
 import com.sparta.companyservice.products.presentation.dto.ProductResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,9 +29,10 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ResponseEntity<ProductResponse> createProduct(@RequestBody ProductCreateRequest request) {
-        // TODO: 구현 예정
-        return null;
+    public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@RequestBody @Valid ProductCreateRequest request) {
+        ProductDto resultDto = productService.createProduct(request.toCommand());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(ProductResponse.from(resultDto)));
     }
 
     @GetMapping("/{productId}")
