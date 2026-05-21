@@ -45,7 +45,7 @@ public class InventoryController {
         return ResponseEntity.ok(ApiResponse.success(WarehouseInventoryResponse.from(dto)));
     }
 
-    @GetMapping("/warehouse/{warehouse_id}")
+    @GetMapping("/warehouses/{warehouse_id}")
     public ResponseEntity<ApiResponse<List<WarehouseInventoryResponse>>> getInventoriesByWarehouse(
             @PathVariable UUID warehouse_id) {
         List<WarehouseInventoryResponse> responses = inventoryService.getInventoriesByWarehouse(warehouse_id).stream()
