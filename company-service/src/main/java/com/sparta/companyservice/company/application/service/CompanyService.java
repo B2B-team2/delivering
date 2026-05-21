@@ -6,6 +6,8 @@ import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -39,5 +41,11 @@ public class CompanyService {
 
         Company savedCompany = companyRepository.save(company);
         return CompanyDto.from(savedCompany);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<CompanyDto> getCompanies(Pageable pageable) {
+        return companyRepository.findAll(pageable)
+                .map(CompanyDto::from);
     }
 }
