@@ -10,8 +10,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class CompanyEntityTest {
     @Test
-    @DisplayName("공간 데이터 변환 검증: Double 좌표가 JTS Point(SRID 4326)로 정확히 변환되는가?")
-    void geometryConversionTest() {
+    @DisplayName("공간 데이터 통합 변환 검증: 위도/경도가 단일 Point(location, SRID 4326)로 정확히 변환되는가?")
+    void geometryIntegrationConversionTest() {
         // given
         Double lat = 37.5665;
         Double lon = 126.9780;
@@ -23,8 +23,12 @@ class CompanyEntityTest {
                 .build();
 
         // then
-        // Company 엔티티 내부에서 latitude Point는 (0, lat), longitude Point는 (lon, 0)으로 생성됨
-        // 이 로직이 엔티티 클래스의 구현과 일치하는지 확인
+        assertThat(company.getLocation()).isNotNull();
+        assertThat(company.getLocation().getSRID()).isEqualTo(4326);
+        assertThat(company.getLocation().getY()).isEqualTo(lat);
+        assertThat(company.getLocation().getX()).isEqualTo(lon);
+        
+        // 편의 메서드 검증
         assertThat(company.getLatitude()).isEqualTo(lat);
         assertThat(company.getLongitude()).isEqualTo(lon);
     }

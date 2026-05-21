@@ -51,10 +51,7 @@ public class Company extends BaseEntity {
     private UUID hubId;
 
     @Column(nullable = false, columnDefinition = "geometry(Point, 4326)")
-    private Point latitude;
-
-    @Column(nullable = false, columnDefinition = "geometry(Point, 4326)")
-    private Point longitude;
+    private Point location;
 
     private String address;
 
@@ -72,17 +69,18 @@ public class Company extends BaseEntity {
         this.description = description;
         this.businessNumber = businessNumber;
         this.hubId = hubId;
-        this.latitude = latitude != null ? geometryFactory.createPoint(new Coordinate(0, latitude)) : null;
-        this.longitude = longitude != null ? geometryFactory.createPoint(new Coordinate(longitude, 0)) : null;
+        this.location = (latitude != null && longitude != null) 
+            ? geometryFactory.createPoint(new Coordinate(longitude, latitude)) 
+            : null;
         this.address = address;
         this.logoUrl = logoUrl;
     }
 
     public Double getLatitude() {
-        return latitude != null ? latitude.getY() : null;
+        return location != null ? location.getY() : null;
     }
 
     public Double getLongitude() {
-        return longitude != null ? longitude.getX() : null;
+        return location != null ? location.getX() : null;
     }
 }
