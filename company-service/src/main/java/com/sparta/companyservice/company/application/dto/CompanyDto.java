@@ -22,6 +22,7 @@ public class CompanyDto {
     private final String address;
     private final String logoUrl;
     private final LocalDateTime createdAt;
+    private final LocalDateTime deletedAt;
 
     public static CompanyDto from(Company company) {
         return CompanyDto.builder()
@@ -32,11 +33,12 @@ public class CompanyDto {
                 .description(company.getDescription())
                 .businessNumber(company.getBusinessNumber())
                 .hubId(company.getHubId())
-                .latitude(company.getLatitude())
-                .longitude(company.getLongitude())
+                .latitude(company.getLocation() != null ? company.getLocation().getY() : null)
+                .longitude(company.getLocation() != null ? company.getLocation().getX() : null)
                 .address(company.getAddress())
                 .logoUrl(company.getLogoUrl())
                 .createdAt(company.getCreatedAt())
+                .deletedAt(company.getDeletedAt())
                 .build();
     }
 }
