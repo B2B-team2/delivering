@@ -1,5 +1,7 @@
 package com.sparta.companyservice.product.application.service;
 
+import com.sparta.common.dto.BusinessException;
+import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.domain.core.Product;
@@ -18,9 +20,11 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -69,6 +73,45 @@ class ProductServiceTest {
         assertThat(result.getName()).isEqualTo(command.getName());
         assertThat(result.getStatus()).isEqualTo(ProductStatusEnum.ON_SALE.name());
         verify(productRepository, times(1)).save(any(Product.class));
+    }
+
+    @Test
+    @DisplayName("상품 상세 조회 성공")
+    void getProductSuccessTest() {
+        // given
+        UUID productId = UUID.randomUUID();
+        Product product = Product.builder()
+                .productId(productId)
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        // when
+        ProductDto result = productService.getProduct(productId);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getProductId()).isEqualTo(productId);
+        assertThat(result.getName()).isEqualTo("테스트 상품");
+        verify(productRepository, times(1)).findById(productId);
+    }
+
+    @Test
+    @DisplayName("상품 상세 조회 실패: 없는 상품")
+    void getProductFailTest() {
+        // given
+        UUID productId = UUID.randomUUID();
+        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> productService.getProduct(productId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
     }
 
     @Test

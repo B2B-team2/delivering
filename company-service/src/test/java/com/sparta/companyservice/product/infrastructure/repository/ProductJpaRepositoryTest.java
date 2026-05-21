@@ -85,4 +85,47 @@ class ProductJpaRepositoryTest {
         assertThat(result.getContent()).extracting("name")
                 .doesNotContain("삭제된 상품");
     }
+
+    @Test
+    @DisplayName("findByProductIdAndDeletedAtIsNull 단건 조회 성공")
+    void findByProductIdAndDeletedAtIsNullTest() {
+        // given
+        Company company = Company.builder()
+                .companyName("테스트 업체 2")
+                .companyType(CompanyTypeEnum.PRODUCER)
+                .businessNumber(UUID.randomUUID().toString().substring(0, 10))
+                .hubId(UUID.randomUUID())
+                .latitude(37.0)
+                .longitude(127.0)
+                .build();
+        company = companyJpaRepository.save(company);
+
+        Product product = Product.builder()
+                .companyId(company.getCompanyId())
+                .categoryId(null)
+                .name("단건 조회 상품")
+                .price(BigDecimal.valueOf(1000))
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+        product = productJpaRepository.save(product);
+
+        Product deletedProduct = Product.builder()
+                .companyId(company.getCompanyId())
+                .categoryId(null)
+                .name("삭제된 단건 조회 상품")
+                .price(BigDecimal.valueOf(1000))
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+        deletedProduct.softDelete("system");
+        deletedProduct = productJpaRepository.save(deletedProduct);
+
+        // when
+        java.util.Optional<Product> found = productJpaRepository.findByProductIdAndDeletedAtIsNull(product.getProductId());
+        java.util.Optional<Product> notFound = productJpaRepository.findByProductIdAndDeletedAtIsNull(deletedProduct.getProductId());
+
+        // then
+        assertThat(found).isPresent();
+        assertThat(found.get().getName()).isEqualTo("단건 조회 상품");
+        assertThat(notFound).isEmpty();
+    }
 }

@@ -39,9 +39,9 @@ public class ProductController {
     }
 
     @GetMapping("/{productId}")
-    public ResponseEntity<ProductResponse> getProduct(@PathVariable UUID productId) {
-        // TODO: 구현 예정
-        return null;
+    public ResponseEntity<ApiResponse<ProductResponse>> getProduct(@PathVariable UUID productId) {
+        ProductDto resultDto = productService.getProduct(productId);
+        return ResponseEntity.ok(ApiResponse.success(ProductResponse.from(resultDto)));
     }
 
     @GetMapping

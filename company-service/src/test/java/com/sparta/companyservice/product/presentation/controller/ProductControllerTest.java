@@ -101,6 +101,33 @@ class ProductControllerTest {
 
     @Test
     @WithMockUser
+    @DisplayName("상품 상세 조회 API 성공 검증")
+    void getProductSuccessTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        ProductDto responseDto = ProductDto.builder()
+                .productId(productId)
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .status(ProductStatusEnum.ON_SALE.name())
+                .build();
+
+        when(productService.getProduct(productId)).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/products/{productId}", productId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.data.name").value("테스트 상품"));
+    }
+
+    @Test
+    @WithMockUser
     @DisplayName("상품 목록 조회 API 성공 검증")
     void getProductsSuccessTest() throws Exception {
         // given

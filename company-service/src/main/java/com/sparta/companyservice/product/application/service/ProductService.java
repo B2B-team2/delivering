@@ -1,5 +1,7 @@
 package com.sparta.companyservice.product.application.service;
 
+import com.sparta.common.dto.BusinessException;
+import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.domain.core.Product;
@@ -37,8 +39,9 @@ public class ProductService {
     }
 
     public ProductDto getProduct(UUID productId) {
-        // TODO: 구현 예정
-        return null;
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_NOT_FOUND));
+        return ProductDto.from(product);
     }
 
     public Page<ProductDto> getProducts(Pageable pageable) {
