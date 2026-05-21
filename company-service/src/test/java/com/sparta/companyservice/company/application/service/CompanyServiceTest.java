@@ -13,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -60,6 +61,7 @@ class CompanyServiceTest {
                 .longitude(command.getLongitude())
                 .build();
 
+        when(companyRepository.findByBusinessNumberAnyStatus(command.getBusinessNumber())).thenReturn(Optional.empty());
         when(companyRepository.save(any(Company.class))).thenReturn(savedCompany);
 
         // when
@@ -83,8 +85,84 @@ class CompanyServiceTest {
         assertThatThrownBy(() -> companyService.createCompany(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.INVALID_COMPANY_TYPE);
-        
+
         verify(companyRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("업체 생성 실패: 이미 활성 상태인 사업자 번호일 경우 DUPLICATE_BUSINESS_NUMBER 예외가 발생하는가?")
+    void createCompanyDuplicateBusinessNumberActiveTest() {
+        // given
+        CompanyCreateCommand command = CompanyCreateCommand.builder()
+                .companyType("PRODUCER")
+                .businessNumber("123-45-67890")
+                .build();
+
+        Company activeCompany = Company.builder()
+                .businessNumber(command.getBusinessNumber())
+                .build();
+        // deletedAt is null by default
+
+        when(companyRepository.findByBusinessNumberAnyStatus(command.getBusinessNumber())).thenReturn(Optional.of(activeCompany));
+
+        // when & then
+        assertThatThrownBy(() -> companyService.createCompany(command))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
+
+        verify(companyRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("업체 생성(복구) 성공: 삭제된 상태인 사업자 번호일 경우 데이터를 복구하고 업데이트하는가?")
+    void createCompanyRestoreTest() {
+        // given
+        CompanyCreateCommand command = CompanyCreateCommand.builder()
+                .companyName("New Company Name")
+                .companyType("PRODUCER")
+                .businessNumber("123-45-67890")
+                .hubId(UUID.randomUUID())
+                .build();
+
+        Company deletedCompany = spy(Company.builder()
+                .companyId(UUID.randomUUID())
+                .businessNumber(command.getBusinessNumber())
+                .build());
+        deletedCompany.softDelete("user"); // soft delete
+
+        when(companyRepository.findByBusinessNumberAnyStatus(command.getBusinessNumber())).thenReturn(Optional.of(deletedCompany));
+
+        // when
+        CompanyDto result = companyService.createCompany(command);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getCompanyName()).isEqualTo(command.getCompanyName());
+        assertThat(deletedCompany.getDeletedAt()).isNull();
+        verify(deletedCompany).restore();
+        verify(deletedCompany).update(anyString(), any(), any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("업체 생성 실패: 저장 시 중복된 사업자 번호로 인한 제약 조건 위반 발생 시 DUPLICATE_BUSINESS_NUMBER 예외가 발생하는가?")
+    void createCompanyDuplicateBusinessNumberConcurrencyTest() {
+        // given
+        CompanyCreateCommand command = CompanyCreateCommand.builder()
+                .companyName("Test Company")
+                .companyType("PRODUCER")
+                .businessNumber("123-45-67890")
+                .hubId(UUID.randomUUID())
+                .latitude(37.5665)
+                .longitude(126.9780)
+                .build();
+
+        when(companyRepository.findByBusinessNumberAnyStatus(command.getBusinessNumber())).thenReturn(Optional.empty());
+        when(companyRepository.save(any(Company.class))).thenThrow(DataIntegrityViolationException.class);
+
+        // when & then
+        assertThatThrownBy(() -> companyService.createCompany(command))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
     }
 
     @Test
