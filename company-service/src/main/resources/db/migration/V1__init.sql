@@ -1,10 +1,10 @@
 -- PostGIS 확장 활성화 (public 스키마에 설치 권장)
 CREATE EXTENSION IF NOT EXISTS postgis SCHEMA public;
 
--- company 스키마 생성 및 검색 경로 설정
-CREATE SCHEMA IF NOT EXISTS company;
+-- company-db 스키마 생성 및 검색 경로 설정
+CREATE SCHEMA IF NOT EXISTS "company-db";
 -- geometry 타입을 찾기 위해 public을 검색 경로에 포함해야 함
-SET search_path TO company, public;
+SET search_path TO "company-db", public;
 
 -- p_product_categories (상품 분류)
 CREATE TABLE p_product_categories (
