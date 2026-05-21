@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -22,6 +23,7 @@ public class ProductDto {
     private String description;
     private String thumbnailUrl;
     private String status;
+    private LocalDateTime deletedAt;
 
     public static ProductDto from(Product entity) {
         return ProductDto.builder()
@@ -33,6 +35,7 @@ public class ProductDto {
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
                 .status(entity.getStatus().name())
+                .deletedAt(entity.getDeletedAt())
                 .build();
     }
 }

@@ -52,7 +52,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 생성 성공")
     void createProductSuccessTest() {
-        // given
         ProductCreateCommand command = ProductCreateCommand.builder()
                 .companyId(UUID.randomUUID())
                 .categoryId(UUID.randomUUID())
@@ -77,10 +76,8 @@ class ProductServiceTest {
         when(categoryRepository.findById(command.getCategoryId())).thenReturn(Optional.of(ProductCategory.builder().build()));
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
 
-        // when
         ProductDto result = productService.createProduct(command);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo(command.getName());
         assertThat(result.getStatus()).isEqualTo(ProductStatusEnum.ON_SALE.name());
@@ -90,7 +87,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 생성 실패: 존재하지 않는 업체")
     void createProductFail_CompanyNotFound() {
-        // given
         ProductCreateCommand command = ProductCreateCommand.builder()
                 .companyId(UUID.randomUUID())
                 .categoryId(UUID.randomUUID())
@@ -100,7 +96,6 @@ class ProductServiceTest {
 
         when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(false);
 
-        // when & then
         assertThatThrownBy(() -> productService.createProduct(command))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage());
@@ -109,7 +104,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 생성 실패: 존재하지 않는 카테고리")
     void createProductFail_CategoryNotFound() {
-        // given
         ProductCreateCommand command = ProductCreateCommand.builder()
                 .companyId(UUID.randomUUID())
                 .categoryId(UUID.randomUUID())
@@ -120,7 +114,6 @@ class ProductServiceTest {
         when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(true);
         when(categoryRepository.findById(command.getCategoryId())).thenReturn(Optional.empty());
 
-        // when & then
         assertThatThrownBy(() -> productService.createProduct(command))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.CATEGORY_NOT_FOUND.getMessage());
@@ -129,7 +122,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 상세 조회 성공")
     void getProductSuccessTest() {
-        // given
         UUID productId = UUID.randomUUID();
         Product product = Product.builder()
                 .productId(productId)
@@ -142,10 +134,8 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        // when
         ProductDto result = productService.getProduct(productId);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result.getProductId()).isEqualTo(productId);
         assertThat(result.getName()).isEqualTo("테스트 상품");
@@ -155,11 +145,9 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 상세 조회 실패: 없는 상품")
     void getProductFailTest() {
-        // given
         UUID productId = UUID.randomUUID();
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        // when & then
         assertThatThrownBy(() -> productService.getProduct(productId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
@@ -168,7 +156,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 목록 페이징 조회 성공")
     void getProductsSuccessTest() {
-        // given
         Pageable pageable = PageRequest.of(0, 10);
         Product product = Product.builder()
                 .productId(UUID.randomUUID())
@@ -182,10 +169,8 @@ class ProductServiceTest {
         Page<Product> productPage = new PageImpl<>(List.of(product), pageable, 1);
         when(productRepository.findAll(any(Pageable.class))).thenReturn(productPage);
 
-        // when
         Page<ProductDto> result = productService.getProducts(pageable);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().get(0).getName()).isEqualTo("테스트 상품");
@@ -195,7 +180,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 수정 성공")
     void updateProductSuccessTest() {
-        // given
         UUID productId = UUID.randomUUID();
         Product existingProduct = Product.builder()
                 .productId(productId)
@@ -218,10 +202,8 @@ class ProductServiceTest {
         when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(true);
         when(categoryRepository.findById(command.getCategoryId())).thenReturn(Optional.of(ProductCategory.builder().build()));
 
-        // when
         ProductDto result = productService.updateProduct(productId, command);
 
-        // then
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("변경된 상품");
         assertThat(result.getPrice()).isEqualTo(BigDecimal.valueOf(20000));
@@ -231,7 +213,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 수정 실패: 존재하지 않는 상품")
     void updateProductFail_NotFound() {
-        // given
         UUID productId = UUID.randomUUID();
         ProductUpdateCommand command = ProductUpdateCommand.builder()
                 .name("변경된 상품")
@@ -240,7 +221,6 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        // when & then
         assertThatThrownBy(() -> productService.updateProduct(productId, command))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
@@ -249,7 +229,6 @@ class ProductServiceTest {
     @Test
     @DisplayName("상품 수정 실패: 유효하지 않은 상품 상태 Enum")
     void updateProductFail_InvalidStatus() {
-        // given
         UUID productId = UUID.randomUUID();
         Product existingProduct = Product.builder()
                 .productId(productId)
@@ -258,15 +237,47 @@ class ProductServiceTest {
 
         ProductUpdateCommand command = ProductUpdateCommand.builder()
                 .companyId(UUID.randomUUID())
-                .status("INVALID_STATUS") // 잘못된 상태
+                .status("INVALID_STATUS")
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
         when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(true);
 
-        // when & then
         assertThatThrownBy(() -> productService.updateProduct(productId, command))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.INVALID_PRODUCT_STATUS.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 삭제 성공")
+    void deleteProductSuccessTest() {
+        UUID productId = UUID.randomUUID();
+        Product product = Product.builder()
+                .productId(productId)
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(product));
+
+        ProductDto result = productService.deleteProduct(productId);
+
+        assertThat(result).isNotNull();
+        assertThat(product.getDeletedAt()).isNotNull();
+        verify(productRepository, times(1)).findById(productId);
+    }
+
+    @Test
+    @DisplayName("상품 삭제 실패: 존재하지 않는 상품")
+    void deleteProductFailTest() {
+        UUID productId = UUID.randomUUID();
+        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> productService.deleteProduct(productId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
     }
 }

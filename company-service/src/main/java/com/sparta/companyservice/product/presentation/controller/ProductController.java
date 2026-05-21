@@ -6,6 +6,7 @@ import com.sparta.common.util.PageableUtil;
 import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.application.service.ProductService;
 import com.sparta.companyservice.product.presentation.dto.ProductCreateRequest;
+import com.sparta.companyservice.product.presentation.dto.ProductDeleteResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductUpdateRequest;
 import jakarta.validation.Valid;
@@ -67,8 +68,8 @@ public class ProductController {
     }
 
     @DeleteMapping("/{productId}")
-    public ResponseEntity<Void> deleteProduct(@PathVariable UUID productId) {
-        // TODO: 구현 예정
-        return ResponseEntity.noContent().build();
+    public ResponseEntity<ApiResponse<ProductDeleteResponse>> deleteProduct(@PathVariable UUID productId) {
+        ProductDto resultDto = productService.deleteProduct(productId);
+        return ResponseEntity.ok(ApiResponse.success(ProductDeleteResponse.from(resultDto.getProductId(), resultDto.getDeletedAt())));
     }
 }

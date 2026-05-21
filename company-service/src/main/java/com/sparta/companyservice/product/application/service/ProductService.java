@@ -84,8 +84,12 @@ public class ProductService {
     }
 
     @Transactional
-    public void deleteProduct(UUID productId) {
-        // TODO: 구현 예정
+    public ProductDto deleteProduct(UUID productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_NOT_FOUND));
+
+        product.softDelete("system");
+        return ProductDto.from(product);
     }
 
     private void validateCompanyAndCategory(UUID companyId, UUID categoryId) {
