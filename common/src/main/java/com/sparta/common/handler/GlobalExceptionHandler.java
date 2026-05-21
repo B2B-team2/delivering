@@ -9,9 +9,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingPathVariableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import java.util.List;
 
 @Slf4j
@@ -22,9 +25,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
         ErrorCode errorCode = e.getErrorCode();
+        String errorName = (errorCode instanceof Enum) ? ((Enum<?>) errorCode).name() : "BUSINESS_ERROR";
+
+        List<ErrorResponse.FieldErrorDetail> fieldErrors = null;
+        if (errorCode.getField() != null) {
+            fieldErrors = List.of(ErrorResponse.FieldErrorDetail.builder()
+                    .field(errorCode.getField())
+                    .message(errorCode.getMessage())
+                    .build());
+        }
+
         ErrorResponse response = ErrorResponse.builder()
                 .status(errorCode.getHttpStatus().value())
-                .message(e.getMessage())
+                .message(errorName)
+                .errors(fieldErrors)
                 .build();
         return ResponseEntity.status(errorCode.getHttpStatus()).body(response);
     }
@@ -51,8 +65,9 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception e) {
         log.error("Server Error: ", e);
+        ErrorCode errorCode = CommonErrorCode.INTERNAL_SERVER_ERROR;
         ErrorResponse response = ErrorResponse.builder()
-                .status(500)
+                .status(errorCode.getHttpStatus().value())
                 .message("SERVER_ERROR")
                 .build();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
@@ -83,5 +98,46 @@ public class GlobalExceptionHandler {
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(response);
+    }
+
+    // 6. 경로 변수 타입 불일치 처리 (MethodArgumentTypeMismatchException)
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleMethodArgumentTypeMismatchException(MethodArgumentTypeMismatchException e) {
+        log.warn("Parameter Type Mismatch: {}", e.getMessage());
+        ErrorResponse response = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("INVALID_PARAMETER_TYPE")
+                .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
+                        .field(e.getName())
+                        .message(String.format("'%s'은(는) 유효한 %s 형식이 아닙니다.", e.getValue(), e.getRequiredType().getSimpleName()))
+                        .build()))
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    // 7. 필수 경로 변수 누락 처리 (MissingPathVariableException)
+    @ExceptionHandler(MissingPathVariableException.class)
+    public ResponseEntity<ErrorResponse> handleMissingPathVariableException(MissingPathVariableException e) {
+        log.warn("Missing Path Variable: {}", e.getMessage());
+        ErrorResponse response = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("MISSING_PATH_VARIABLE")
+                .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
+                        .field(e.getVariableName())
+                        .message("필수 경로 변수가 누락되었습니다.")
+                        .build()))
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    // 8. 지원하지 않는 HTTP 메서드 요청 처리 (HttpRequestMethodNotSupportedException)
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
+        log.warn("Method Not Allowed: {}", e.getMessage());
+        ErrorResponse response = ErrorResponse.builder()
+                .status(HttpStatus.METHOD_NOT_ALLOWED.value())
+                .message("METHOD_NOT_ALLOWED")
+                .build();
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(response);
     }
 }

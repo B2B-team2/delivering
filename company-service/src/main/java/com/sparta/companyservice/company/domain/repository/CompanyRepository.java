@@ -1,6 +1,8 @@
 package com.sparta.companyservice.company.domain.repository;
 
 import com.sparta.companyservice.company.domain.core.Company;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -12,5 +14,7 @@ import java.util.UUID;
 public interface CompanyRepository {
     Company save(Company company);
     Optional<Company> findById(UUID id);
+    Page<Company> findAll(Pageable pageable);
     long count();
+    Optional<Company> findByBusinessNumberAnyStatus(String businessNumber);
 }
