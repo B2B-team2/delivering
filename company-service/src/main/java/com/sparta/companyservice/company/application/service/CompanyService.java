@@ -1,15 +1,19 @@
 package com.sparta.companyservice.company.application.service;
 
+import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
+import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +27,7 @@ public class CompanyService {
         try {
             type = CompanyTypeEnum.valueOf(command.getCompanyType());
         } catch (IllegalArgumentException e) {
-            throw new com.sparta.common.dto.BusinessException(com.sparta.companyservice.global.exception.CompanyErrorCode.INVALID_COMPANY_TYPE);
+            throw new BusinessException(CompanyErrorCode.INVALID_COMPANY_TYPE);
         }
 
         Company company = Company.builder()
@@ -47,5 +51,12 @@ public class CompanyService {
     public Page<CompanyDto> getCompanies(Pageable pageable) {
         return companyRepository.findAll(pageable)
                 .map(CompanyDto::from);
+    }
+
+    @Transactional(readOnly = true)
+    public CompanyDto getCompany(UUID companyId) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
+        return CompanyDto.from(company);
     }
 }

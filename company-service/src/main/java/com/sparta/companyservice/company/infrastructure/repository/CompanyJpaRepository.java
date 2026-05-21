@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -12,4 +13,5 @@ import java.util.UUID;
  */
 public interface CompanyJpaRepository extends JpaRepository<Company, UUID> {
     Page<Company> findAllByDeletedAtIsNull(Pageable pageable);
+    Optional<Company> findByCompanyIdAndDeletedAtIsNull(UUID companyId);
 }

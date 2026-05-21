@@ -15,10 +15,13 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/companies")
@@ -44,5 +47,11 @@ public class CompanyController {
                 companyService.getCompanies(validatedPageable).map(CompanyResponse::from)
         );
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/{companyId}")
+    public ResponseEntity<ApiResponse<CompanyResponse>> getCompany(@PathVariable UUID companyId) {
+        CompanyDto resultDto = companyService.getCompany(companyId);
+        return ResponseEntity.ok(ApiResponse.success(CompanyResponse.from(resultDto)));
     }
 }
