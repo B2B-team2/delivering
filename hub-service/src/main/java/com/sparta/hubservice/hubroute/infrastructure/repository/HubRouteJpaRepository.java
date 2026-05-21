@@ -14,4 +14,6 @@ public interface HubRouteJpaRepository extends JpaRepository<HubRoute, UUID> {
     Optional<HubRoute> findByFromHubIdAndToHubIdAndDeletedAtIsNull(UUID fromHubId, UUID toHubId);
 
     List<HubRoute> findAllByFromHubIdAndDeletedAtIsNull(UUID fromHubId);
+
+    List<HubRoute> findAllByDeletedAtIsNull();
 }
