@@ -70,6 +70,7 @@ public class CompanyController {
     @DeleteMapping("/{companyId}")
     public ResponseEntity<ApiResponse<CompanyResponse>> deleteCompany(
             @PathVariable UUID companyId) {
+        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
         CompanyDto resultDto = companyService.deleteCompany(companyId, "system");
         return ResponseEntity.ok(ApiResponse.success(CompanyResponse.from(resultDto)));
     }
