@@ -1,6 +1,7 @@
 package com.sparta.hubservice.hub.domain.repository;
 
 import com.sparta.hubservice.hub.domain.core.Hub;
+import com.sparta.hubservice.hub.domain.core.HubType;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,8 @@ public interface HubRepository {
     Optional<Hub> findById(UUID hubId);
 
     List<Hub> findAll();
+
+    List<Hub> findAllByHubType(HubType hubType);
 
     void delete(Hub hub);
 }
