@@ -5,10 +5,7 @@ import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
-import com.sparta.orderservice.order.domain.core.CompanyOrder;
-import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
-import com.sparta.orderservice.order.domain.core.Order;
-import com.sparta.orderservice.order.domain.core.OrderItem;
+import com.sparta.orderservice.order.domain.core.*;
 import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
@@ -136,6 +133,16 @@ public class OrderService {
         }
         companyOrder.ship();
         return CompanyOrderResult.from(companyOrder);
+    }
+
+    // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
+    public boolean isCancellable(UUID orderId) {
+        Order order = orderRepository.findOrderById(orderId).orElse(null);
+        if (order == null) return false;
+        if (order.getStatus() != OrderStatus.PENDING) return false;
+        return order.getCompanyOrders().stream()
+                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
+                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
     }
 
     private CompanyOrder findCompanyOrderOrThrow(UUID companyOrderId) {
