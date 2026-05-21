@@ -21,7 +21,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 import java.util.UUID;
 
 @Entity
-@Table(name = "p_companies", schema = "company")
+@Table(name = "p_companies", schema = "company-db")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
