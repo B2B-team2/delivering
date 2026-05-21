@@ -29,4 +29,9 @@ public class ProductOptionRepositoryImpl implements ProductOptionRepository {
         option.softDelete(option.getCreatedBy()); // BaseEntity 삭제 로직
         optionJpaRepository.save(option);
     }
+
+    @Override
+    public long count() {
+        return optionJpaRepository.count();
+    }
 }

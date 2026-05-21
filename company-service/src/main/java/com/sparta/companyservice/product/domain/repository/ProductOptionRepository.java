@@ -9,4 +9,5 @@ public interface ProductOptionRepository {
     ProductOption save(ProductOption option);
     Optional<ProductOption> findById(UUID productOptionId);
     void delete(ProductOption option);
+    long count();
 }
