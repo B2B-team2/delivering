@@ -1,7 +1,6 @@
 package com.sparta.companyservice.products.application.dto;
 
 import com.sparta.companyservice.products.domain.core.Product;
-import com.sparta.companyservice.products.domain.core.ProductStatusEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +21,7 @@ public class ProductDto {
     private BigDecimal price;
     private String description;
     private String thumbnailUrl;
-    private ProductStatusEnum status;
+    private String status;
 
     public static ProductDto from(Product entity) {
         return ProductDto.builder()
@@ -33,7 +32,7 @@ public class ProductDto {
                 .price(entity.getPrice())
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
-                .status(entity.getStatus())
+                .status(entity.getStatus() != null ? entity.getStatus().name() : null)
                 .build();
     }
 }

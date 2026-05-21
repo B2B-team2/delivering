@@ -1,7 +1,6 @@
 package com.sparta.companyservice.products.presentation.dto;
 
 import com.sparta.companyservice.products.application.dto.ProductDto;
-import com.sparta.companyservice.products.domain.core.ProductStatusEnum;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,7 +21,7 @@ public class ProductResponse {
     private BigDecimal price;
     private String description;
     private String thumbnailUrl;
-    private ProductStatusEnum status;
+    private String status;
 
     public static ProductResponse from(ProductDto dto) {
         return ProductResponse.builder()
