@@ -1,7 +1,6 @@
 package com.sparta.hubservice.warehouse.presentation.dto;
 
 import com.sparta.hubservice.warehouse.application.dto.WarehouseDto;
-import com.sparta.hubservice.warehouse.domain.core.WarehouseStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -18,7 +17,7 @@ public class WarehouseResponse {
     private final String address;
     private final String region;
     private final String contactPhone;
-    private final WarehouseStatus status;
+    private final String status;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 

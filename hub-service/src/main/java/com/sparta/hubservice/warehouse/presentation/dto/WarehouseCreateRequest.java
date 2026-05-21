@@ -1,7 +1,6 @@
 package com.sparta.hubservice.warehouse.presentation.dto;
 
 import com.sparta.hubservice.warehouse.application.dto.WarehouseCreateCommand;
-import com.sparta.hubservice.warehouse.domain.core.WarehouseStatus;
 import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 
@@ -17,7 +16,7 @@ public class WarehouseCreateRequest {
     private String address;
     private String region;
     private String contactPhone;
-    private WarehouseStatus status;
+    private String status;
 
     public WarehouseCreateCommand toCommand() {
         return WarehouseCreateCommand.builder()

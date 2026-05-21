@@ -1,7 +1,6 @@
 package com.sparta.hubservice.warehouse.presentation.dto;
 
 import com.sparta.hubservice.warehouse.application.dto.WarehouseUpdateCommand;
-import com.sparta.hubservice.warehouse.domain.core.WarehouseStatus;
 import lombok.Getter;
 
 @Getter
@@ -11,7 +10,7 @@ public class WarehouseUpdateRequest {
     private String address;
     private String region;
     private String contactPhone;
-    private WarehouseStatus status;
+    private String status;
 
     public WarehouseUpdateCommand toCommand() {
         return WarehouseUpdateCommand.builder()
