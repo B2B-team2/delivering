@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.deliveryRoute.entity;
+package com.sparta.deliveryservice.deliveryRoute.domin.core;
 
 public enum RouteStatus {
     PENDING,      // 이동 대기
