@@ -6,6 +6,7 @@ import com.sparta.common.util.PageableUtil;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
+import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -35,6 +37,14 @@ public class CompanyController {
         CompanyDto resultDto = companyService.createCompany(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(CompanyResponse.from(resultDto)));
+    }
+
+    @PatchMapping("/{companyId}")
+    public ResponseEntity<ApiResponse<CompanyResponse>> patchCompany(
+            @PathVariable UUID companyId,
+            @RequestBody @Valid CompanyUpdateRequest request) {
+        CompanyDto resultDto = companyService.updateCompany(companyId, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(CompanyResponse.from(resultDto)));
     }
 
     @GetMapping

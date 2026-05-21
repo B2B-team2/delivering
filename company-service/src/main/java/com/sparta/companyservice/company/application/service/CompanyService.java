@@ -2,6 +2,7 @@ package com.sparta.companyservice.company.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
@@ -43,6 +44,7 @@ public class CompanyService {
                             type,
                             command.getPhone(),
                             command.getDescription(),
+                            command.getBusinessNumber(),
                             command.getHubId(),
                             command.getLatitude(),
                             command.getLongitude(),
@@ -72,6 +74,41 @@ public class CompanyService {
                         throw new BusinessException(CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
                     }
                 });
+    }
+
+    @Transactional
+    public CompanyDto updateCompany(UUID companyId, CompanyUpdateCommand command) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
+
+        CompanyTypeEnum type;
+        try {
+            type = CompanyTypeEnum.valueOf(command.getCompanyType());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(CompanyErrorCode.INVALID_COMPANY_TYPE);
+        }
+
+        if (!company.getBusinessNumber().equals(command.getBusinessNumber())) {
+            companyRepository.findByBusinessNumberAnyStatus(command.getBusinessNumber())
+                    .ifPresent(existing -> {
+                        throw new BusinessException(CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
+                    });
+        }
+
+        company.update(
+                command.getCompanyName(),
+                type,
+                command.getPhone(),
+                command.getDescription(),
+                command.getBusinessNumber(),
+                command.getHubId(),
+                command.getLatitude(),
+                command.getLongitude(),
+                command.getAddress(),
+                command.getLogoUrl()
+        );
+
+        return CompanyDto.from(company);
     }
 
     @Transactional(readOnly = true)

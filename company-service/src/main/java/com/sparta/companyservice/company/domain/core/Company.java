@@ -85,12 +85,13 @@ public class Company extends BaseEntity {
     }
 
     public void update(String companyName, CompanyTypeEnum companyType, String phone,
-                       String description, UUID hubId, Double latitude, Double longitude,
+                       String description, String businessNumber, UUID hubId, Double latitude, Double longitude,
                        String address, String logoUrl) {
         this.companyName = companyName;
         this.companyType = companyType;
         this.phone = phone;
         this.description = description;
+        this.businessNumber = businessNumber;
         this.hubId = hubId;
         this.location = (latitude != null && longitude != null)
                 ? geometryFactory.createPoint(new Coordinate(longitude, latitude))

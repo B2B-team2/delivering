@@ -2,6 +2,7 @@ package com.sparta.companyservice.company.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
@@ -142,7 +143,7 @@ class CompanyServiceTest {
         assertThat(result.getCompanyName()).isEqualTo(command.getCompanyName());
         assertThat(deletedCompany.getDeletedAt()).isNull();
         verify(deletedCompany).restore();
-        verify(deletedCompany).update(anyString(), any(), any(), any(), any(), any(), any(), any(), any());
+        verify(deletedCompany).update(anyString(), any(), any(), any(), anyString(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -163,6 +164,85 @@ class CompanyServiceTest {
 
         // when & then
         assertThatThrownBy(() -> companyService.createCompany(command))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
+    }
+
+    @Test
+    @DisplayName("업체 정보 수정 성공: 정상적인 데이터로 수정 시 필드값이 올바르게 변경되는가?")
+    void updateCompanySuccessTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        Company existingCompany = spy(Company.builder()
+                .companyId(companyId)
+                .companyName("Old Name")
+                .companyType(CompanyTypeEnum.PRODUCER)
+                .businessNumber("111-11-11111")
+                .hubId(UUID.randomUUID())
+                .build());
+
+        CompanyUpdateCommand command = CompanyUpdateCommand.builder()
+                .companyName("New Name")
+                .companyType("PRODUCER")
+                .businessNumber("222-22-22222")
+                .hubId(UUID.randomUUID())
+                .latitude(37.0)
+                .longitude(127.0)
+                .build();
+
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(existingCompany));
+        when(companyRepository.findByBusinessNumberAnyStatus("222-22-22222")).thenReturn(Optional.empty());
+
+        // when
+        CompanyDto result = companyService.updateCompany(companyId, command);
+
+        // then
+        assertThat(result.getCompanyName()).isEqualTo("New Name");
+        assertThat(result.getBusinessNumber()).isEqualTo("222-22-22222");
+        verify(existingCompany).update(eq("New Name"), eq(CompanyTypeEnum.PRODUCER), any(), any(), eq("222-22-22222"), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("업체 정보 수정 실패: 존재하지 않는 ID로 수정 시도 시 COMPANY_NOT_FOUND 예외가 발생하는가?")
+    void updateCompanyNotFoundTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyUpdateCommand command = CompanyUpdateCommand.builder()
+                .companyType("PRODUCER")
+                .build();
+
+        when(companyRepository.findById(companyId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> companyService.updateCompany(companyId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.COMPANY_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("업체 정보 수정 실패: 이미 존재하는 다른 업체의 사업자 번호로 변경 시도 시 DUPLICATE_BUSINESS_NUMBER 예외가 발생하는가?")
+    void updateCompanyDuplicateBusinessNumberTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        Company existingCompany = Company.builder()
+                .companyId(companyId)
+                .companyName("Old Name")
+                .companyType(CompanyTypeEnum.PRODUCER)
+                .businessNumber("111-11-11111")
+                .build();
+
+        CompanyUpdateCommand command = CompanyUpdateCommand.builder()
+                .companyType("PRODUCER")
+                .businessNumber("222-22-22222")
+                .build();
+
+        Company otherCompany = Company.builder().businessNumber("222-22-22222").build();
+
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(existingCompany));
+        when(companyRepository.findByBusinessNumberAnyStatus("222-22-22222")).thenReturn(Optional.of(otherCompany));
+
+        // when & then
+        assertThatThrownBy(() -> companyService.updateCompany(companyId, command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
     }

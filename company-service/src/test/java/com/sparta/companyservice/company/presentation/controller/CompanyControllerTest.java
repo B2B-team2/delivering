@@ -6,6 +6,7 @@ import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
+import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -25,12 +26,14 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -77,6 +80,58 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$.status").value(201))
                 .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.companyName").value(request.getCompanyName()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("API 응답 규격 검증: PATCH /api/v1/companies/{companyId} 호출 시 200 OK와 ApiResponse 포맷이 유지되는가?")
+    void patchCompanyApiResponseFormatTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyUpdateRequest request = CompanyUpdateRequest.builder()
+                .companyName("Update Company")
+                .companyType("VENDOR")
+                .businessNumber("987-65-43210")
+                .hubId(UUID.randomUUID())
+                .latitude(36.0)
+                .longitude(128.0)
+                .build();
+
+        CompanyDto responseDto = CompanyDto.builder()
+                .companyId(companyId)
+                .companyName(request.getCompanyName())
+                .build();
+
+        when(companyService.updateCompany(eq(companyId), any())).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/companies/{companyId}", companyId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.companyName").value(request.getCompanyName()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("Bean Validation 검증: 필수 필드 누락 시 400 Bad Request를 반환하는가? (PATCH)")
+    void patchCompanyValidationTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyUpdateRequest invalidRequest = CompanyUpdateRequest.builder()
+                .companyName("") // Blank
+                .companyType("HUB")
+                .build();
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/companies/{companyId}", companyId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
     }
 
     @Test
