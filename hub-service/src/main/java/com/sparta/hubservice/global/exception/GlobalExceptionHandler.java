@@ -3,6 +3,7 @@ package com.sparta.hubservice.global.exception;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.common.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -40,6 +41,17 @@ public class GlobalExceptionHandler {
                 .errors(fieldErrors)
                 .build();
         return ResponseEntity.badRequest().body(response);
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        log.warn("Data integrity violation: {}", e.getMessage());
+        ErrorCode code = ErrorCode.DUPLICATE_INVENTORY;
+        ErrorResponse response = ErrorResponse.builder()
+                .status(code.getHttpStatus().value())
+                .message(code.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
