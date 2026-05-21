@@ -14,7 +14,13 @@ public enum ErrorCode implements com.sparta.common.dto.ErrorCode {
 
     // Warehouse
     WAREHOUSE_NOT_FOUND(HttpStatus.NOT_FOUND, "W001", "물류 창고를 찾을 수 없습니다."),
-    DUPLICATE_WAREHOUSE(HttpStatus.CONFLICT, "W002", "해당 허브에 이미 창고가 존재합니다.");
+    DUPLICATE_WAREHOUSE(HttpStatus.CONFLICT, "W002", "해당 허브에 이미 창고가 존재합니다."),
+
+    // Inventory
+    INVENTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "I001", "재고를 찾을 수 없습니다."),
+    DUPLICATE_INVENTORY(HttpStatus.CONFLICT, "I002", "해당 창고에 이미 동일한 상품 옵션의 재고가 존재합니다."),
+    INSUFFICIENT_STOCK(HttpStatus.CONFLICT, "I003", "가용 재고가 부족합니다."),
+    INVALID_STOCK_OPERATION(HttpStatus.BAD_REQUEST, "I004", "유효하지 않은 재고 조작입니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
