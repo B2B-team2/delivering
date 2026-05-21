@@ -3,6 +3,7 @@ package com.sparta.hubservice.global.exception;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.common.dto.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -41,14 +42,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
-//    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
-//    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
-//        log.warn("Optimistic lock failure: {}", e.getMessage());
-//        ErrorCode code = ErrorCode.OPTIMISTIC_LOCK_FAILURE;
-//        ErrorResponse response = ErrorResponse.builder()
-//                .status(code.getHttpStatus().value())
-//                .message(code.getMessage())
-//                .build();
-//        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
-//    }
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException e) {
+        log.warn("Optimistic lock failure: {}", e.getMessage());
+        ErrorCode code = ErrorCode.OPTIMISTIC_LOCK_FAILURE;
+        ErrorResponse response = ErrorResponse.builder()
+                .status(code.getHttpStatus().value())
+                .message(code.getMessage())
+                .build();
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
 }

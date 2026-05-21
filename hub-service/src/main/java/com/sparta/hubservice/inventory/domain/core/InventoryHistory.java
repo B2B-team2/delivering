@@ -30,6 +30,9 @@ public class InventoryHistory extends BaseEntity {
     @Column(nullable = false)
     private UUID inventoryId;
 
+    @Column
+    private UUID orderId;
+
     @Column(nullable = false)
     private int changeQuantity;
 
@@ -38,8 +41,9 @@ public class InventoryHistory extends BaseEntity {
     private InventoryChangeType changeType;
 
     @Builder
-    public InventoryHistory(UUID inventoryId, int changeQuantity, InventoryChangeType changeType) {
+    public InventoryHistory(UUID inventoryId, UUID orderId, int changeQuantity, InventoryChangeType changeType) {
         this.inventoryId = inventoryId;
+        this.orderId = orderId;
         this.changeQuantity = changeQuantity;
         this.changeType = changeType;
     }

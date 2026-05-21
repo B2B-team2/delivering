@@ -3,6 +3,7 @@ package com.sparta.hubservice.inventory.application.service;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.hubservice.global.exception.ErrorCode;
 import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
+import com.sparta.hubservice.inventory.application.dto.InventoryItemCommand;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryAdjustCommand;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryCreateCommand;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
@@ -90,9 +91,10 @@ public class InventoryService {
         return WarehouseInventoryDto.from(inventory);
     }
 
-    public InventoryHistoryPageDto getInventoryHistories(UUID inventoryId, InventoryChangeType changeType,
+    public InventoryHistoryPageDto getInventoryHistories(UUID inventoryId, String changeType,
                                                          LocalDate startDate, LocalDate endDate,
                                                          Pageable pageable) {
+        InventoryChangeType parsedChangeType = changeType != null ? parseChangeType(changeType) : null;
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
 
@@ -100,9 +102,73 @@ public class InventoryService {
         LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
 
         Page<InventoryHistory> historyPage = historyRepository.findHistories(
-                inventoryId, changeType, startDateTime, endDateTime, pageable);
+                inventoryId, parsedChangeType, startDateTime, endDateTime, pageable);
 
         return new InventoryHistoryPageDto(inventory, historyPage);
+    }
+
+    @Transactional
+    public void reserveStock(UUID orderId, List<InventoryItemCommand> items) {
+        for (var item : items) {
+            WarehouseInventory inventory = inventoryRepository.findById(item.getInventoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            inventory.reserve(item.getQuantity());
+            historyRepository.save(InventoryHistory.builder()
+                    .inventoryId(item.getInventoryId())
+                    .orderId(orderId)
+                    .changeQuantity(item.getQuantity())
+                    .changeType(InventoryChangeType.RESERVED)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void cancelReservation(UUID orderId) {
+        List<InventoryHistory> reservations = historyRepository.findByOrderIdAndChangeType(orderId, InventoryChangeType.RESERVED);
+        if (reservations.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+        }
+        for (InventoryHistory reservation : reservations) {
+            WarehouseInventory inventory = inventoryRepository.findById(reservation.getInventoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            inventory.cancelReservation(reservation.getChangeQuantity());
+            historyRepository.save(InventoryHistory.builder()
+                    .inventoryId(reservation.getInventoryId())
+                    .orderId(orderId)
+                    .changeQuantity(-reservation.getChangeQuantity())
+                    .changeType(InventoryChangeType.CANCELLED)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void deductStock(UUID orderId, List<InventoryItemCommand> items) {
+        for (var item : items) {
+            WarehouseInventory inventory = inventoryRepository.findById(item.getInventoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            inventory.deduct(item.getQuantity());
+            historyRepository.save(InventoryHistory.builder()
+                    .inventoryId(item.getInventoryId())
+                    .orderId(orderId)
+                    .changeQuantity(-item.getQuantity())
+                    .changeType(InventoryChangeType.OUTBOUND)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void returnStock(UUID orderId, List<InventoryItemCommand> items) {
+        for (var item : items) {
+            WarehouseInventory inventory = inventoryRepository.findById(item.getInventoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            inventory.returnStock(item.getQuantity());
+            historyRepository.save(InventoryHistory.builder()
+                    .inventoryId(item.getInventoryId())
+                    .orderId(orderId)
+                    .changeQuantity(item.getQuantity())
+                    .changeType(InventoryChangeType.RETURNED)
+                    .build());
+        }
     }
 
     @Transactional

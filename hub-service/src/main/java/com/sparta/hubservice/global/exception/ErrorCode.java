@@ -19,8 +19,10 @@ public enum ErrorCode implements com.sparta.common.dto.ErrorCode {
     // Inventory
     INVENTORY_NOT_FOUND(HttpStatus.NOT_FOUND, "I001", "재고를 찾을 수 없습니다."),
     DUPLICATE_INVENTORY(HttpStatus.CONFLICT, "I002", "해당 창고에 이미 동일한 상품 옵션의 재고가 존재합니다."),
-    INSUFFICIENT_STOCK(HttpStatus.CONFLICT, "I003", "가용 재고가 부족합니다."),
-    INVALID_STOCK_OPERATION(HttpStatus.BAD_REQUEST, "I004", "유효하지 않은 재고 조작입니다.");
+    INSUFFICIENT_STOCK(HttpStatus.CONFLICT, "I003", "재고가 부족합니다."),
+    INVALID_STOCK_OPERATION(HttpStatus.BAD_REQUEST, "I004", "유효하지 않은 재고 조작입니다."),
+    OPTIMISTIC_LOCK_FAILURE(HttpStatus.CONFLICT, "I005", "동시 요청입니다. 잠시 후 재시도해 주세요."),
+    CANCEL_QUANTITY_EXCEEDED(HttpStatus.CONFLICT, "I006", "취소 수량이 예약된 수량을 초과합니다.");
 
     private final HttpStatus httpStatus;
     private final String code;

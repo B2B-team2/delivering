@@ -30,6 +30,11 @@ public class InventoryHistoryRepositoryImpl implements InventoryHistoryRepositor
     }
 
     @Override
+    public List<InventoryHistory> findByOrderIdAndChangeType(UUID orderId, InventoryChangeType changeType) {
+        return inventoryHistoryJpaRepository.findByOrderIdAndChangeTypeAndDeletedAtIsNull(orderId, changeType);
+    }
+
+    @Override
     public Page<InventoryHistory> findHistories(UUID inventoryId, InventoryChangeType changeType,
                                                 LocalDateTime startDateTime, LocalDateTime endDateTime,
                                                 Pageable pageable) {

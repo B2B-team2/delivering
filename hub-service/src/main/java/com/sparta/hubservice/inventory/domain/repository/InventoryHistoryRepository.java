@@ -18,4 +18,6 @@ public interface InventoryHistoryRepository {
     Page<InventoryHistory> findHistories(UUID inventoryId, InventoryChangeType changeType,
                                          LocalDateTime startDateTime, LocalDateTime endDateTime,
                                          Pageable pageable);
+
+    List<InventoryHistory> findByOrderIdAndChangeType(UUID orderId, InventoryChangeType changeType);
 }
