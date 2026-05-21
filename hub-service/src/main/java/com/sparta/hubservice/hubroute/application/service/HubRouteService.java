@@ -32,6 +32,12 @@ public class HubRouteService {
         return HubRouteDto.from(hubRouteRepository.save(hubRoute));
     }
 
+    public List<HubRouteDto> getAllHubRoutes() {
+        return hubRouteRepository.findAll().stream()
+                .map(HubRouteDto::from)
+                .toList();
+    }
+
     public HubRouteDto getHubRoute(UUID routeId) {
         HubRoute hubRoute = hubRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROUTE_NOT_FOUND));

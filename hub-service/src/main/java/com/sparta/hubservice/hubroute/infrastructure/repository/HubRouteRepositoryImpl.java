@@ -31,6 +31,11 @@ public class HubRouteRepositoryImpl implements HubRouteRepository {
     }
 
     @Override
+    public List<HubRoute> findAll() {
+        return hubRouteJpaRepository.findAllByDeletedAtIsNull();
+    }
+
+    @Override
     public List<HubRoute> findByFromHubId(UUID fromHubId) {
         return hubRouteJpaRepository.findAllByFromHubIdAndDeletedAtIsNull(fromHubId);
     }
