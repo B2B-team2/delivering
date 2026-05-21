@@ -28,4 +28,51 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class WarehouseController {
 
+    private final WarehouseService warehouseService;
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<WarehouseResponse>> createWarehouse(
+            @Valid @RequestBody WarehouseCreateRequest request) {
+        WarehouseDto dto = warehouseService.createWarehouse(request.toCommand());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(WarehouseResponse.from(dto)));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<WarehouseResponse>>> getAllWarehouses() {
+        List<WarehouseResponse> responses = warehouseService.getAllWarehouses().stream()
+                .map(WarehouseResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
+    @GetMapping("/{warehouse_id}")
+    public ResponseEntity<ApiResponse<WarehouseResponse>> getWarehouse(
+            @PathVariable UUID warehouse_id) {
+        WarehouseDto dto = warehouseService.getWarehouse(warehouse_id);
+        return ResponseEntity.ok(ApiResponse.success(WarehouseResponse.from(dto)));
+    }
+
+    @GetMapping("/hub/{hub_id}")
+    public ResponseEntity<ApiResponse<WarehouseResponse>> getWarehouseByHubId(
+            @PathVariable UUID hub_id) {
+        WarehouseDto dto = warehouseService.getWarehouseByHubId(hub_id);
+        return ResponseEntity.ok(ApiResponse.success(WarehouseResponse.from(dto)));
+    }
+
+    @PatchMapping("/{warehouse_id}")
+    public ResponseEntity<ApiResponse<WarehouseResponse>> updateWarehouse(
+            @PathVariable UUID warehouse_id,
+            @RequestBody WarehouseUpdateRequest request) {
+        WarehouseDto dto = warehouseService.updateWarehouse(warehouse_id, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(WarehouseResponse.from(dto)));
+    }
+
+    @DeleteMapping("/{warehouse_id}")
+    public ResponseEntity<ApiResponse<Void>> deleteWarehouse(
+            @PathVariable UUID warehouse_id,
+            @RequestHeader(value = "X-User-Name", required = false, defaultValue = "system") String userName) {
+        warehouseService.deleteWarehouse(warehouse_id, userName);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
 }

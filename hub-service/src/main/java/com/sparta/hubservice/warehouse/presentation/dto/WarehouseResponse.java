@@ -5,6 +5,7 @@ import com.sparta.hubservice.warehouse.domain.core.WarehouseStatus;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -18,6 +19,8 @@ public class WarehouseResponse {
     private final String region;
     private final String contactPhone;
     private final WarehouseStatus status;
+    private final LocalDateTime createdAt;
+    private final LocalDateTime updatedAt;
 
     public static WarehouseResponse from(WarehouseDto dto) {
         return WarehouseResponse.builder()
@@ -28,6 +31,8 @@ public class WarehouseResponse {
                 .region(dto.getRegion())
                 .contactPhone(dto.getContactPhone())
                 .status(dto.getStatus())
+                .createdAt(dto.getCreatedAt())
+                .updatedAt(dto.getUpdatedAt())
                 .build();
     }
 }
