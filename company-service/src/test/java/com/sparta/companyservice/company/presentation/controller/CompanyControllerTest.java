@@ -34,6 +34,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -258,5 +259,44 @@ class CompanyControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("COMPANY_NOT_FOUND"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("업체 삭제 성공: DELETE /api/v1/companies/{companyId} 호출 시 200 OK와 삭제 일시가 반환되는가?")
+    void deleteCompanySuccessTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        java.time.LocalDateTime deletedAt = java.time.LocalDateTime.now();
+        CompanyDto responseDto = CompanyDto.builder()
+                .companyId(companyId)
+                .deletedAt(deletedAt)
+                .build();
+
+        when(companyService.deleteCompany(eq(companyId), any())).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/companies/{companyId}", companyId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.companyId").value(companyId.toString()))
+                .andExpect(jsonPath("$.data.deletedAt").exists());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("공통 에러 처리 검증: 경로 변수 타입 불일치 시 400 Bad Request와 상세 메시지를 반환하는가?")
+    void pathVariableTypeMismatchTest() throws Exception {
+        // when & then
+        mockMvc.perform(get("/api/v1/companies/invalid-uuid")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value("INVALID_PARAMETER_TYPE"))
+                .andExpect(jsonPath("$.errors[0].field").value("companyId"))
+                .andExpect(jsonPath("$.errors[0].message").value(org.hamcrest.Matchers.containsString("유효한 UUID 형식이 아닙니다.")));
     }
 }

@@ -309,4 +309,40 @@ class CompanyServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.COMPANY_NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("업체 삭제 성공: 존재하는 ID로 삭제 시 softDelete가 호출되고 deletedAt이 설정되는가?")
+    void deleteCompanySuccessTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        String username = "testUser";
+        Company company = spy(Company.builder()
+                .companyId(companyId)
+                .companyName("Delete Target")
+                .companyType(CompanyTypeEnum.PRODUCER)
+                .build());
+
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+
+        // when
+        CompanyDto result = companyService.deleteCompany(companyId, username);
+
+        // then
+        assertThat(result.getDeletedAt()).isNotNull();
+        verify(company).softDelete(username);
+    }
+
+    @Test
+    @DisplayName("업체 삭제 실패: 존재하지 않는 ID로 삭제 시도 시 COMPANY_NOT_FOUND 예외가 발생하는가?")
+    void deleteCompanyNotFoundTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        String username = "testUser";
+        when(companyRepository.findById(companyId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> companyService.deleteCompany(companyId, username))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.COMPANY_NOT_FOUND);
+    }
 }
