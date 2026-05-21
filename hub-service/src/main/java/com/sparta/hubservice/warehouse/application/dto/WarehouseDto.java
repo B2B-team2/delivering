@@ -1,7 +1,6 @@
 package com.sparta.hubservice.warehouse.application.dto;
 
 import com.sparta.hubservice.warehouse.domain.core.Warehouse;
-import com.sparta.hubservice.warehouse.domain.core.WarehouseStatus;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -18,7 +17,7 @@ public class WarehouseDto {
     private final String address;
     private final String region;
     private final String contactPhone;
-    private final WarehouseStatus status;
+    private final String status;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
 
@@ -30,7 +29,7 @@ public class WarehouseDto {
                 .address(warehouse.getAddress())
                 .region(warehouse.getRegion())
                 .contactPhone(warehouse.getContactPhone())
-                .status(warehouse.getStatus())
+                .status(warehouse.getStatus().name())
                 .createdAt(warehouse.getCreatedAt())
                 .updatedAt(warehouse.getUpdatedAt())
                 .build();

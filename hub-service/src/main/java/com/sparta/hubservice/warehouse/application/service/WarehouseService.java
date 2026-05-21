@@ -37,7 +37,7 @@ public class WarehouseService {
                 .address(command.getAddress())
                 .region(command.getRegion())
                 .contactPhone(command.getContactPhone())
-                .status(command.getStatus() != null ? command.getStatus() : WarehouseStatus.ACTIVE)
+                .status(command.getStatus() != null ? WarehouseStatus.valueOf(command.getStatus()) : WarehouseStatus.ACTIVE)
                 .build();
 
         return WarehouseDto.from(warehouseRepository.save(warehouse));
@@ -69,8 +69,9 @@ public class WarehouseService {
     public WarehouseDto updateWarehouse(UUID warehouseId, WarehouseUpdateCommand command) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WAREHOUSE_NOT_FOUND));
+        WarehouseStatus status = command.getStatus() != null ? WarehouseStatus.valueOf(command.getStatus()) : null;
         warehouse.update(command.getWarehouseName(), command.getAddress(), command.getRegion(),
-                command.getContactPhone(), command.getStatus());
+                command.getContactPhone(), status);
         return WarehouseDto.from(warehouse);
     }
 
