@@ -82,15 +82,22 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success());
     }
 
-//    // todo 출고 준비
-//    @Put? Patch?
-//    public ResponseEntity<Void> prepareShipment(@PathVariable UUID companyOrderId) {
-//    }
-//
-//    // 출고 완료 (재고 차감 + SHIPPED 상태 변경)
-//    @Put? Patch?
-//    public ResponseEntity<Void> completeShipment(@PathVariable UUID companyOrderId) {
-//        orderService.completeShipment(companyOrderId);
-//        return ResponseEntity.ok().build();
-//    }
+    // 출고 준비 확인: ORDERED → PREPARING
+    @PatchMapping("/company/{companyOrderId}/preparing")
+    public ResponseEntity<ApiResponse<CompanyOrderResponse>> prepareCompanyOrder(
+            @PathVariable UUID companyOrderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                CompanyOrderResponse.from(orderService.prepareCompanyOrder(companyOrderId))));
+    }
+
+    // 출고 완료: PREPARING → SHIPPED
+    // TODO: Hub Service FeignClient 재고 차감 연동
+    @PatchMapping("/company/{companyOrderId}/shipped")
+    public ResponseEntity<ApiResponse<CompanyOrderResponse>> shipCompanyOrder(
+            @PathVariable UUID companyOrderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                CompanyOrderResponse.from(orderService.shipCompanyOrder(companyOrderId))));
+    }
 }

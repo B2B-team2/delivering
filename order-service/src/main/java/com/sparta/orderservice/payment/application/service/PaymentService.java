@@ -7,6 +7,7 @@ import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
 import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
+import com.sparta.orderservice.payment.domain.core.PaymentStatus;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
 import com.sparta.orderservice.payment.domain.core.Payment;
 import com.sparta.orderservice.payment.domain.core.PaymentMethod;
@@ -52,6 +53,10 @@ public class PaymentService {
 
         Order order = orderRepository.findOrderById(payment.getOrderId())
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+        if (payment.getStatus() == PaymentStatus.CANCELLED) {
+            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
+        }
 
         if (order.getStatus() != OrderStatus.PENDING) {
             throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);

@@ -1,9 +1,7 @@
 package com.sparta.orderservice.payment.domain.core;
 
 
-import com.sparta.common.dto.BusinessException;
 import com.sparta.common.entity.BaseEntity;
-import com.sparta.orderservice.global.exception.PaymentErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -63,12 +61,8 @@ public class Payment extends BaseEntity {
 
     /**
      * 결제 취소/환불: COMPLETED → CANCELLED
-     * 이미 취소된 결제에 재취소 시도 시 예외 발생
      */
     public void cancel(String cancelledBy) {
-        if (this.status == PaymentStatus.CANCELLED) {
-            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
-        }
         this.status = PaymentStatus.CANCELLED;
         this.softDelete(cancelledBy);
     }

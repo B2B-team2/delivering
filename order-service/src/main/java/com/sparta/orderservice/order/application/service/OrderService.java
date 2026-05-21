@@ -6,6 +6,7 @@ import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
+import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
 import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
@@ -71,9 +72,9 @@ public class OrderService {
         }
 
         orderRepository.save(order);
-//
-//        // 선결제: 주문 생성과 동시에 결제 COMPLETED 처리 (같은 트랜잭션)
-//        paymentService.createCompletedPayment(order.getOrderId(), totalPrice);
+
+        // 선결제: 주문 생성과 동시에 결제 COMPLETED 처리 (같은 트랜잭션)
+        paymentService.createCompletedPayment(order.getOrderId(), totalPrice);
 
         return OrderResult.from(order);
     }
@@ -115,5 +116,30 @@ public class OrderService {
         CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderById(companyOrderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
         companyOrder.cancel(requesterId.toString());
+    }
+
+    // 출고 준비 확인: ORDERED → PREPARING
+    @Transactional
+    public CompanyOrderResult prepareCompanyOrder(UUID companyOrderId) {
+        CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderById(companyOrderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
+        if (companyOrder.getStatus() != CompanyOrderStatus.ORDERED) {
+            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        companyOrder.prepare();
+        return CompanyOrderResult.from(companyOrder);
+    }
+
+    // 출고 완료: PREPARING → SHIPPED
+    // TODO: Hub Service FeignClient 재고 차감 연동 (다음 주 논의)
+    @Transactional
+    public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
+        CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderById(companyOrderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
+        if (companyOrder.getStatus() != CompanyOrderStatus.PREPARING) {
+            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        companyOrder.ship();
+        return CompanyOrderResult.from(companyOrder);
     }
 }
