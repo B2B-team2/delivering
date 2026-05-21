@@ -13,10 +13,12 @@ public interface DraftRepository {
 
     Optional<Draft> findDraftById(UUID draftId);
 
-    Page<Draft> findAllByUserId(UUID userId, Pageable pageable);
+    Page<Draft> findDraftsByUserId(UUID userId, Pageable pageable);
 
-    // soft-deleted 포함 조회 (upsert 패턴: 같은 상품 옵션 재담기 시 복원)
-    Optional<Draft> findByUserIdAndProductOptionId(UUID userId, UUID productOptionId);
+    // 마스터 권한 전체 조회 (TODO: 권한별 필터링 구현 시 사용)
+    Page<Draft> findAllDrafts(Pageable pageable);
+
+    Optional<Draft> findExistingDraft(UUID userId, UUID productOptionId);
 
     void delete(Draft draft);
 }
