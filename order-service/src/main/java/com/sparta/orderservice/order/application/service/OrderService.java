@@ -9,10 +9,11 @@ import com.sparta.orderservice.order.domain.core.CompanyOrder;
 import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
 import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
+import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
-import com.sparta.orderservice.payment.application.service.PaymentService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +28,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CompanyOrderRepository companyOrderRepository;
-    private final PaymentService paymentService;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 주문 생성
     @Transactional
@@ -73,8 +74,8 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        // 선결제: 주문 생성과 동시에 결제 COMPLETED 처리 (같은 트랜잭션)
-        paymentService.createCompletedPayment(order.getOrderId(), totalPrice);
+        // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
+        eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), totalPrice));
 
         return OrderResult.from(order);
     }
@@ -105,24 +106,19 @@ public class OrderService {
 
     // 서브 주문 상세 조회
     public CompanyOrderResult getCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderById(companyOrderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
-        return CompanyOrderResult.from(companyOrder);
+        return CompanyOrderResult.from(findCompanyOrderOrThrow(companyOrderId));
     }
 
     // 서브 주문 부분 취소
     @Transactional
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
-        CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderById(companyOrderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
-        companyOrder.cancel(requesterId.toString());
+        findCompanyOrderOrThrow(companyOrderId).cancel(requesterId.toString());
     }
 
     // 출고 준비 확인: ORDERED → PREPARING
     @Transactional
     public CompanyOrderResult prepareCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderById(companyOrderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
+        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.ORDERED) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
@@ -134,12 +130,16 @@ public class OrderService {
     // TODO: Hub Service FeignClient 재고 차감 연동 (다음 주 논의)
     @Transactional
     public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderById(companyOrderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
+        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.PREPARING) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.ship();
         return CompanyOrderResult.from(companyOrder);
+    }
+
+    private CompanyOrder findCompanyOrderOrThrow(UUID companyOrderId) {
+        return companyOrderRepository.findCompanyOrderById(companyOrderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
     }
 }
