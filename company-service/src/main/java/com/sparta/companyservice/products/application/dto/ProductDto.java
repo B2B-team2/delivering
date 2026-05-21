@@ -32,7 +32,7 @@ public class ProductDto {
                 .price(entity.getPrice())
                 .description(entity.getDescription())
                 .thumbnailUrl(entity.getThumbnailUrl())
-                .status(entity.getStatus() != null ? entity.getStatus().name() : null)
+                .status(entity.getStatus().name())
                 .build();
     }
 }

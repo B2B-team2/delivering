@@ -1,6 +1,8 @@
 package com.sparta.companyservice.products.domain.core;
 
 import com.sparta.common.entity.BaseEntity;
+import com.sparta.common.dto.BusinessException;
+import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -22,8 +24,6 @@ import java.util.UUID;
 @Table(name = "p_products")
 @Getter
 @NoArgsConstructor
-@AllArgsConstructor(access = AccessLevel.PRIVATE)
-@Builder
 public class Product extends BaseEntity {
 
     @Id
@@ -48,7 +48,19 @@ public class Product extends BaseEntity {
     private String thumbnailUrl;
 
     @Enumerated(EnumType.STRING)
-    @Builder.Default
-    private ProductStatusEnum status = ProductStatusEnum.ON_SALE;
+    @Column(nullable = false)
+    private ProductStatusEnum status;
+
+    @Builder
+    private Product(UUID productId, UUID companyId, UUID categoryId, String name, BigDecimal price, String description, String thumbnailUrl, ProductStatusEnum status) {
+        this.productId = productId;
+        this.companyId = companyId;
+        this.categoryId = categoryId;
+        this.name = name;
+        this.price = price;
+        this.description = description;
+        this.thumbnailUrl = thumbnailUrl;
+        this.status = status;
+    }
 
 }
