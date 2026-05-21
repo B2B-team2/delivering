@@ -1,14 +1,17 @@
 package com.sparta.companyservice.product.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.common.dto.PageResponse;
+import com.sparta.common.util.PageableUtil;
 import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.application.service.ProductService;
 import com.sparta.companyservice.product.presentation.dto.ProductCreateRequest;
 import com.sparta.companyservice.product.presentation.dto.ProductResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -42,9 +45,15 @@ public class ProductController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<ProductResponse>> getProducts(Pageable pageable) {
-        // TODO: 구현 예정
-        return null;
+    public ResponseEntity<ApiResponse<PageResponse<ProductResponse>>> getProducts(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        
+        Pageable validatedPageable = PageableUtil.validatePageSize(pageable);
+        
+        PageResponse<ProductResponse> response = new PageResponse<>(
+                productService.getProducts(validatedPageable).map(ProductResponse::from)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/{productId}")

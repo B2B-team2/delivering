@@ -13,16 +13,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -91,5 +97,34 @@ class ProductControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 목록 조회 API 성공 검증")
+    void getProductsSuccessTest() throws Exception {
+        // given
+        ProductDto responseDto = ProductDto.builder()
+                .productId(UUID.randomUUID())
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .status(ProductStatusEnum.ON_SALE.name())
+                .build();
+
+        Page<ProductDto> productPage = new PageImpl<>(List.of(responseDto), PageRequest.of(0, 10), 1);
+        when(productService.getProducts(any(Pageable.class))).thenReturn(productPage);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/products")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content[0].name").value("테스트 상품"))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 }

@@ -42,8 +42,8 @@ public class ProductService {
     }
 
     public Page<ProductDto> getProducts(Pageable pageable) {
-        // TODO: 구현 예정
-        return null;
+        return productRepository.findAll(pageable)
+                .map(ProductDto::from);
     }
 
     @Transactional
