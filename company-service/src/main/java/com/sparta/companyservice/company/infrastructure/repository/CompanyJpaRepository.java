@@ -14,4 +14,5 @@ import java.util.UUID;
 public interface CompanyJpaRepository extends JpaRepository<Company, UUID> {
     Page<Company> findAllByDeletedAtIsNull(Pageable pageable);
     Optional<Company> findByCompanyIdAndDeletedAtIsNull(UUID companyId);
+    Optional<Company> findByBusinessNumber(String businessNumber);
 }

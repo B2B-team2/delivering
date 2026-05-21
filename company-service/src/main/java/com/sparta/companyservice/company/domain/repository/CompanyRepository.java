@@ -16,4 +16,5 @@ public interface CompanyRepository {
     Optional<Company> findById(UUID id);
     Page<Company> findAll(Pageable pageable);
     long count();
+    Optional<Company> findByBusinessNumberAnyStatus(String businessNumber);
 }

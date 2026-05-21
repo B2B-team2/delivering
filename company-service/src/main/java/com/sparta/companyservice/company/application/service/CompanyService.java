@@ -8,6 +8,7 @@ import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -30,21 +31,47 @@ public class CompanyService {
             throw new BusinessException(CompanyErrorCode.INVALID_COMPANY_TYPE);
         }
 
-        Company company = Company.builder()
-                .companyName(command.getCompanyName())
-                .companyType(type)
-                .phone(command.getPhone())
-                .description(command.getDescription())
-                .businessNumber(command.getBusinessNumber())
-                .hubId(command.getHubId())
-                .latitude(command.getLatitude())
-                .longitude(command.getLongitude())
-                .address(command.getAddress())
-                .logoUrl(command.getLogoUrl())
-                .build();
+        return companyRepository.findByBusinessNumberAnyStatus(command.getBusinessNumber())
+                .map(existingCompany -> {
+                    if (existingCompany.getDeletedAt() == null) {
+                        throw new BusinessException(CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
+                    }
+                    // 삭제된 상태라면 복구 및 정보 업데이트
+                    existingCompany.restore();
+                    existingCompany.update(
+                            command.getCompanyName(),
+                            type,
+                            command.getPhone(),
+                            command.getDescription(),
+                            command.getHubId(),
+                            command.getLatitude(),
+                            command.getLongitude(),
+                            command.getAddress(),
+                            command.getLogoUrl()
+                    );
+                    return CompanyDto.from(existingCompany);
+                })
+                .orElseGet(() -> {
+                    Company company = Company.builder()
+                            .companyName(command.getCompanyName())
+                            .companyType(type)
+                            .phone(command.getPhone())
+                            .description(command.getDescription())
+                            .businessNumber(command.getBusinessNumber())
+                            .hubId(command.getHubId())
+                            .latitude(command.getLatitude())
+                            .longitude(command.getLongitude())
+                            .address(command.getAddress())
+                            .logoUrl(command.getLogoUrl())
+                            .build();
 
-        Company savedCompany = companyRepository.save(company);
-        return CompanyDto.from(savedCompany);
+                    try {
+                        Company savedCompany = companyRepository.save(company);
+                        return CompanyDto.from(savedCompany);
+                    } catch (DataIntegrityViolationException e) {
+                        throw new BusinessException(CompanyErrorCode.DUPLICATE_BUSINESS_NUMBER);
+                    }
+                });
     }
 
     @Transactional(readOnly = true)

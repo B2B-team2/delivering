@@ -83,4 +83,23 @@ public class Company extends BaseEntity {
     public Double getLongitude() {
         return location != null ? location.getX() : null;
     }
+
+    public void update(String companyName, CompanyTypeEnum companyType, String phone,
+                       String description, UUID hubId, Double latitude, Double longitude,
+                       String address, String logoUrl) {
+        this.companyName = companyName;
+        this.companyType = companyType;
+        this.phone = phone;
+        this.description = description;
+        this.hubId = hubId;
+        this.location = (latitude != null && longitude != null)
+                ? geometryFactory.createPoint(new Coordinate(longitude, latitude))
+                : null;
+        this.address = address;
+        this.logoUrl = logoUrl;
+    }
+
+    public void restore() {
+        this.clearDeleted();
+    }
 }

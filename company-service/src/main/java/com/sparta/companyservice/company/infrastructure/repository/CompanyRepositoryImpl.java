@@ -39,4 +39,9 @@ public class CompanyRepositoryImpl implements CompanyRepository {
     public long count() {
         return jpaRepository.count();
     }
+
+    @Override
+    public Optional<Company> findByBusinessNumberAnyStatus(String businessNumber) {
+        return jpaRepository.findByBusinessNumber(businessNumber);
+    }
 }
