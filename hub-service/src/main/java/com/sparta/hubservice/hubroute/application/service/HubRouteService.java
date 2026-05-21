@@ -76,6 +76,8 @@ public class HubRouteService {
         hubRouteRepository.save(hubRoute);
     }
 
+    // TODO: Redis 연결 후 주석 해제
+    // @Cacheable(value = "hubRoutes", key = "#fromHubId + ':' + #toHubId")
     public RouteSearchResult findRoute(UUID fromHubId, UUID toHubId) {
         Map<UUID, Map<UUID, HubRoute>> routeMap = hubRouteRepository.findAll().stream()
                 .collect(Collectors.groupingBy(
