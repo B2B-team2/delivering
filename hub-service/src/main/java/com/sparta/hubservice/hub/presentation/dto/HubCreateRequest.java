@@ -1,6 +1,7 @@
 package com.sparta.hubservice.hub.presentation.dto;
 
 import com.sparta.hubservice.hub.application.dto.HubCreateCommand;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -23,12 +24,10 @@ public class HubCreateRequest {
     @NotBlank(message = "주소는 필수 입력 항목입니다.")
     private String address;
 
-    @NotNull(message = "위도는 필수 입력 항목입니다.")
-    private Double latitude;
+    @Valid
+    @NotNull(message = "위치 정보는 필수 입력 항목입니다.")
+    private LocationDto location;
 
-    @NotNull(message = "경도는 필수 입력 항목입니다.")
-    private Double longitude;
-    
     private String contactPhone;
 
     public HubCreateCommand toCommand() {
@@ -36,8 +35,8 @@ public class HubCreateRequest {
                 .name(name)
                 .hubType(hubType)
                 .address(address)
-                .latitude(latitude)
-                .longitude(longitude)
+                .latitude(location.getLatitude())
+                .longitude(location.getLongitude())
                 .contactPhone(contactPhone)
                 .build();
     }

@@ -15,6 +15,10 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.Point;
+import org.locationtech.jts.geom.PrecisionModel;
 
 import java.util.UUID;
 
@@ -23,6 +27,9 @@ import java.util.UUID;
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Hub extends BaseEntity {
+
+    private static final GeometryFactory GEOMETRY_FACTORY =
+            new GeometryFactory(new PrecisionModel(), 4326);
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -40,10 +47,7 @@ public class Hub extends BaseEntity {
     private String address;
 
     @Column(nullable = false)
-    private Double latitude;
-
-    @Column(nullable = false)
-    private Double longitude;
+    private Point location;
 
     @Column(name = "contact_phone")
     private String contactPhone;
@@ -57,18 +61,25 @@ public class Hub extends BaseEntity {
         this.name = name;
         this.hubType = hubType;
         this.address = address;
-        this.latitude = latitude;
-        this.longitude = longitude;
+        this.location = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
         this.contactPhone = contactPhone;
         this.status = status;
+    }
+
+    public Double getLatitude() {
+        return location.getY();
+    }
+
+    public Double getLongitude() {
+        return location.getX();
     }
 
     public void update(String name, String address, Double latitude, Double longitude,
                        String contactPhone, HubStatus status) {
         if (name != null) this.name = name;
         if (address != null) this.address = address;
-        if (latitude != null) this.latitude = latitude;
-        if (longitude != null) this.longitude = longitude;
+        if (latitude != null && longitude != null)
+            this.location = GEOMETRY_FACTORY.createPoint(new Coordinate(longitude, latitude));
         if (contactPhone != null) this.contactPhone = contactPhone;
         if (status != null) this.status = status;
     }
