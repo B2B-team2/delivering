@@ -10,15 +10,21 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -101,5 +107,36 @@ class CompanyControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
                 .andExpect(status().isCreated());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("API 응답 규격 검증: GET /api/v1/companies 호출 시 200 OK와 PageResponse 포맷이 유지되는가?")
+    void getCompaniesApiResponseFormatTest() throws Exception {
+        // given
+        CompanyDto responseDto = CompanyDto.builder()
+                .companyId(UUID.randomUUID())
+                .companyName("Test Company")
+                .companyType("PRODUCER")
+                .build();
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+        when(companyService.getCompanies(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(responseDto), pageable, 1));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/companies")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .param("sort", "createdAt,DESC")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[0].companyName").value(responseDto.getCompanyName()))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
     }
 }

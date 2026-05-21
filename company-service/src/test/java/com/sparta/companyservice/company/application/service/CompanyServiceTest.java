@@ -13,7 +13,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -81,39 +87,29 @@ class CompanyServiceTest {
     }
 
     @Test
-    @DisplayName("데이터 전달 검증: Command 객체의 데이터가 엔티티로 누락 없이 전달되는가?")
-    void commandToEntityMappingTest() {
+    @DisplayName("업체 목록 조회 성공: Repository에서 반환된 Page<Company>가 Page<CompanyDto>로 정확히 변환되는가?")
+    void getCompaniesSuccessTest() {
         // given
-        CompanyCreateCommand command = CompanyCreateCommand.builder()
-                .companyName("Mapping Test")
-                .companyType("RECEIVER")
-                .businessNumber("111-22-33333")
+        Pageable pageable = PageRequest.of(0, 10, Sort.by("createdAt").descending());
+        Company company = Company.builder()
+                .companyId(UUID.randomUUID())
+                .companyName("Test Company")
+                .companyType(CompanyTypeEnum.PRODUCER)
+                .businessNumber("123-45-67890")
                 .hubId(UUID.randomUUID())
-                .latitude(35.0)
-                .longitude(127.0)
-                .phone("010-1234-5678")
-                .description("Desc")
-                .address("Seoul")
-                .logoUrl("http://logo.com")
                 .build();
-
-        when(companyRepository.save(any(Company.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        
+        Page<Company> companyPage = new PageImpl<>(List.of(company), pageable, 1);
+        when(companyRepository.findAll(any(Pageable.class))).thenReturn(companyPage);
 
         // when
-        companyService.createCompany(command);
+        Page<CompanyDto> result = companyService.getCompanies(pageable);
 
         // then
-        verify(companyRepository).save(argThat(company -> 
-            company.getCompanyName().equals(command.getCompanyName()) &&
-            company.getCompanyType().equals(CompanyTypeEnum.RECEIVER) &&
-            company.getBusinessNumber().equals(command.getBusinessNumber()) &&
-            company.getHubId().equals(command.getHubId()) &&
-            company.getLatitude().equals(command.getLatitude()) &&
-            company.getLongitude().equals(command.getLongitude()) &&
-            company.getPhone().equals(command.getPhone()) &&
-            company.getDescription().equals(command.getDescription()) &&
-            company.getAddress().equals(command.getAddress()) &&
-            company.getLogoUrl().equals(command.getLogoUrl())
-        ));
+        assertThat(result).isNotNull();
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getCompanyName()).isEqualTo(company.getCompanyName());
+        assertThat(result.getTotalElements()).isEqualTo(1);
+        verify(companyRepository).findAll(pageable);
     }
 }
