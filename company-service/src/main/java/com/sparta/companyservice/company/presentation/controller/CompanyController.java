@@ -2,6 +2,7 @@ package com.sparta.companyservice.company.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.common.dto.PageResponse;
+import com.sparta.common.util.PageableUtil;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
@@ -36,8 +37,11 @@ public class CompanyController {
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<CompanyResponse>>> getCompanies(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Pageable validatedPageable = PageableUtil.validatePageSize(pageable);
+
         PageResponse<CompanyResponse> response = new PageResponse<>(
-                companyService.getCompanies(pageable).map(CompanyResponse::from)
+                companyService.getCompanies(validatedPageable).map(CompanyResponse::from)
         );
         return ResponseEntity.ok(ApiResponse.success(response));
     }

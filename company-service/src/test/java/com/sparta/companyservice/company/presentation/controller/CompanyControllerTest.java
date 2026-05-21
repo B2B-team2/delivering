@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -138,5 +140,23 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$.data.page").value(0))
                 .andExpect(jsonPath("$.data.size").value(10))
                 .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("페이지네이션 사이즈 보정 검증: 허용되지 않은 사이즈(20) 요청 시 10으로 보정되어 서비스에 전달되는가?")
+    void getCompaniesSizeCorrectionTest() throws Exception {
+        // given
+        when(companyService.getCompanies(any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/companies")
+                        .param("size", "20")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk());
+
+        // PageableUtil에 의해 size 20이 10으로 보정되어 서비스에 전달되었는지 확인
+        verify(companyService).getCompanies(argThat(pageable -> pageable.getPageSize() == 10));
     }
 }
