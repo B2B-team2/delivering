@@ -5,8 +5,11 @@ import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
+import com.sparta.companyservice.product.application.port.CompanyQueryPort;
 import com.sparta.companyservice.product.domain.core.Product;
+import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
+import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
 import com.sparta.companyservice.product.domain.repository.ProductRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,12 @@ class ProductServiceTest {
     @Mock
     private ProductRepository productRepository;
 
+    @Mock
+    private ProductCategoryRepository categoryRepository;
+
+    @Mock
+    private CompanyQueryPort companyQueryPort;
+
     @InjectMocks
     private ProductService productService;
 
@@ -64,6 +73,8 @@ class ProductServiceTest {
                 .status(ProductStatusEnum.ON_SALE)
                 .build();
 
+        when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(true);
+        when(categoryRepository.findById(command.getCategoryId())).thenReturn(Optional.of(ProductCategory.builder().build()));
         when(productRepository.save(any(Product.class))).thenReturn(savedProduct);
 
         // when
@@ -74,6 +85,45 @@ class ProductServiceTest {
         assertThat(result.getName()).isEqualTo(command.getName());
         assertThat(result.getStatus()).isEqualTo(ProductStatusEnum.ON_SALE.name());
         verify(productRepository, times(1)).save(any(Product.class));
+    }
+
+    @Test
+    @DisplayName("상품 생성 실패: 존재하지 않는 업체")
+    void createProductFail_CompanyNotFound() {
+        // given
+        ProductCreateCommand command = ProductCreateCommand.builder()
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .build();
+
+        when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(false);
+
+        // when & then
+        assertThatThrownBy(() -> productService.createProduct(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 생성 실패: 존재하지 않는 카테고리")
+    void createProductFail_CategoryNotFound() {
+        // given
+        ProductCreateCommand command = ProductCreateCommand.builder()
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .build();
+
+        when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(true);
+        when(categoryRepository.findById(command.getCategoryId())).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> productService.createProduct(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.CATEGORY_NOT_FOUND.getMessage());
     }
 
     @Test
@@ -128,7 +178,7 @@ class ProductServiceTest {
                 .price(BigDecimal.valueOf(10000))
                 .status(ProductStatusEnum.ON_SALE)
                 .build();
-        
+
         Page<Product> productPage = new PageImpl<>(List.of(product), pageable, 1);
         when(productRepository.findAll(any(Pageable.class))).thenReturn(productPage);
 
@@ -165,6 +215,8 @@ class ProductServiceTest {
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(true);
+        when(categoryRepository.findById(command.getCategoryId())).thenReturn(Optional.of(ProductCategory.builder().build()));
 
         // when
         ProductDto result = productService.updateProduct(productId, command);
@@ -205,10 +257,12 @@ class ProductServiceTest {
                 .build();
 
         ProductUpdateCommand command = ProductUpdateCommand.builder()
+                .companyId(UUID.randomUUID())
                 .status("INVALID_STATUS") // 잘못된 상태
                 .build();
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+        when(companyQueryPort.existsCompanyById(command.getCompanyId())).thenReturn(true);
 
         // when & then
         assertThatThrownBy(() -> productService.updateProduct(productId, command))

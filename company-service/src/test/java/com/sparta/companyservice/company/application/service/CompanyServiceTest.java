@@ -351,4 +351,25 @@ class CompanyServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.COMPANY_NOT_FOUND);
     }
+
+    @Test
+    @DisplayName("업체 존재 여부 확인: 존재하는 ID면 true, 없으면 false를 반환하는가?")
+    void existsCompanyTest() {
+        // given
+        UUID existingId = UUID.randomUUID();
+        UUID nonExistingId = UUID.randomUUID();
+        
+        Company company = Company.builder().companyId(existingId).build();
+        
+        when(companyRepository.findById(existingId)).thenReturn(Optional.of(company));
+        when(companyRepository.findById(nonExistingId)).thenReturn(Optional.empty());
+
+        // when
+        boolean exists = companyService.existsCompany(existingId);
+        boolean notExists = companyService.existsCompany(nonExistingId);
+
+        // then
+        assertThat(exists).isTrue();
+        assertThat(notExists).isFalse();
+    }
 }

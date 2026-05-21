@@ -13,7 +13,8 @@ public enum CompanyErrorCode implements ErrorCode {
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "C002", "업체를 찾을 수 없습니다.", null),
     DUPLICATE_BUSINESS_NUMBER(HttpStatus.CONFLICT, "C003", "이미 등록된 사업자 번호입니다.", "businessNumber"),
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "P002", "상품을 찾을 수 없습니다.", null),
-    INVALID_PRODUCT_STATUS(HttpStatus.BAD_REQUEST, "P003", "유효하지 않은 상품 상태입니다.", "status");
+    INVALID_PRODUCT_STATUS(HttpStatus.BAD_REQUEST, "P003", "유효하지 않은 상품 상태입니다.", "status"),
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "P004", "카테고리를 찾을 수 없습니다.", null);
 
     private final HttpStatus httpStatus;
     private final String code;

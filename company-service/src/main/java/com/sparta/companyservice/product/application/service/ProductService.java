@@ -5,8 +5,10 @@ import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
+import com.sparta.companyservice.product.application.port.CompanyQueryPort;
 import com.sparta.companyservice.product.domain.core.Product;
 import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
+import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
 import com.sparta.companyservice.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -22,9 +24,13 @@ import java.util.UUID;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductCategoryRepository categoryRepository;
+    private final CompanyQueryPort companyQueryPort;
 
     @Transactional
     public ProductDto createProduct(ProductCreateCommand command) {
+        validateCompanyAndCategory(command.getCompanyId(), command.getCategoryId());
+
         Product product = Product.builder()
                 .companyId(command.getCompanyId())
                 .categoryId(command.getCategoryId())
@@ -55,6 +61,8 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_NOT_FOUND));
 
+        validateCompanyAndCategory(command.getCompanyId(), command.getCategoryId());
+
         ProductStatusEnum status;
         try {
             status = ProductStatusEnum.valueOf(command.getStatus());
@@ -78,5 +86,14 @@ public class ProductService {
     @Transactional
     public void deleteProduct(UUID productId) {
         // TODO: 구현 예정
+    }
+
+    private void validateCompanyAndCategory(UUID companyId, UUID categoryId) {
+        if (!companyQueryPort.existsCompanyById(companyId)) {
+            throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
+        }
+        if (categoryId != null && categoryRepository.findById(categoryId).isEmpty()) {
+            throw new BusinessException(CompanyErrorCode.CATEGORY_NOT_FOUND);
+        }
     }
 }
