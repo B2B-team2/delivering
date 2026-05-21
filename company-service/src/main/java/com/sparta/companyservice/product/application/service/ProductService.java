@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
+import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
 import com.sparta.companyservice.product.domain.core.Product;
 import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
 import com.sparta.companyservice.product.domain.repository.ProductRepository;
@@ -47,6 +48,31 @@ public class ProductService {
     public Page<ProductDto> getProducts(Pageable pageable) {
         return productRepository.findAll(pageable)
                 .map(ProductDto::from);
+    }
+
+    @Transactional
+    public ProductDto updateProduct(UUID productId, ProductUpdateCommand command) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_NOT_FOUND));
+
+        ProductStatusEnum status;
+        try {
+            status = ProductStatusEnum.valueOf(command.getStatus());
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(CompanyErrorCode.INVALID_PRODUCT_STATUS);
+        }
+
+        product.update(
+                command.getCompanyId(),
+                command.getCategoryId(),
+                command.getName(),
+                command.getPrice(),
+                command.getDescription(),
+                command.getThumbnailUrl(),
+                status
+        );
+
+        return ProductDto.from(product);
     }
 
     @Transactional

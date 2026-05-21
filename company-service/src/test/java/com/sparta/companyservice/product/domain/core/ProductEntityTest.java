@@ -42,4 +42,39 @@ class ProductEntityTest {
         assertThat(product.getStatus()).isEqualTo(ProductStatusEnum.ON_SALE);
     }
 
+    @Test
+    @DisplayName("update() 메서드를 통해 엔티티 필드가 정상적으로 변경된다.")
+    void update_Method_Changes_Fields_Correctly() {
+        // given
+        Product product = Product.builder()
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("기존 상품명")
+                .price(BigDecimal.valueOf(1000))
+                .description("기존 설명")
+                .thumbnailUrl("http://old.url")
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        UUID newCompanyId = UUID.randomUUID();
+        UUID newCategoryId = UUID.randomUUID();
+        String newName = "변경된 상품명";
+        BigDecimal newPrice = BigDecimal.valueOf(2000);
+        String newDesc = "변경된 설명";
+        String newThumb = "http://new.url";
+        ProductStatusEnum newStatus = ProductStatusEnum.SOLD_OUT;
+
+        // when
+        product.update(newCompanyId, newCategoryId, newName, newPrice, newDesc, newThumb, newStatus);
+
+        // then
+        assertThat(product.getCompanyId()).isEqualTo(newCompanyId);
+        assertThat(product.getCategoryId()).isEqualTo(newCategoryId);
+        assertThat(product.getName()).isEqualTo(newName);
+        assertThat(product.getPrice()).isEqualTo(newPrice);
+        assertThat(product.getDescription()).isEqualTo(newDesc);
+        assertThat(product.getThumbnailUrl()).isEqualTo(newThumb);
+        assertThat(product.getStatus()).isEqualTo(newStatus);
+    }
+
 }

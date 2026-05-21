@@ -7,6 +7,7 @@ import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.application.service.ProductService;
 import com.sparta.companyservice.product.presentation.dto.ProductCreateRequest;
 import com.sparta.companyservice.product.presentation.dto.ProductResponse;
+import com.sparta.companyservice.product.presentation.dto.ProductUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -54,6 +56,14 @@ public class ProductController {
                 productService.getProducts(validatedPageable).map(ProductResponse::from)
         );
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PatchMapping("/{productId}")
+    public ResponseEntity<ApiResponse<ProductResponse>> patchProduct(
+            @PathVariable UUID productId,
+            @RequestBody @Valid ProductUpdateRequest request) {
+        ProductDto resultDto = productService.updateProduct(productId, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(ProductResponse.from(resultDto)));
     }
 
     @DeleteMapping("/{productId}")

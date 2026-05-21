@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
+import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
 import com.sparta.companyservice.product.domain.core.Product;
 import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
 import com.sparta.companyservice.product.domain.repository.ProductRepository;
@@ -139,5 +140,79 @@ class ProductServiceTest {
         assertThat(result.getTotalElements()).isEqualTo(1);
         assertThat(result.getContent().get(0).getName()).isEqualTo("테스트 상품");
         verify(productRepository, times(1)).findAll(pageable);
+    }
+
+    @Test
+    @DisplayName("상품 수정 성공")
+    void updateProductSuccessTest() {
+        // given
+        UUID productId = UUID.randomUUID();
+        Product existingProduct = Product.builder()
+                .productId(productId)
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("기존 상품")
+                .price(BigDecimal.valueOf(10000))
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        ProductUpdateCommand command = ProductUpdateCommand.builder()
+                .companyId(existingProduct.getCompanyId())
+                .categoryId(existingProduct.getCategoryId())
+                .name("변경된 상품")
+                .price(BigDecimal.valueOf(20000))
+                .status("SOLD_OUT")
+                .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+
+        // when
+        ProductDto result = productService.updateProduct(productId, command);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getName()).isEqualTo("변경된 상품");
+        assertThat(result.getPrice()).isEqualTo(BigDecimal.valueOf(20000));
+        assertThat(result.getStatus()).isEqualTo("SOLD_OUT");
+    }
+
+    @Test
+    @DisplayName("상품 수정 실패: 존재하지 않는 상품")
+    void updateProductFail_NotFound() {
+        // given
+        UUID productId = UUID.randomUUID();
+        ProductUpdateCommand command = ProductUpdateCommand.builder()
+                .name("변경된 상품")
+                .status("ON_SALE")
+                .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> productService.updateProduct(productId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 수정 실패: 유효하지 않은 상품 상태 Enum")
+    void updateProductFail_InvalidStatus() {
+        // given
+        UUID productId = UUID.randomUUID();
+        Product existingProduct = Product.builder()
+                .productId(productId)
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        ProductUpdateCommand command = ProductUpdateCommand.builder()
+                .status("INVALID_STATUS") // 잘못된 상태
+                .build();
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+
+        // when & then
+        assertThatThrownBy(() -> productService.updateProduct(productId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.INVALID_PRODUCT_STATUS.getMessage());
     }
 }

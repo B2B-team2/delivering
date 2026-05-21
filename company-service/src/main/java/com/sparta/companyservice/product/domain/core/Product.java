@@ -59,4 +59,14 @@ public class Product extends BaseEntity {
         this.status = status;
     }
 
+    public void update(UUID companyId, UUID categoryId, String name, BigDecimal price, String description, String thumbnailUrl, ProductStatusEnum status) {
+        this.companyId = companyId;
+        this.categoryId = categoryId;
+        this.name = name;
+        this.price = price;
+        this.description = description;
+        this.thumbnailUrl = thumbnailUrl;
+        this.status = status;
+    }
+
 }
