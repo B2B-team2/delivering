@@ -9,11 +9,17 @@ import org.springframework.http.HttpStatus;
 @RequiredArgsConstructor
 public enum CompanyErrorCode implements ErrorCode {
 
-    INVALID_COMPANY_TYPE(HttpStatus.BAD_REQUEST, "C001", "유효하지 않은 업체 타입입니다."),
-    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "C002", "업체를 찾을 수 없습니다."),
-    DUPLICATE_BUSINESS_NUMBER(HttpStatus.BAD_REQUEST, "C003", "이미 등록된 사업자 번호입니다.");
+    INVALID_COMPANY_TYPE(HttpStatus.BAD_REQUEST, "C001", "유효하지 않은 업체 타입입니다.", "type"),
+    COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "C002", "업체를 찾을 수 없습니다.", null),
+    DUPLICATE_BUSINESS_NUMBER(HttpStatus.CONFLICT, "C003", "이미 등록된 사업자 번호입니다.", "businessNumber");
 
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
+    private final String field;
+
+    @Override
+    public String getField() {
+        return this.field;
+    }
 }

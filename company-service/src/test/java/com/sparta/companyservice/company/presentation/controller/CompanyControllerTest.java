@@ -202,6 +202,6 @@ class CompanyControllerTest {
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
-                .andExpect(jsonPath("$.message").value(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage()));
+                .andExpect(jsonPath("$.message").value("COMPANY_NOT_FOUND"));
     }
 }
