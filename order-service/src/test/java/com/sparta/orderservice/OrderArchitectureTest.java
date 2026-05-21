@@ -11,4 +11,7 @@ public class OrderArchitectureTest extends BaseArchitectureTest {
     @ArchTest
     static final ArchRule order_prefix_rule = domain_prefix_naming_rule("Order");
 
+    @ArchTest
+    static final ArchRule payment_prefix_rule = domain_prefix_naming_rule("Payment");
+
 }

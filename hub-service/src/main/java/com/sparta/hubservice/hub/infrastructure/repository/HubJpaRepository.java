@@ -1,6 +1,7 @@
 package com.sparta.hubservice.hub.infrastructure.repository;
 
 import com.sparta.hubservice.hub.domain.core.Hub;
+import com.sparta.hubservice.hub.domain.core.HubType;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -12,4 +13,6 @@ public interface HubJpaRepository extends JpaRepository<Hub, UUID> {
     List<Hub> findAllByDeletedAtIsNull();
 
     Optional<Hub> findByHubIdAndDeletedAtIsNull(UUID hubId);
+
+    List<Hub> findAllByHubTypeAndDeletedAtIsNull(HubType hubType);
 }

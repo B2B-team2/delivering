@@ -6,6 +6,8 @@ import com.sparta.hubservice.hub.application.service.HubService;
 import com.sparta.hubservice.hub.presentation.dto.HubCreateRequest;
 import com.sparta.hubservice.hub.presentation.dto.HubResponse;
 import com.sparta.hubservice.hub.presentation.dto.HubUpdateRequest;
+import com.sparta.hubservice.hubroute.application.service.HubRouteService;
+import com.sparta.hubservice.hubroute.presentation.dto.HubRouteResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,7 @@ import java.util.UUID;
 public class HubController {
 
     private final HubService hubService;
+    private final HubRouteService hubRouteService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<HubResponse>> createHub(
@@ -67,5 +70,14 @@ public class HubController {
             @RequestHeader(value = "X-User-Name", required = false, defaultValue = "system") String userName) {
         hubService.deleteHub(hub_id, userName);
         return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @GetMapping("/{hub_id}/routes")
+    public ResponseEntity<ApiResponse<List<HubRouteResponse>>> getRoutesByHub(
+            @PathVariable UUID hub_id) {
+        List<HubRouteResponse> responses = hubRouteService.getRoutesByHub(hub_id).stream()
+                .map(HubRouteResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(responses));
     }
 }

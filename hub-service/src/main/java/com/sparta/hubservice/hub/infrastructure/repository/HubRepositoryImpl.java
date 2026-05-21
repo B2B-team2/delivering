@@ -1,6 +1,7 @@
 package com.sparta.hubservice.hub.infrastructure.repository;
 
 import com.sparta.hubservice.hub.domain.core.Hub;
+import com.sparta.hubservice.hub.domain.core.HubType;
 import com.sparta.hubservice.hub.domain.repository.HubRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -28,6 +29,11 @@ public class HubRepositoryImpl implements HubRepository {
     @Override
     public List<Hub> findAll() {
         return hubJpaRepository.findAllByDeletedAtIsNull();
+    }
+
+    @Override
+    public List<Hub> findAllByHubType(HubType hubType) {
+        return hubJpaRepository.findAllByHubTypeAndDeletedAtIsNull(hubType);
     }
 
     @Override

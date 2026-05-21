@@ -1,7 +1,7 @@
 -- ============================================================
 -- V1: order-service 초기 스키마 생성
 -- 스키마: order-db
--- 테이블: p_orders, p_company_orders, p_order_items
+-- 테이블: p_orders, p_company_orders, p_order_items, p_payments
 -- ============================================================
 
 -- ============================================================
@@ -70,4 +70,25 @@ CREATE TABLE IF NOT EXISTS "order-db".p_order_items
     deleted_by        VARCHAR(255),
 
     CONSTRAINT fk_order_item_company_order FOREIGN KEY (company_order_id) REFERENCES "order-db".p_company_orders (company_order_id)
+);
+
+-- ============================================================
+-- 4. p_payments (결제)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS "order-db".p_payments
+(
+    payment_id        UUID          NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    order_id          UUID          NOT NULL,                       -- p_orders FK
+    payment_method    VARCHAR(30)   NOT NULL DEFAULT 'CARD',        -- 결제 방식 (CARD만 허용)
+    amount            NUMERIC(12, 2),                               -- 결제 금액
+    status            VARCHAR(30)   NOT NULL DEFAULT 'PENDING',     -- 결제 상태 (PENDING, COMPLETED, CANCELLED)
+    pg_transaction_id VARCHAR(255),                                 -- PG사 거래 ID (결제 승인 후 발급)
+    created_at        TIMESTAMP     NOT NULL,
+    created_by        VARCHAR(255),
+    updated_at        TIMESTAMP,
+    updated_by        VARCHAR(255),
+    deleted_at        TIMESTAMP,
+    deleted_by        VARCHAR(255),
+
+    CONSTRAINT fk_payment_order FOREIGN KEY (order_id) REFERENCES "order-db".p_orders (order_id)
 );
