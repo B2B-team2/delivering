@@ -1,6 +1,5 @@
 package com.sparta.hubservice.inventory.application.dto;
 
-import com.sparta.hubservice.inventory.domain.core.InventoryChangeType;
 import com.sparta.hubservice.inventory.domain.core.InventoryHistory;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +13,7 @@ public class InventoryHistoryItemDto {
 
     private final UUID historyId;
     private final int changeQuantity;
-    private final InventoryChangeType changeType;
+    private final String changeType;
     private final LocalDateTime createdAt;
     private final String createdBy;
 
@@ -22,7 +21,7 @@ public class InventoryHistoryItemDto {
         return InventoryHistoryItemDto.builder()
                 .historyId(history.getHistoryId())
                 .changeQuantity(history.getChangeQuantity())
-                .changeType(history.getChangeType())
+                .changeType(history.getChangeType().name())
                 .createdAt(history.getCreatedAt())
                 .createdBy(history.getCreatedBy())
                 .build();

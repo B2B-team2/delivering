@@ -50,7 +50,7 @@ public class InventoryHistoryPageResponse {
         private HistoryItem(InventoryHistoryItemDto dto) {
             this.historyId = dto.getHistoryId();
             this.changeQuantity = dto.getChangeQuantity();
-            this.changeType = dto.getChangeType().name();
+            this.changeType = dto.getChangeType();
             this.createdAt = dto.getCreatedAt();
             this.createdBy = dto.getCreatedBy();
         }

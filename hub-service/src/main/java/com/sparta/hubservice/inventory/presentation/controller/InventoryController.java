@@ -4,7 +4,6 @@ import com.sparta.common.dto.ApiResponse;
 import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
 import com.sparta.hubservice.inventory.application.service.InventoryService;
-import com.sparta.hubservice.inventory.domain.core.InventoryChangeType;
 import com.sparta.hubservice.inventory.presentation.dto.InventoryHistoryPageResponse;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryAdjustRequest;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryCreateRequest;
@@ -66,7 +65,7 @@ public class InventoryController {
     @GetMapping("/{inventory_id}/histories")
     public ResponseEntity<ApiResponse<InventoryHistoryPageResponse>> getInventoryHistories(
             @PathVariable UUID inventory_id,
-            @RequestParam(required = false) InventoryChangeType changeType,
+            @RequestParam(required = false) String changeType,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
