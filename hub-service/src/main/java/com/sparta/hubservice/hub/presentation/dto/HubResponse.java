@@ -18,8 +18,7 @@ public class HubResponse {
     private String name;
     private String hubType;
     private String address;
-    private Double latitude;
-    private Double longitude;
+    private LocationDto location;
     private String contactPhone;
     private String status;
 
@@ -29,8 +28,7 @@ public class HubResponse {
                 .name(dto.getName())
                 .hubType(dto.getHubType())
                 .address(dto.getAddress())
-                .latitude(dto.getLatitude())
-                .longitude(dto.getLongitude())
+                .location(new LocationDto(dto.getLatitude(), dto.getLongitude()))
                 .contactPhone(dto.getContactPhone())
                 .status(dto.getStatus())
                 .build();

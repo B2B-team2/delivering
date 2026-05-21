@@ -1,6 +1,7 @@
 package com.sparta.hubservice.hub.presentation.dto;
 
 import com.sparta.hubservice.hub.application.dto.HubUpdateCommand;
+import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,12 +15,16 @@ public class HubUpdateRequest {
 
     private String name;
     private String address;
-    private Double latitude;
-    private Double longitude;
+
+    @Valid
+    private LocationDto location;
+
     private String contactPhone;
     private String status;              // "ACTIVE" / "INACTIVE" / "MAINTENANCE"
 
     public HubUpdateCommand toCommand() {
+        Double latitude  = location != null ? location.getLatitude()  : null;
+        Double longitude = location != null ? location.getLongitude() : null;
         return HubUpdateCommand.builder()
                 .name(name)
                 .address(address)
