@@ -21,7 +21,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @Builder
-public class DeliveryAddress extends BaseEntity {
+public class CompanyDeliveryAddress extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

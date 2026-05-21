@@ -1,9 +1,9 @@
 package com.sparta.companyservice.product.application.initializer;
 
 import com.sparta.companyservice.company.domain.core.Company;
-import com.sparta.companyservice.company.domain.core.DeliveryAddress;
+import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
-import com.sparta.companyservice.company.domain.repository.DeliveryAddressRepository;
+import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.product.domain.core.Product;
 import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.core.ProductOption;
@@ -30,7 +30,7 @@ public class ProductDummyInitializer implements ApplicationRunner {
     private final ProductCategoryRepository categoryRepository;
     private final ProductOptionRepository optionRepository;
     private final CompanyRepository companyRepository;
-    private final DeliveryAddressRepository deliveryAddressRepository;
+    private final CompanyDeliveryAddressRepository deliveryAddressRepository;
 
     @Override
     @Transactional
@@ -65,8 +65,8 @@ public class ProductDummyInitializer implements ApplicationRunner {
 
             log.info("🎯 [CompanyService] 초기 배송지 데이터 주입 시작");
             if (deliveryAddressRepository.count() == 0) {
-                saveDeliveryAddress(producer, "본사 수령지", "관리자", "02-123-4567", "서울특별시 중구 세종대로 110", "본관 1층", "04524", true);
-                saveDeliveryAddress(techFactory, "제조공장 하차장", "공장장", "031-789-0000", "경기도 성남시 분당구 판교역로 166", "A동 창고", "13486", true);
+                saveCompanyDeliveryAddress(producer, "본사 수령지", "관리자", "02-123-4567", "서울특별시 중구 세종대로 110", "본관 1층", "04524", true);
+                saveCompanyDeliveryAddress(techFactory, "제조공장 하차장", "공장장", "031-789-0000", "경기도 성남시 분당구 판교역로 166", "A동 창고", "13486", true);
             }
 
             log.info("🎯 [CompanyService] 초기 도메인 데이터 주입 완료");
@@ -105,8 +105,8 @@ public class ProductDummyInitializer implements ApplicationRunner {
         optionRepository.save(option);
     }
 
-    private void saveDeliveryAddress(Company company, String name, String recipient, String phone, String address, String detail, String zip, boolean isDefault) {
-        DeliveryAddress deliveryAddress = DeliveryAddress.builder()
+    private void saveCompanyDeliveryAddress(Company company, String name, String recipient, String phone, String address, String detail, String zip, boolean isDefault) {
+        CompanyDeliveryAddress deliveryAddress = CompanyDeliveryAddress.builder()
                 .companyId(company.getCompanyId())
                 .addressName(name)
                 .recipientName(recipient)
