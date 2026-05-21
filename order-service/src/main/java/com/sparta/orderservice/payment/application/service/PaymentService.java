@@ -1,8 +1,12 @@
 package com.sparta.orderservice.payment.application.service;
 
 import com.sparta.common.dto.BusinessException;
+import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.global.exception.PaymentErrorCode;
-import com.sparta.orderservice.payment.application.dto.CreatePaymentCommand;
+import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
+import com.sparta.orderservice.order.domain.core.Order;
+import com.sparta.orderservice.order.domain.core.OrderStatus;
+import com.sparta.orderservice.order.domain.repository.OrderRepository;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
 import com.sparta.orderservice.payment.domain.core.Payment;
 import com.sparta.orderservice.payment.domain.core.PaymentMethod;
@@ -13,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -21,38 +26,44 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
 
     /**
-     * 결제 생성: PENDING 상태로 저장
-     * 실제 결제 승인은 PATCH /payments/{paymentId}/confirm 에서 처리
+     * 선결제: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
+     * OrderService.createOrder() 내에서 같은 트랜잭션으로 호출됨
      */
     @Transactional
-    public PaymentResult createPayment(CreatePaymentCommand command) {
-        PaymentMethod paymentMethod = PaymentMethod.valueOf(command.paymentMethod());
-        Payment payment = Payment.ready(command.orderId(), paymentMethod, command.amount());
+    public PaymentResult createCompletedPayment(UUID orderId, BigDecimal amount) {
+        Payment payment = Payment.complete(orderId, PaymentMethod.CARD, amount);
         paymentRepository.save(payment);
         return PaymentResult.from(payment);
     }
 
     /**
-     * 결제 확정: PENDING → COMPLETED
-     * 실제 PG 연동 X — mock UUID를 pgTransactionId로 자동 생성
-     * 이미 완료/취소된 결제에 confirm 시도 시 예외 발생 (Payment.confirm 내부 검증)
-     */
-    @Transactional
-    public PaymentResult confirmPayment(UUID paymentId) {
-        Payment payment = findPaymentOrThrow(paymentId);
-        payment.confirm();
-        return PaymentResult.from(payment);
-    }
-
-    /**
-     * 결제 취소: PENDING → CANCELLED
-     * 이미 취소된 결제에 재취소 시도 시 예외 발생 (Payment.cancel 내부 검증)
+     * 결제 취소/환불: COMPLETED → CANCELLED
+     * 취소 가능 조건:
+     *   1) Order.status == PENDING (출고 전 — DELIVERING/COMPLETED/CANCELLED 이면 불가)
+     *   2) 모든 CompanyOrder가 ORDERED 또는 PREPARING 상태
+     *      - SHIPPED(배송중) 또는 DELIVERED(수령완료) 이면 취소 불가
      */
     @Transactional
     public PaymentResult cancelPayment(UUID paymentId, UUID requesterId) {
         Payment payment = findPaymentOrThrow(paymentId);
+
+        Order order = orderRepository.findOrderById(payment.getOrderId())
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
+        }
+
+        boolean anyShipped = order.getCompanyOrders().stream()
+                .anyMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
+                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
+        if (anyShipped) {
+            throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
+        }
+
         payment.cancel(requesterId.toString());
         return PaymentResult.from(payment);
     }

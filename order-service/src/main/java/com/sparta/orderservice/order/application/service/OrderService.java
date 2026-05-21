@@ -1,15 +1,16 @@
 package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
+import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
 import com.sparta.orderservice.order.domain.core.Order;
-import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
+import com.sparta.orderservice.payment.application.service.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ public class OrderService {
 
     private final OrderRepository orderRepository;
     private final CompanyOrderRepository companyOrderRepository;
+    private final PaymentService paymentService;
 
     // 주문 생성
     @Transactional
@@ -69,6 +71,10 @@ public class OrderService {
         }
 
         orderRepository.save(order);
+//
+//        // 선결제: 주문 생성과 동시에 결제 COMPLETED 처리 (같은 트랜잭션)
+//        paymentService.createCompletedPayment(order.getOrderId(), totalPrice);
+
         return OrderResult.from(order);
     }
 
