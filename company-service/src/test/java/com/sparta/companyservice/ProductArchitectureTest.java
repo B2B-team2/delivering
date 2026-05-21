@@ -7,7 +7,7 @@ import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
-@AnalyzeClasses(packages = "com.sparta.companyservice.products",
+@AnalyzeClasses(packages = "com.sparta.companyservice.product",
         importOptions = {
                 ImportOption.DoNotIncludeJars.class,
                 ImportOption.DoNotIncludeTests.class
