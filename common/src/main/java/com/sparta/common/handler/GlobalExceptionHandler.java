@@ -22,9 +22,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
         ErrorCode errorCode = e.getErrorCode();
+        String errorName = (errorCode instanceof Enum) ? ((Enum<?>) errorCode).name() : "BUSINESS_ERROR";
+
+        List<ErrorResponse.FieldErrorDetail> fieldErrors = null;
+        if (errorCode.getField() != null) {
+            fieldErrors = List.of(ErrorResponse.FieldErrorDetail.builder()
+                    .field(errorCode.getField())
+                    .message(errorCode.getMessage())
+                    .build());
+        }
+
         ErrorResponse response = ErrorResponse.builder()
                 .status(errorCode.getHttpStatus().value())
-                .message(e.getMessage())
+                .message(errorName)
+                .errors(fieldErrors)
                 .build();
         return ResponseEntity.status(errorCode.getHttpStatus()).body(response);
     }
