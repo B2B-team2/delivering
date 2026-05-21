@@ -20,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -111,5 +112,41 @@ class CompanyServiceTest {
         assertThat(result.getContent().get(0).getCompanyName()).isEqualTo(company.getCompanyName());
         assertThat(result.getTotalElements()).isEqualTo(1);
         verify(companyRepository).findAll(pageable);
+    }
+
+    @Test
+    @DisplayName("업체 상세 조회 성공: 존재하는 ID로 조회 시 정확한 DTO가 반환되는가?")
+    void getCompanySuccessTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        Company company = Company.builder()
+                .companyId(companyId)
+                .companyName("Detail Test Company")
+                .companyType(CompanyTypeEnum.PRODUCER)
+                .businessNumber("123-45-67890")
+                .build();
+
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+
+        // when
+        CompanyDto result = companyService.getCompany(companyId);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.getCompanyId()).isEqualTo(companyId);
+        assertThat(result.getCompanyName()).isEqualTo(company.getCompanyName());
+    }
+
+    @Test
+    @DisplayName("업체 상세 조회 실패: 존재하지 않는 ID로 조회 시 COMPANY_NOT_FOUND 예외가 발생하는가?")
+    void getCompanyNotFoundTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        when(companyRepository.findById(companyId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> companyService.getCompany(companyId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.COMPANY_NOT_FOUND);
     }
 }

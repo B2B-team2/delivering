@@ -1,15 +1,18 @@
 package com.sparta.companyservice.company.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.common.handler.GlobalExceptionHandler;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
+import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -32,6 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(CompanyController.class)
+@Import(GlobalExceptionHandler.class)
 class CompanyControllerTest {
 
     @Autowired
@@ -158,5 +162,46 @@ class CompanyControllerTest {
 
         // PageableUtil에 의해 size 20이 10으로 보정되어 서비스에 전달되었는지 확인
         verify(companyService).getCompanies(argThat(pageable -> pageable.getPageSize() == 10));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("업체 상세 조회 성공: GET /api/v1/companies/{companyId} 호출 시 200 OK와 상세 정보가 반환되는가?")
+    void getCompanySuccessTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyDto responseDto = CompanyDto.builder()
+                .companyId(companyId)
+                .companyName("Detail Test Company")
+                .companyType("PRODUCER")
+                .build();
+
+        when(companyService.getCompany(companyId)).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/companies/{companyId}", companyId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.companyId").value(companyId.toString()))
+                .andExpect(jsonPath("$.data.companyName").value(responseDto.getCompanyName()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("업체 상세 조회 실패: 존재하지 않는 업체 조회 시 404 Not Found를 반환하는가?")
+    void getCompanyNotFoundTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        when(companyService.getCompany(companyId))
+                .thenThrow(new com.sparta.common.dto.BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/companies/{companyId}", companyId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage()));
     }
 }
