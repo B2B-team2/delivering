@@ -15,11 +15,13 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -62,6 +64,13 @@ public class CompanyController {
     @GetMapping("/{companyId}")
     public ResponseEntity<ApiResponse<CompanyResponse>> getCompany(@PathVariable UUID companyId) {
         CompanyDto resultDto = companyService.getCompany(companyId);
+        return ResponseEntity.ok(ApiResponse.success(CompanyResponse.from(resultDto)));
+    }
+
+    @DeleteMapping("/{companyId}")
+    public ResponseEntity<ApiResponse<CompanyResponse>> deleteCompany(
+            @PathVariable UUID companyId) {
+        CompanyDto resultDto = companyService.deleteCompany(companyId, "system");
         return ResponseEntity.ok(ApiResponse.success(CompanyResponse.from(resultDto)));
     }
 }

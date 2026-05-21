@@ -123,4 +123,13 @@ public class CompanyService {
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
         return CompanyDto.from(company);
     }
+
+    @Transactional
+    public CompanyDto deleteCompany(UUID companyId, String username) {
+        Company company = companyRepository.findById(companyId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
+
+        company.softDelete(username);
+        return CompanyDto.from(company);
+    }
 }
