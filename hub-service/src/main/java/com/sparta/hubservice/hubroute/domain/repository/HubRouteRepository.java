@@ -14,6 +14,8 @@ public interface HubRouteRepository {
 
     Optional<HubRoute> findByFromHubIdAndToHubId(UUID fromHubId, UUID toHubId);
 
+    List<HubRoute> findAll();
+
     List<HubRoute> findByFromHubId(UUID fromHubId);
 
     void delete(HubRoute hubRoute);
