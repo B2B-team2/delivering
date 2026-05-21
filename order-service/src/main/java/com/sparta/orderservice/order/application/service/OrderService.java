@@ -141,8 +141,8 @@ public class OrderService {
 
     // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
     public boolean isCancellable(UUID orderId) {
-        Order order = orderRepository.findOrderById(orderId).orElse(null);
-        if (order == null) return false;
+        Order order = orderRepository.findOrderById(orderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
         if (order.getStatus() != OrderStatus.PENDING) return false;
         return order.getCompanyOrders().stream()
                 .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
