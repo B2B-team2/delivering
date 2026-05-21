@@ -49,6 +49,12 @@ public class Draft extends BaseEntity {
         this.quantity = quantity;
     }
 
+    // 삭제된 임시주문 항목을 복원하고 수량 갱신 (upsert 패턴)
+    public void restore(int quantity) {
+        this.clearDeleted();
+        this.quantity = quantity;
+    }
+
     public void delete(String deletedBy) {
         this.softDelete(deletedBy);
     }
