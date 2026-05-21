@@ -1,13 +1,20 @@
 package com.sparta.hubservice.inventory.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
 import com.sparta.hubservice.inventory.application.service.InventoryService;
+import com.sparta.hubservice.inventory.domain.core.InventoryChangeType;
+import com.sparta.hubservice.inventory.presentation.dto.InventoryHistoryPageResponse;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryAdjustRequest;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryCreateRequest;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -18,8 +25,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -52,6 +61,18 @@ public class InventoryController {
                 .map(WarehouseInventoryResponse::from)
                 .toList();
         return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
+    @GetMapping("/{inventory_id}/histories")
+    public ResponseEntity<ApiResponse<InventoryHistoryPageResponse>> getInventoryHistories(
+            @PathVariable UUID inventory_id,
+            @RequestParam(required = false) InventoryChangeType changeType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        InventoryHistoryPageDto dto = inventoryService.getInventoryHistories(
+                inventory_id, changeType, startDate, endDate, pageable);
+        return ResponseEntity.ok(ApiResponse.success(InventoryHistoryPageResponse.from(dto)));
     }
 
     @PatchMapping("/{inventory_id}/adjust")

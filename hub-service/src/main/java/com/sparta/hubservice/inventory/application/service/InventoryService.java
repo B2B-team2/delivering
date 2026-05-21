@@ -2,6 +2,7 @@ package com.sparta.hubservice.inventory.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.hubservice.global.exception.ErrorCode;
+import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryAdjustCommand;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryCreateCommand;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
@@ -11,9 +12,13 @@ import com.sparta.hubservice.inventory.domain.core.WarehouseInventory;
 import com.sparta.hubservice.inventory.domain.repository.InventoryHistoryRepository;
 import com.sparta.hubservice.inventory.domain.repository.WarehouseInventoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -83,6 +88,21 @@ public class InventoryService {
                 .build());
 
         return WarehouseInventoryDto.from(inventory);
+    }
+
+    public InventoryHistoryPageDto getInventoryHistories(UUID inventoryId, InventoryChangeType changeType,
+                                                         LocalDate startDate, LocalDate endDate,
+                                                         Pageable pageable) {
+        WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+
+        LocalDateTime startDateTime = startDate != null ? startDate.atStartOfDay() : null;
+        LocalDateTime endDateTime = endDate != null ? endDate.atTime(23, 59, 59) : null;
+
+        Page<InventoryHistory> historyPage = historyRepository.findHistories(
+                inventoryId, changeType, startDateTime, endDateTime, pageable);
+
+        return new InventoryHistoryPageDto(inventory, historyPage);
     }
 
     @Transactional
