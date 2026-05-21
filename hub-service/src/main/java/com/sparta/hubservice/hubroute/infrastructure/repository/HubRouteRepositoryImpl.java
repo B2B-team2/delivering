@@ -22,17 +22,22 @@ public class HubRouteRepositoryImpl implements HubRouteRepository {
 
     @Override
     public Optional<HubRoute> findById(UUID routeId) {
-        return hubRouteJpaRepository.findById(routeId);
+        return hubRouteJpaRepository.findByRouteIdAndDeletedAtIsNull(routeId);
     }
 
     @Override
     public Optional<HubRoute> findByFromHubIdAndToHubId(UUID fromHubId, UUID toHubId) {
-        return hubRouteJpaRepository.findByFromHubIdAndToHubId(fromHubId, toHubId);
+        return hubRouteJpaRepository.findByFromHubIdAndToHubIdAndDeletedAtIsNull(fromHubId, toHubId);
+    }
+
+    @Override
+    public List<HubRoute> findAll() {
+        return hubRouteJpaRepository.findAllByDeletedAtIsNull();
     }
 
     @Override
     public List<HubRoute> findByFromHubId(UUID fromHubId) {
-        return hubRouteJpaRepository.findByFromHubId(fromHubId);
+        return hubRouteJpaRepository.findAllByFromHubIdAndDeletedAtIsNull(fromHubId);
     }
 
     @Override

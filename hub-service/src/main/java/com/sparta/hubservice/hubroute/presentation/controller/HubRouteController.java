@@ -8,6 +8,7 @@ import com.sparta.hubservice.hubroute.presentation.dto.HubRouteResponse;
 import com.sparta.hubservice.hubroute.presentation.dto.HubRouteUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -35,6 +36,14 @@ public class HubRouteController {
         HubRouteDto dto = hubRouteService.createHubRoute(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(HubRouteResponse.from(dto)));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<HubRouteResponse>>> getAllHubRoutes() {
+        List<HubRouteResponse> responses = hubRouteService.getAllHubRoutes().stream()
+                .map(HubRouteResponse::from)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.success(responses));
     }
 
     @GetMapping("/{route_id}")

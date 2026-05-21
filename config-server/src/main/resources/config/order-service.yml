@@ -24,6 +24,7 @@ spring:
   flyway:
     schemas: order-db       # Flyway가 관리할 스키마
     locations: classpath:db/migration # 마이그레이션 파일 위치
+    validate-on-migrate: false  # 개발 중 V1 수정 시 체크섬 검증 스킵 (운영 배포 전 반드시 제거 또는 true로 변경)
 
 logging:
   level:
