@@ -51,7 +51,8 @@ public class DraftController {
             @RequestHeader("X-User-Id") UUID userId,
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        PageResponse<DraftResponse> response = draftService.getDrafts(userId, pageable);
+        PageResponse<DraftResponse> response = new PageResponse<>(
+                draftService.getDrafts(userId, pageable).map(DraftResponse::from));
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
