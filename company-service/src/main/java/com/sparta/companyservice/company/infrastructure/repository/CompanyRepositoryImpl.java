@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -43,5 +44,10 @@ public class CompanyRepositoryImpl implements CompanyRepository {
     @Override
     public Optional<Company> findByBusinessNumberAnyStatus(String businessNumber) {
         return jpaRepository.findByBusinessNumber(businessNumber);
+    }
+
+    @Override
+    public List<Company> findAllByCompanyIdIn(List<UUID> companyIds) {
+        return jpaRepository.findAllByCompanyIdInAndDeletedAtIsNull(companyIds);
     }
 }

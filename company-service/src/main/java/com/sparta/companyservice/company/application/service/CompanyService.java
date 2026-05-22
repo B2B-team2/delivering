@@ -2,6 +2,7 @@ package com.sparta.companyservice.company.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyHubMappingResult;
 import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressDto;
@@ -19,6 +20,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -165,5 +167,22 @@ public class CompanyService {
 
         CompanyDeliveryAddress savedAddress = companyDeliveryAddressRepository.save(address);
         return CompanyDeliveryAddressDto.from(savedAddress);
+    }
+
+    @Transactional(readOnly = true)
+    public CompanyHubMappingResult getHubMappings(List<UUID> companyIds) {
+        List<Company> companies = companyRepository.findAllByCompanyIdIn(companyIds);
+
+        List<CompanyHubMappingResult.MappingItem> mappingItems = companies.stream()
+                .map(company -> CompanyHubMappingResult.MappingItem.builder()
+                        .companyId(company.getCompanyId())
+                        .hubId(company.getHubId())
+                        .companyName(company.getCompanyName())
+                        .build())
+                .toList();
+
+        return CompanyHubMappingResult.builder()
+                .mappings(mappingItems)
+                .build();
     }
 }
