@@ -16,5 +16,5 @@ public interface WarehouseRepository {
 
     List<Warehouse> findAll();
 
-    void delete(Warehouse warehouse);
+    void delete(Warehouse warehouse, String deletedBy);
 }

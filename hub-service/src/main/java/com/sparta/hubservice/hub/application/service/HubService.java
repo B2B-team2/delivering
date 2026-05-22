@@ -12,10 +12,11 @@ import com.sparta.hubservice.hub.domain.repository.HubRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -39,11 +40,10 @@ public class HubService {
         return HubDto.from(hubRepository.save(hub));
     }
 
-    @Cacheable(value = "hubs", key = "'all'")
-    public List<HubDto> getAllHubs() {
-        return hubRepository.findAll().stream()
-                .map(HubDto::from)
-                .toList();
+    public Page<HubDto> getAllHubs(String hubType, String status, String keyword, Pageable pageable) {
+        HubType hubTypeEnum = (hubType != null) ? HubType.valueOf(hubType) : null;
+        HubStatus statusEnum = (status != null) ? HubStatus.valueOf(status) : null;
+        return hubRepository.search(hubTypeEnum, statusEnum, keyword, pageable).map(HubDto::from);
     }
 
     @Cacheable(value = "hubs", key = "#hubId")

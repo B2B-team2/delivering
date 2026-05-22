@@ -1,7 +1,10 @@
 package com.sparta.hubservice.hub.domain.repository;
 
 import com.sparta.hubservice.hub.domain.core.Hub;
+import com.sparta.hubservice.hub.domain.core.HubStatus;
 import com.sparta.hubservice.hub.domain.core.HubType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -17,5 +20,7 @@ public interface HubRepository {
 
     List<Hub> findAllByHubType(HubType hubType);
 
-    void delete(Hub hub);
+    Page<Hub> search(HubType hubType, HubStatus status, String keyword, Pageable pageable);
+
+    void delete(Hub hub, String deletedBy);
 }
