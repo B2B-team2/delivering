@@ -569,15 +569,15 @@ erDiagram
 | `quantity` | INTEGER | Not Null | 구매 수량 |
 | `unit_price` | NUMERIC(12,2) | Not Null | 구매 시점 단가 (스냅샷) |
 
-#### p_order_drafts (주문 임시저장 — 장바구니)
+#### p_order_drafts (주문 임시저장)
 
-| 컬럼명 | 타입 | 제약 | 설명 |
-|---|---|---|---|
-| `draft_id` | UUID | PK, Not Null | 장바구니 상품 식별자 |
-| `user_id` | UUID | FK, Not Null | 사용자 참조 |
-| `product_id` | UUID | FK, Not Null | 상품 참조 |
-| `product_option_id` | UUID | FK, Not Null | 상품옵션 참조 |
-| `quantity` | INTEGER | Not Null, Default 1 | 주문 수량 |
+| 컬럼명 | 타입 | 제약 | 설명          |
+|---|---|---|-------------|
+| `draft_id` | UUID | PK, Not Null | 임시주문 상품 식별자 |
+| `user_id` | UUID | FK, Not Null | 사용자 참조      |
+| `product_id` | UUID | FK, Not Null | 상품 참조       |
+| `product_option_id` | UUID | FK, Not Null | 상품옵션 참조     |
+| `quantity` | INTEGER | Not Null, Default 1 | 주문 수량       |
 
 #### p_payments (결제)
 
