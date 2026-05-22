@@ -11,6 +11,7 @@ import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
 import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
+import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
 import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
@@ -93,6 +94,7 @@ public class OrderService {
 
         // companyId → hubId 전체 매핑 (수령업체 + 공급업체 모두 포함)
         Map<UUID, UUID> hubIdMap = companyPort.getHubIds(allCompanyIds);
+        validateHubMapping(hubIdMap, allCompanyIds);
         UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId()); // 수령업체 소속 허브
 
         // 재고 예약: 실패 시 예외 전파 → 주문 생성 전체 롤백
@@ -129,11 +131,21 @@ public class OrderService {
     public void cancelOrder(UUID orderId, UUID requesterId) {
         Order order = orderRepository.findOrderById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-        order.getCompanyOrders().forEach(co -> co.cancel(requesterId.toString()));
+
+        validateOrderCancellable(order);
+
+        // 이미 CANCELLED/DELIVERED인 CompanyOrder는 건너뜀
+        order.getCompanyOrders().stream()
+                .filter(co -> co.getStatus() != CompanyOrderStatus.CANCELLED
+                        && co.getStatus() != CompanyOrderStatus.DELIVERED)
+                .forEach(co -> co.cancel(requesterId.toString()));
         order.cancel(requesterId.toString());
 
         // 재고 예약 전체 취소 (orderId 기준)
         hubStockPort.cancelStock(orderId);
+
+        // 주문 취소 이벤트 발행 → PaymentEventHandler에서 결제 취소 처리 (같은 트랜잭션)
+        eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
     }
 
     // 서브 주문 상세 조회
@@ -144,7 +156,11 @@ public class OrderService {
     // 서브 주문 부분 취소
     @Transactional
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
-        findCompanyOrderOrThrow(companyOrderId).cancel(requesterId.toString());
+        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+
+        validateCompanyOrderCancellable(companyOrder);
+
+        companyOrder.cancel(requesterId.toString());
 
         // 재고 예약 부분 취소 (companyOrderId 기준)
         hubStockPort.cancelCompanyStock(companyOrderId);
@@ -209,6 +225,34 @@ public class OrderService {
         return order.getCompanyOrders().stream()
                 .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
                         || co.getStatus() == CompanyOrderStatus.DELIVERED);
+    }
+
+    // 요청한 모든 companyId에 대해 hubId 매핑이 존재하는지 검증
+    private void validateHubMapping(Map<UUID, UUID> hubIdMap, List<UUID> companyIds) {
+        companyIds.forEach(companyId -> {
+            if (!hubIdMap.containsKey(companyId) || hubIdMap.get(companyId) == null) {
+                throw new BusinessException(OrderErrorCode.HUB_MAPPING_NOT_FOUND);
+            }
+        });
+    }
+
+    private void validateOrderCancellable(Order order) {
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            throw new BusinessException(OrderErrorCode.ORDER_ALREADY_CANCELLED);
+        }
+        if (order.getStatus() == OrderStatus.COMPLETED) {
+            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+        }
+    }
+
+    private void validateCompanyOrderCancellable(CompanyOrder companyOrder) {
+        if (companyOrder.getStatus() == CompanyOrderStatus.CANCELLED) {
+            throw new BusinessException(OrderErrorCode.COMPANY_ORDER_ALREADY_CANCELLED);
+        }
+        if (companyOrder.getStatus() == CompanyOrderStatus.SHIPPED
+                || companyOrder.getStatus() == CompanyOrderStatus.DELIVERED) {
+            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+        }
     }
 
     private CompanyOrder findCompanyOrderOrThrow(UUID companyOrderId) {

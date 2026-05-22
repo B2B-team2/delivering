@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -67,6 +68,10 @@ public class Order extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;                            // 낙관적 락 — 동시 상태 전환 충돌 감지
 
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<CompanyOrder> companyOrders = new ArrayList<>();

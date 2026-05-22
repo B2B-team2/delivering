@@ -16,5 +16,7 @@ public interface PaymentJpaRepository extends JpaRepository<Payment, UUID> {
 
     Optional<Payment> findByPaymentIdAndDeletedAtIsNull(UUID paymentId);
 
+    Optional<Payment> findByOrderIdAndDeletedAtIsNull(UUID orderId);
+
     Page<Payment> findAllByDeletedAtIsNull(Pageable pageable);
 }

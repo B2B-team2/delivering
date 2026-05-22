@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS "order-db".p_orders
     delivery_fee         NUMERIC(8, 2)  NOT NULL DEFAULT 0,     -- 총 배송비
     final_price          NUMERIC(12, 2) NOT NULL,               -- 최종 결제 금액
     status               VARCHAR(30)  NOT NULL DEFAULT 'PENDING', -- 주문 상태
+    version              BIGINT       NOT NULL DEFAULT 0,          -- 낙관적 락 버전
     created_at           TIMESTAMP    NOT NULL,
     created_by           VARCHAR(255),
     updated_at           TIMESTAMP,
@@ -41,6 +42,7 @@ CREATE TABLE IF NOT EXISTS "order-db".p_company_orders
     subtotal_price        NUMERIC(12, 2) NOT NULL,              -- 업체별 상품 합계
     subtotal_delivery_fee NUMERIC(8, 2)  NOT NULL DEFAULT 0,    -- 업체별 배송비
     status                VARCHAR(30)   NOT NULL DEFAULT 'ORDERED', -- 서브 주문 상태
+    version               BIGINT        NOT NULL DEFAULT 0,          -- 낙관적 락 버전
     created_at            TIMESTAMP     NOT NULL,
     created_by            VARCHAR(255),
     updated_at            TIMESTAMP,
