@@ -14,8 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record OrderCreateRequest(
-        @NotNull UUID requesterCompanyId,           // 요청(공급)업체
-        @NotNull UUID receiverCompanyId,            // 수령업체
+        @NotNull UUID receiverCompanyId,            // 수령업체 TODO: X-Company-Id 헤더로 주입 예정
         @NotBlank String recipientName,             // 수령인 실명
         @NotBlank String phone,                     // 수령인 연락처
         String slackId,                             // 수령인 Slack ID (nullable)
@@ -52,7 +51,6 @@ public record OrderCreateRequest(
                 .toList();
 
         return new CreateOrderCommand(
-                requesterCompanyId,
                 receiverCompanyId,
                 recipientName,
                 phone,

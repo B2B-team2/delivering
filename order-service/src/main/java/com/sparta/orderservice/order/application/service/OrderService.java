@@ -12,6 +12,7 @@ import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
+import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final CompanyOrderRepository companyOrderRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final HubStockPort hubStockPort;
 
     // 주문 생성
     @Transactional
@@ -45,7 +47,6 @@ public class OrderService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         Order order = Order.of(
-                command.requesterCompanyId(),
                 command.receiverCompanyId(),
                 command.recipientName(),
                 command.phone(),
@@ -54,7 +55,7 @@ public class OrderService {
                 command.dueDate(),
                 command.requestMemo(),
                 totalPrice,
-                BigDecimal.ZERO,    // todo 배송비계산... 허브연동시?
+                BigDecimal.ZERO,
                 totalPrice          // finalPrice = totalPrice + deliveryFee
         );
 
@@ -78,6 +79,11 @@ public class OrderService {
         }
 
         orderRepository.save(order);
+
+        // TODO: [Hub Service] 재고 예약
+        // - items 필드 스펙 확정 대기 중 (productOptionId)
+        // - 실패 시 예외 전파 → 주문 생성 전체 롤백
+        // hubStockPort.reserveStock(order.getOrderId());
 
         // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
         eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), totalPrice));
@@ -108,6 +114,10 @@ public class OrderService {
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
         order.getCompanyOrders().forEach(co -> co.cancel(requesterId.toString()));
         order.cancel(requesterId.toString());
+
+        // TODO: [Hub Service] 재고 예약 전체 취소
+        // companyOrderId 기준 개별 취소
+        // hubStockPort.cancelStock(orderId);
     }
 
     // 서브 주문 상세 조회
@@ -119,6 +129,9 @@ public class OrderService {
     @Transactional
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
         findCompanyOrderOrThrow(companyOrderId).cancel(requesterId.toString());
+
+        // TODO: [Hub Service] 재고 예약 부분 취소
+        // hubStockPort.cancelStock(companyOrderId);
     }
 
     // 출고 준비 확인: ORDERED → PREPARING
@@ -133,7 +146,6 @@ public class OrderService {
     }
 
     // 출고 완료: PREPARING → SHIPPED
-    // TODO: Hub Service FeignClient 재고 차감 연동 (다음 주 논의)
     @Transactional
     public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
         CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
@@ -141,6 +153,10 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.ship();
+
+        // TODO: [Hub Service] 재고 차감
+        // hubStockPort.deductStock(companyOrderId);
+
         return CompanyOrderResult.from(companyOrder);
     }
 
