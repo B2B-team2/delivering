@@ -189,4 +189,9 @@ public class CompanyService {
                 .mappings(mappingItems)
                 .build();
     }
+
+    @Transactional(readOnly = true)
+    public boolean existsCompanyInHub(UUID hubId) {
+        return companyRepository.existsByHubId(hubId);
+    }
 }

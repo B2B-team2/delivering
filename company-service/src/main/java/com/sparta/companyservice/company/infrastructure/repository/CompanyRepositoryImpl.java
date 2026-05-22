@@ -50,4 +50,9 @@ public class CompanyRepositoryImpl implements CompanyRepository {
     public List<Company> findAllByCompanyIdIn(List<UUID> companyIds) {
         return jpaRepository.findAllByCompanyIdInAndDeletedAtIsNull(companyIds);
     }
+
+    @Override
+    public boolean existsByHubId(UUID hubId) {
+        return jpaRepository.existsByHubIdAndDeletedAtIsNull(hubId);
+    }
 }

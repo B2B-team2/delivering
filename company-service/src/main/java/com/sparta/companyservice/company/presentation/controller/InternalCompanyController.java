@@ -7,10 +7,14 @@ import com.sparta.companyservice.company.presentation.dto.CompanyHubMappingRespo
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/internal/companies")
@@ -27,5 +31,10 @@ public class InternalCompanyController {
                 companyService.getHubMappings(request.getCompanyIds()));
 
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @GetMapping("/exists")
+    public ResponseEntity<ApiResponse<Boolean>> existsCompanyInHub(@RequestParam UUID hubId) {
+        return ResponseEntity.ok(ApiResponse.success(companyService.existsCompanyInHub(hubId)));
     }
 }
