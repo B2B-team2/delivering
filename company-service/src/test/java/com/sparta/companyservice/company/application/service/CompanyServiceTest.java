@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
+import com.sparta.companyservice.company.application.dto.CompanyHubMappingResult;
 import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
 import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
@@ -374,7 +375,55 @@ class CompanyServiceTest {
     }
 
     @Test
-    @DisplayName("배송지 등록 성공: 기본 배송지 설정 시 기존 설정 해제 로직이 호출되는가? (현재 실패 예상)")
+    @DisplayName("업체-허브 매핑 조회 성공: 유효한 ID 목록 전달 시 정확한 결과가 반환되는가?")
+    void getHubMappingsSuccessTest() {
+        // given
+        UUID companyId1 = UUID.randomUUID();
+        UUID companyId2 = UUID.randomUUID();
+        UUID hubId1 = UUID.randomUUID();
+        UUID hubId2 = UUID.randomUUID();
+
+        Company company1 = Company.builder()
+                .companyId(companyId1)
+                .companyName("Company 1")
+                .hubId(hubId1)
+                .build();
+        Company company2 = Company.builder()
+                .companyId(companyId2)
+                .companyName("Company 2")
+                .hubId(hubId2)
+                .build();
+
+        when(companyRepository.findAllByCompanyIdIn(List.of(companyId1, companyId2)))
+                .thenReturn(List.of(company1, company2));
+
+        // when
+        CompanyHubMappingResult result = companyService.getHubMappings(List.of(companyId1, companyId2));
+
+        // then
+        assertThat(result.getMappings()).hasSize(2);
+        assertThat(result.getMappings()).extracting("companyId")
+                .containsExactlyInAnyOrder(companyId1, companyId2);
+        assertThat(result.getMappings()).extracting("companyName")
+                .containsExactlyInAnyOrder("Company 1", "Company 2");
+    }
+
+    @Test
+    @DisplayName("업체-허브 매핑 조회: 존재하지 않는 ID 전달 시 빈 목록이 반환되는가?")
+    void getHubMappingsEmptyTest() {
+        // given
+        List<UUID> ids = List.of(UUID.randomUUID());
+        when(companyRepository.findAllByCompanyIdIn(ids)).thenReturn(List.of());
+
+        // when
+        CompanyHubMappingResult result = companyService.getHubMappings(ids);
+
+        // then
+        assertThat(result.getMappings()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("배송지 등록 성공: 기본 배송지 설정 시 기존 설정 해제 로직이 호출되는가?")
     void createAddressWithDefaultTest() {
         // given
         UUID companyId = UUID.randomUUID();
