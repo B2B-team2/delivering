@@ -132,4 +132,8 @@ public class CompanyService {
         company.softDelete(username);
         return CompanyDto.from(company);
     }
+
+    public boolean existsCompany(UUID companyId) {
+        return companyRepository.findById(companyId).isPresent();
+    }
 }
