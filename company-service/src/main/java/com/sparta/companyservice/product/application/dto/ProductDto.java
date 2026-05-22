@@ -1,0 +1,41 @@
+package com.sparta.companyservice.product.application.dto;
+
+import com.sparta.companyservice.product.domain.core.Product;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class ProductDto {
+    private UUID productId;
+    private UUID companyId;
+    private UUID categoryId;
+    private String name;
+    private BigDecimal price;
+    private String description;
+    private String thumbnailUrl;
+    private String status;
+    private LocalDateTime deletedAt;
+
+    public static ProductDto from(Product entity) {
+        return ProductDto.builder()
+                .productId(entity.getProductId())
+                .companyId(entity.getCompanyId())
+                .categoryId(entity.getCategoryId())
+                .name(entity.getName())
+                .price(entity.getPrice())
+                .description(entity.getDescription())
+                .thumbnailUrl(entity.getThumbnailUrl())
+                .status(entity.getStatus().name())
+                .deletedAt(entity.getDeletedAt())
+                .build();
+    }
+}

@@ -26,6 +26,7 @@ public class CompanyResponse {
     private String address;
     private String logoUrl;
     private LocalDateTime createdAt;
+    private LocalDateTime deletedAt;
 
     public static CompanyResponse from(CompanyDto dto) {
         return CompanyResponse.builder()
@@ -41,6 +42,7 @@ public class CompanyResponse {
                 .address(dto.getAddress())
                 .logoUrl(dto.getLogoUrl())
                 .createdAt(dto.getCreatedAt())
+                .deletedAt(dto.getDeletedAt())
                 .build();
     }
 }
