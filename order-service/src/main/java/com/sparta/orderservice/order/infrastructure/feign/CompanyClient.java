@@ -1,8 +1,8 @@
 package com.sparta.orderservice.order.infrastructure.feign;
 
 import com.sparta.common.dto.ApiResponse;
-import com.sparta.common.dto.internal.CompanyHubMappingRequest;
-import com.sparta.common.dto.internal.CompanyHubMappingResponse;
+import com.sparta.orderservice.order.infrastructure.feign.dto.CompanyHubMappingRequest;
+import com.sparta.orderservice.order.infrastructure.feign.dto.CompanyHubMappingResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

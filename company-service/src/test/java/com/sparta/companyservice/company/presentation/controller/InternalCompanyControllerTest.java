@@ -1,6 +1,5 @@
 package com.sparta.companyservice.company.presentation.controller;
 
-import com.sparta.common.dto.internal.CompanyHubMappingRequest;
 import com.sparta.companyservice.company.application.dto.CompanyHubMappingResult;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import org.junit.jupiter.api.DisplayName;

@@ -1,4 +1,4 @@
-package com.sparta.common.dto.internal;
+package com.sparta.orderservice.order.infrastructure.feign.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

@@ -10,11 +10,8 @@ import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
-import com.sparta.companyservice.company.presentation.dto.CompanyDeliveryAddressCreateRequest;
-import com.sparta.companyservice.company.presentation.dto.CompanyDeliveryAddressResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
-import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressDto;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -89,14 +86,5 @@ public class CompanyController {
         // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
         CompanyDto resultDto = companyService.deleteCompany(companyId, "system");
         return ResponseEntity.ok(ApiResponse.success(CompanyResponse.from(resultDto)));
-    }
-
-    @PostMapping("/{companyId}/addresses")
-    public ResponseEntity<ApiResponse<CompanyDeliveryAddressResponse>> createAddress(
-            @PathVariable UUID companyId,
-            @RequestBody @Valid CompanyDeliveryAddressCreateRequest request) {
-        CompanyDeliveryAddressDto resultDto = companyService.createAddress(request.toCommand(companyId));
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(CompanyDeliveryAddressResponse.from(resultDto)));
     }
 }
