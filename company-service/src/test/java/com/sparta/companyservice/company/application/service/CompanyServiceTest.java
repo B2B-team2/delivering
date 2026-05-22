@@ -2,10 +2,13 @@ package com.sparta.companyservice.company.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
-import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
+import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
 import com.sparta.companyservice.company.domain.core.Company;
+import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
+import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -16,11 +19,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -28,20 +31,17 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class CompanyServiceTest {
 
     @Mock
     private CompanyRepository companyRepository;
+
+    @Mock
+    private CompanyDeliveryAddressRepository companyDeliveryAddressRepository;
 
     @InjectMocks
     private CompanyService companyService;
@@ -371,5 +371,35 @@ class CompanyServiceTest {
         // then
         assertThat(exists).isTrue();
         assertThat(notExists).isFalse();
+    }
+
+    @Test
+    @DisplayName("배송지 등록 성공: 기본 배송지 설정 시 기존 설정 해제 로직이 호출되는가? (현재 실패 예상)")
+    void createAddressWithDefaultTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyDeliveryAddressCreateCommand command = CompanyDeliveryAddressCreateCommand.builder()
+                .companyId(companyId)
+                .addressName("New Default Address")
+                .isDefault(true)
+                .build();
+
+        Company company = Company.builder().companyId(companyId).build();
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+
+        CompanyDeliveryAddress savedAddress = CompanyDeliveryAddress.builder()
+                .addressId(UUID.randomUUID())
+                .companyId(companyId)
+                .addressName(command.getAddressName())
+                .isDefault(true)
+                .build();
+        when(companyDeliveryAddressRepository.save(any(CompanyDeliveryAddress.class))).thenReturn(savedAddress);
+
+        // when
+        companyService.createAddress(command);
+
+        // then
+        // 현재 CompanyService.createAddress 에는 이 호출 로직이 없으므로 verify 에서 실패할 것입니다.
+        verify(companyDeliveryAddressRepository, times(1)).updateAllIsDefaultFalseByCompanyId(companyId);
     }
 }
