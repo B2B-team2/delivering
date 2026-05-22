@@ -148,6 +148,10 @@ public class CompanyService {
             throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
         }
 
+        if (command.getIsDefault()) {
+            companyDeliveryAddressRepository.updateAllIsDefaultFalseByCompanyId(command.getCompanyId());
+        }
+
         CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
                 .companyId(command.getCompanyId())
                 .addressName(command.getAddressName())
