@@ -2,9 +2,12 @@ package com.sparta.companyservice.company.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.common.handler.GlobalExceptionHandler;
+import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
+import com.sparta.companyservice.company.application.service.CompanyAddressService;
 import com.sparta.companyservice.company.application.service.CompanyService;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
@@ -50,6 +53,9 @@ class CompanyControllerTest {
 
     @MockBean
     private CompanyService companyService;
+
+    @MockBean
+    private CompanyAddressService companyAddressService;
 
     @Test
     @WithMockUser
@@ -331,5 +337,24 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$.status").value(201))
                 .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.addressName").value(request.getAddressName()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("배송지 등록 API 실패 검증: 필수 필드 누락 시 400 Bad Request 반환")
+    void createAddressFailValidationTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyAddressCreateRequest invalidRequest = CompanyAddressCreateRequest.builder()
+                .companyId(companyId)
+                .addressName("") // NotBlank 위반
+                .build();
+
+        // when & then
+        mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
     }
 }
