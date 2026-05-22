@@ -1,11 +1,16 @@
 package com.sparta.hubservice.hub.infrastructure.repository;
 
 import com.sparta.hubservice.hub.domain.core.Hub;
+import com.sparta.hubservice.hub.domain.core.HubStatus;
 import com.sparta.hubservice.hub.domain.core.HubType;
 import com.sparta.hubservice.hub.domain.repository.HubRepository;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -37,7 +42,8 @@ public class HubRepositoryImpl implements HubRepository {
     }
 
     @Override
-    public void delete(Hub hub) {
-        hubJpaRepository.delete(hub);
+    public void delete(Hub hub, String deletedBy) {
+        hub.softDelete(deletedBy);
+        hubJpaRepository.save(hub);
     }
 }
