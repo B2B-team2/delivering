@@ -15,6 +15,8 @@ import java.util.UUID;
 
 public record OrderCreateRequest(
         @NotNull UUID receiverCompanyId,            // 수령업체 TODO: X-Company-Id 헤더로 주입 예정
+        // TODO: deliveryAddressId(UUID)를 받아 Company Service 내부 API로 조회 후 아래 필드 자동 세팅 예정
+        //       확정 전까지는 클라이언트(Postman)에서 직접 입력 (p_delivery_addresses 테이블 활용 목적)
         @NotBlank String recipientName,             // 수령인 실명
         @NotBlank String phone,                     // 수령인 연락처
         String slackId,                             // 수령인 Slack ID (nullable)
