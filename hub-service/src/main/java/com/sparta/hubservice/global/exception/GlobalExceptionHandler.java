@@ -10,6 +10,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.List;
 
@@ -73,5 +74,15 @@ public class GlobalExceptionHandler {
                 .message(code.getMessage())
                 .build();
         return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException e) {
+        log.warn("Type Mismatch: {}", e.getMessage());
+        ErrorResponse response = ErrorResponse.builder()
+                .status(400)
+                .message("잘못된 형식의 파라미터입니다.")
+                .build();
+        return ResponseEntity.badRequest().body(response);
     }
 }
