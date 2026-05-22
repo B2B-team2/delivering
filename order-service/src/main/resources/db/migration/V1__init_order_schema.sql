@@ -6,7 +6,31 @@
 CREATE SCHEMA IF NOT EXISTS "order-db";
 
 -- ============================================================
--- 1. p_orders (주문)
+-- 1. p_order_drafts (임시주문)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS "order-db".p_order_drafts
+(
+    draft_id          UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id           UUID        NOT NULL,                   -- 임시주문 소유자
+    product_id        UUID        NOT NULL,                   -- 상품 ID
+    product_option_id UUID        NOT NULL,                   -- 상품 옵션(SKU)
+    quantity          INTEGER     NOT NULL DEFAULT 1,         -- 수량
+    created_at        TIMESTAMP   NOT NULL,
+    created_by        VARCHAR(255),
+    updated_at        TIMESTAMP,
+    updated_by        VARCHAR(255),
+    deleted_at        TIMESTAMP,
+    deleted_by        VARCHAR(255)
+);
+
+-- 활성(soft-delete 제외) 임시주문 중 동일 사용자+상품옵션 중복 방지 (partial unique index)
+-- 동시 upsert 요청 시 두 번째 INSERT를 DB 레벨에서 차단 → DataIntegrityViolationException → 409
+CREATE UNIQUE INDEX IF NOT EXISTS uq_draft_user_product_option_active
+    ON "order-db".p_order_drafts (user_id, product_option_id)
+    WHERE deleted_at IS NULL;
+
+-- ============================================================
+-- 2. p_orders (주문)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS "order-db".p_orders
 (
