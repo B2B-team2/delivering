@@ -44,6 +44,7 @@ public class InventoryHistoryPageResponse {
         private final UUID historyId;
         private final int changeQuantity;
         private final String changeType;
+        private final String reason;
         private final LocalDateTime createdAt;
         private final String createdBy;
 
@@ -51,6 +52,7 @@ public class InventoryHistoryPageResponse {
             this.historyId = dto.getHistoryId();
             this.changeQuantity = dto.getChangeQuantity();
             this.changeType = dto.getChangeType();
+            this.reason = dto.getReason();
             this.createdAt = dto.getCreatedAt();
             this.createdBy = dto.getCreatedBy();
         }

@@ -2,10 +2,12 @@ package com.sparta.hubservice.inventory.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
+import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryAdjustDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
 import com.sparta.hubservice.inventory.application.service.InventoryService;
 import com.sparta.hubservice.inventory.presentation.dto.InventoryHistoryPageResponse;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryAdjustRequest;
+import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryAdjustResponse;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryCreateRequest;
 import com.sparta.hubservice.inventory.presentation.dto.WarehouseInventoryResponse;
 import jakarta.validation.Valid;
@@ -75,11 +77,11 @@ public class InventoryController {
     }
 
     @PatchMapping("/{inventory_id}/adjust")
-    public ResponseEntity<ApiResponse<WarehouseInventoryResponse>> adjustInventory(
+    public ResponseEntity<ApiResponse<WarehouseInventoryAdjustResponse>> adjustInventory(
             @PathVariable UUID inventory_id,
             @Valid @RequestBody WarehouseInventoryAdjustRequest request) {
-        WarehouseInventoryDto dto = inventoryService.adjustInventory(inventory_id, request.toCommand());
-        return ResponseEntity.ok(ApiResponse.success(WarehouseInventoryResponse.from(dto)));
+        WarehouseInventoryAdjustDto dto = inventoryService.adjustInventory(inventory_id, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(WarehouseInventoryAdjustResponse.from(dto)));
     }
 
     @DeleteMapping("/{inventory_id}")

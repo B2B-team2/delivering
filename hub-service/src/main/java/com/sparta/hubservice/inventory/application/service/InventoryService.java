@@ -2,9 +2,11 @@ package com.sparta.hubservice.inventory.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.hubservice.global.exception.ErrorCode;
+import com.sparta.hubservice.global.exception.StockValidationException;
 import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
 import com.sparta.hubservice.inventory.application.dto.InventoryItemCommand;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryAdjustCommand;
+import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryAdjustDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryCreateCommand;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
 import com.sparta.hubservice.inventory.domain.core.InventoryChangeType;
@@ -68,27 +70,30 @@ public class InventoryService {
     }
 
     @Transactional
-    public WarehouseInventoryDto adjustInventory(UUID inventoryId, WarehouseInventoryAdjustCommand command) {
+    public WarehouseInventoryAdjustDto adjustInventory(UUID inventoryId, WarehouseInventoryAdjustCommand command) {
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
 
-        if (inventory.getQuantity() + command.getAdjustQuantity() < 0) {
-            throw new BusinessException(ErrorCode.INVALID_STOCK_OPERATION);
+        int previousQuantity = inventory.getQuantity();
+
+        if (previousQuantity + command.getChangeQuantity() < 0) {
+            throw new StockValidationException("changeQuantity", "차감하려는 수량이 가용 재고보다 많습니다.");
         }
 
-        inventory.adjust(command.getAdjustQuantity());
+        inventory.adjust(command.getChangeQuantity());
 
         if (command.getSafetyStock() != null) {
             inventory.updateSafetyStock(command.getSafetyStock());
         }
 
-        historyRepository.save(InventoryHistory.builder()
+        InventoryHistory history = historyRepository.save(InventoryHistory.builder()
                 .inventoryId(inventoryId)
-                .changeQuantity(command.getAdjustQuantity())
-                .changeType(parseChangeType(command.getReason()))
+                .changeQuantity(command.getChangeQuantity())
+                .changeType(parseChangeType(command.getChangeType()))
+                .reason(command.getReason())
                 .build());
 
-        return WarehouseInventoryDto.from(inventory);
+        return WarehouseInventoryAdjustDto.from(previousQuantity, command.getChangeQuantity(), inventory, history);
     }
 
     public InventoryHistoryPageDto getInventoryHistories(UUID inventoryId, String changeType,

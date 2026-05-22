@@ -43,6 +43,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(response);
     }
 
+    @ExceptionHandler(StockValidationException.class)
+    public ResponseEntity<ErrorResponse> handleStockValidation(StockValidationException e) {
+        ErrorResponse response = ErrorResponse.builder()
+                .status(400)
+                .message(ErrorCode.INVALID_STOCK_OPERATION.getMessage())
+                .errors(e.getErrors())
+                .build();
+        return ResponseEntity.badRequest().body(response);
+    }
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolation(DataIntegrityViolationException e) {
         log.warn("Data integrity violation: {}", e.getMessage());

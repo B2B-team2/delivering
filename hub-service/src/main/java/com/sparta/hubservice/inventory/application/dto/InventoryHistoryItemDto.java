@@ -14,6 +14,7 @@ public class InventoryHistoryItemDto {
     private final UUID historyId;
     private final int changeQuantity;
     private final String changeType;
+    private final String reason;
     private final LocalDateTime createdAt;
     private final String createdBy;
 
@@ -22,6 +23,7 @@ public class InventoryHistoryItemDto {
                 .historyId(history.getHistoryId())
                 .changeQuantity(history.getChangeQuantity())
                 .changeType(history.getChangeType().name())
+                .reason(history.getReason())
                 .createdAt(history.getCreatedAt())
                 .createdBy(history.getCreatedBy())
                 .build();
