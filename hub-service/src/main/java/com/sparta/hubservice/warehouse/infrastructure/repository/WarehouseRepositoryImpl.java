@@ -36,8 +36,9 @@ public class WarehouseRepositoryImpl implements WarehouseRepository {
     }
 
     @Override
-    public void delete(Warehouse warehouse) {
-        warehouseJpaRepository.delete(warehouse);
+    public void delete(Warehouse warehouse, String deletedBy) {
+        warehouse.softDelete(deletedBy);
+        warehouseJpaRepository.save(warehouse);
     }
 
     public boolean existsByHubId(UUID hubId) {

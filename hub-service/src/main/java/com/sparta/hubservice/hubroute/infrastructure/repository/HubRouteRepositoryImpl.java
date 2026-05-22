@@ -41,7 +41,8 @@ public class HubRouteRepositoryImpl implements HubRouteRepository {
     }
 
     @Override
-    public void delete(HubRoute hubRoute) {
-        hubRouteJpaRepository.delete(hubRoute);
+    public void delete(HubRoute hubRoute, String deletedBy) {
+        hubRoute.softDelete(deletedBy);
+        hubRouteJpaRepository.save(hubRoute);
     }
 }
