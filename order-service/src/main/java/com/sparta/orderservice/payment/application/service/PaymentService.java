@@ -2,17 +2,19 @@ package com.sparta.orderservice.payment.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.PaymentErrorCode;
-import com.sparta.orderservice.payment.application.dto.CreatePaymentCommand;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
 import com.sparta.orderservice.payment.domain.core.Payment;
 import com.sparta.orderservice.payment.domain.core.PaymentMethod;
+import com.sparta.orderservice.payment.domain.core.PaymentStatus;
 import com.sparta.orderservice.payment.domain.repository.PaymentRepository;
+import com.sparta.orderservice.payment.application.port.OrderQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 @Service
@@ -21,38 +23,36 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final OrderQueryPort orderQueryPort;
 
     /**
-     * 결제 생성: PENDING 상태로 저장
-     * 실제 결제 승인은 PATCH /payments/{paymentId}/confirm 에서 처리
+     * 선결제: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
+     * OrderService.createOrder() 내에서 같은 트랜잭션으로 호출됨
      */
     @Transactional
-    public PaymentResult createPayment(CreatePaymentCommand command) {
-        PaymentMethod paymentMethod = PaymentMethod.valueOf(command.paymentMethod());
-        Payment payment = Payment.ready(command.orderId(), paymentMethod, command.amount());
+    public PaymentResult createCompletedPayment(UUID orderId, BigDecimal amount) {
+        Payment payment = Payment.complete(orderId, PaymentMethod.CARD, amount);
         paymentRepository.save(payment);
         return PaymentResult.from(payment);
     }
 
     /**
-     * 결제 확정: PENDING → COMPLETED
-     * 실제 PG 연동 X — mock UUID를 pgTransactionId로 자동 생성
-     * 이미 완료/취소된 결제에 confirm 시도 시 예외 발생 (Payment.confirm 내부 검증)
-     */
-    @Transactional
-    public PaymentResult confirmPayment(UUID paymentId) {
-        Payment payment = findPaymentOrThrow(paymentId);
-        payment.confirm();
-        return PaymentResult.from(payment);
-    }
-
-    /**
-     * 결제 취소: PENDING → CANCELLED
-     * 이미 취소된 결제에 재취소 시도 시 예외 발생 (Payment.cancel 내부 검증)
+     * 결제 취소/환불: COMPLETED → CANCELLED
+     * 취소 가능 조건: Order.PENDING + CompanyOrder SHIPPED/DELIVERED 없을 때
+     * 상태 검증은 OrderStatusPort(Adapter)에 위임
      */
     @Transactional
     public PaymentResult cancelPayment(UUID paymentId, UUID requesterId) {
         Payment payment = findPaymentOrThrow(paymentId);
+
+        if (payment.getStatus() == PaymentStatus.CANCELLED) {
+            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
+        }
+
+        if (!orderQueryPort.isCancellable(payment.getOrderId())) {
+            throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
+        }
+
         payment.cancel(requesterId.toString());
         return PaymentResult.from(payment);
     }

@@ -131,6 +131,9 @@ public abstract class BaseArchitectureTest {
     /**
      * [4계층 DDD 아키텍처 의존성 규칙]
      * 사용자 정의 접근 규칙을 따릅니다.
+     * 1. 상위 계층(Application, Domain)은 하위 기술 계층(Infrastructure)을 절대 직접 import 하지 않습니다.
+     * 2. 의존성은 언제나 외곽(Infrastructure)에서 내부(Application, Domain)를 향해 DIP로 구현됩니다.
+     * 3. 런타임 의존성은 Spring Container의 의존성 주입(DI)을 통해 제어 역전으로 결합됩니다.
      */
     @ArchTest
     static final ArchRule layered_architecture_rule = layeredArchitecture()
@@ -142,12 +145,14 @@ public abstract class BaseArchitectureTest {
 
             // Presentation: 오직 외부만 바라보며, 내부로는 Application 레이어에만 접근 가능
             .whereLayer("Presentation").mayNotBeAccessedByAnyLayer()
-            // Application: Presentation 또는 Infrastructure(Port 구현체)에서 접근 가능
+
+            // Application: Presentation과 Infrastructure(구현체) 모두 접근할 수 있어야 함 (DIP)
             .whereLayer("Application").mayOnlyBeAccessedByLayers("Presentation", "Infrastructure")
             // Domain: Application, Infrastructure(구현체), Global(초기화)에서 접근 가능. Presentation은 금지(DTO가 대신함)
             .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Infrastructure")
-            // Infrastructure: 도메인 로직을 실행하는 Application 또는 Global에서 접근 가능. Domain은 인터페이스만 가지며 Infra를 호출하지 않음
-            .whereLayer("Infrastructure").mayOnlyBeAccessedByLayers("Application", "Domain")
+            // Infrastructure: Infrastructure는 그 누구도 직접 접근(import) 금지.
+            // (Application과 Domain은 오직 인터페이스만 바라보며, 실제 구현체는 스프링이 DI로 주입합니다.)
+            .whereLayer("Infrastructure").mayNotBeAccessedByAnyLayer()
             
             .allowEmptyShould(ALLOW_EMPTY)
             .as("도메인 내 4계층(DDD) 의존성 규칙을 위반했습니다.");
