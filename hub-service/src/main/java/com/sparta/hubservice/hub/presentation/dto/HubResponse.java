@@ -6,6 +6,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -21,6 +22,10 @@ public class HubResponse {
     private LocationDto location;
     private String contactPhone;
     private String status;
+    private LocalDateTime createdAt;
+    private String createdBy;
+    private LocalDateTime updatedAt;
+    private String updatedBy;
 
     public static HubResponse from(HubDto dto) {
         return HubResponse.builder()
@@ -31,6 +36,10 @@ public class HubResponse {
                 .location(new LocationDto(dto.getLatitude(), dto.getLongitude()))
                 .contactPhone(dto.getContactPhone())
                 .status(dto.getStatus())
+                .createdAt(dto.getCreatedAt())
+                .createdBy(dto.getCreatedBy())
+                .updatedAt(dto.getUpdatedAt())
+                .updatedBy(dto.getUpdatedBy())
                 .build();
     }
 }

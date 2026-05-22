@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
+import com.sparta.orderservice.order.application.dto.CompanyOrderDeliveredResult;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
 import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
@@ -17,6 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -81,12 +85,13 @@ public class OrderService {
         return OrderResult.from(order);
     }
 
-    // 전체 주문 조회
-    public List<OrderResult> getOrders(UUID requesterId) {
-        // TODO: 권한별 필터링 (마스터/허브관리자 → 전체, 업체 담당자 → 자기 회사 주문만)
-        return orderRepository.findAllOrders().stream()
-                .map(OrderResult::from)
-                .toList();
+    /**
+     * 전체 주문 조회 (페이징)
+     * TODO: 권한별 필터링
+     * - 마스터 → 전체, 허브관리자 → 담당 허브 소속 업체 전체, 업체 담당자 → 자기 회사 주문만)
+     */
+    public Page<OrderResult> getOrders(UUID requesterId, Pageable pageable) {
+        return orderRepository.findAllOrders(pageable).map(OrderResult::from);
     }
 
     // 주문 단건 상세 조회
@@ -137,6 +142,31 @@ public class OrderService {
         }
         companyOrder.ship();
         return CompanyOrderResult.from(companyOrder);
+    }
+
+    // 업체 주문 수령 완료: SHIPPED → DELIVERED (배송 서비스 내부 호출용)
+    @Transactional
+    public CompanyOrderDeliveredResult confirmDelivery(UUID companyOrderId) {
+        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        if (companyOrder.getStatus() != CompanyOrderStatus.SHIPPED) {
+            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+        }
+        companyOrder.deliver();
+        completeOrderIfAllDelivered(companyOrder.getOrder());
+        return CompanyOrderDeliveredResult.from(companyOrder);
+    }
+
+    /**
+     * 모든 CompanyOrder가 완료(DELIVERED 또는 CANCELLED) 상태이면 Order → COMPLETED 전환
+     * anyMatch로 진행 중인 항목 발견 즉시 조기 종료
+     */
+    private void completeOrderIfAllDelivered(Order order) {
+        boolean hasActiveCompanyOrder = order.getCompanyOrders().stream()
+                .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
+                        && co.getStatus() != CompanyOrderStatus.CANCELLED);
+        if (!hasActiveCompanyOrder) {
+            order.complete();
+        }
     }
 
     // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
