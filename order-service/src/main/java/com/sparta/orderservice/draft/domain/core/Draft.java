@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,6 +38,10 @@ public class Draft extends BaseEntity {
 
     @Column(name = "quantity", nullable = false)
     private int quantity = 1;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;                        // 낙관적 락 — 동시 수량 수정/삭제 충돌 감지
 
     private static final int MAX_QUANTITY = 9999;
 

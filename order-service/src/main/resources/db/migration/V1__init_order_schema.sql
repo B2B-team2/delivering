@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS "order-db".p_order_drafts
     product_id        UUID        NOT NULL,                   -- 상품 ID
     product_option_id UUID        NOT NULL,                   -- 상품 옵션(SKU)
     quantity          INTEGER     NOT NULL DEFAULT 1,         -- 수량
+    version           BIGINT      NOT NULL DEFAULT 0,         -- 낙관적 락 버전
     created_at        TIMESTAMP   NOT NULL,
     created_by        VARCHAR(255),
     updated_at        TIMESTAMP,
