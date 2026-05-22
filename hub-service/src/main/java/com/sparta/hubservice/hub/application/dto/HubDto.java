@@ -4,6 +4,7 @@ import com.sparta.hubservice.hub.domain.core.Hub;
 import lombok.Builder;
 import lombok.Getter;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -17,6 +18,10 @@ public class HubDto {
     private final Double longitude;
     private final String contactPhone;
     private final String status;
+    private final LocalDateTime createdAt;
+    private final String createdBy;
+    private final LocalDateTime updatedAt;
+    private final String updatedBy;
 
     public static HubDto from(Hub hub) {
         return HubDto.builder()
@@ -28,6 +33,10 @@ public class HubDto {
                 .longitude(hub.getLongitude())
                 .contactPhone(hub.getContactPhone())
                 .status(hub.getStatus().name())
+                .createdAt(hub.getCreatedAt())
+                .createdBy(hub.getCreatedBy())
+                .updatedAt(hub.getUpdatedAt())
+                .updatedBy(hub.getUpdatedBy())
                 .build();
     }
 }

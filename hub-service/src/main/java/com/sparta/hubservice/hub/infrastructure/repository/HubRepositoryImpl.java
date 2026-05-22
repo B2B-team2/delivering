@@ -42,6 +42,19 @@ public class HubRepositoryImpl implements HubRepository {
     }
 
     @Override
+    public Page<Hub> search(HubType hubType, HubStatus status, String keyword, Pageable pageable) {
+        return hubJpaRepository.findAll((root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            predicates.add(cb.isNull(root.get("deletedAt")));
+            if (hubType != null) predicates.add(cb.equal(root.get("hubType"), hubType));
+            if (status != null) predicates.add(cb.equal(root.get("status"), status));
+            if (keyword != null && !keyword.isBlank())
+                predicates.add(cb.like(root.get("name"), "%" + keyword + "%"));
+            return cb.and(predicates.toArray(new Predicate[0]));
+        }, pageable);
+    }
+
+    @Override
     public void delete(Hub hub, String deletedBy) {
         hub.softDelete(deletedBy);
         hubJpaRepository.save(hub);
