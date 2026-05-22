@@ -409,17 +409,40 @@ class CompanyServiceTest {
     }
 
     @Test
-    @DisplayName("업체-허브 매핑 조회: 존재하지 않는 ID 전달 시 빈 목록이 반환되는가?")
-    void getHubMappingsEmptyTest() {
+    @DisplayName("업체-허브 매핑 조회 실패: 전달된 모든 ID가 유효하지 않을 경우 COMPANY_NOT_FOUND 예외가 발생하는가?")
+    void getHubMappingsNotFoundTest() {
         // given
-        List<UUID> ids = List.of(UUID.randomUUID());
+        List<UUID> ids = List.of(UUID.randomUUID(), UUID.randomUUID());
         when(companyRepository.findAllByCompanyIdIn(ids)).thenReturn(List.of());
+
+        // when & then
+        assertThatThrownBy(() -> companyService.getHubMappings(ids))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.COMPANY_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("업체-허브 매핑 조회 일부 성공: 존재하는 업체에 대해서만 매핑 정보가 반환되는가?")
+    void getHubMappingsPartialSuccessTest() {
+        // given
+        UUID validId = UUID.randomUUID();
+        UUID invalidId = UUID.randomUUID();
+        List<UUID> ids = List.of(validId, invalidId);
+
+        Company company = Company.builder()
+                .companyId(validId)
+                .companyName("Valid Company")
+                .hubId(UUID.randomUUID())
+                .build();
+
+        when(companyRepository.findAllByCompanyIdIn(ids)).thenReturn(List.of(company));
 
         // when
         CompanyHubMappingResult result = companyService.getHubMappings(ids);
 
         // then
-        assertThat(result.getMappings()).isEmpty();
+        assertThat(result.getMappings()).hasSize(1);
+        assertThat(result.getMappings().get(0).getCompanyId()).isEqualTo(validId);
     }
 
     @Test

@@ -173,6 +173,10 @@ public class CompanyService {
     public CompanyHubMappingResult getHubMappings(List<UUID> companyIds) {
         List<Company> companies = companyRepository.findAllByCompanyIdIn(companyIds);
 
+        if (companies.isEmpty()) {
+            throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
+        }
+
         List<CompanyHubMappingResult.MappingItem> mappingItems = companies.stream()
                 .map(company -> CompanyHubMappingResult.MappingItem.builder()
                         .companyId(company.getCompanyId())
