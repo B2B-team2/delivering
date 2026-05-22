@@ -3,9 +3,13 @@ package com.sparta.companyservice.company.application.service;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressCreateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.domain.core.Company;
+import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
+import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +26,7 @@ import java.util.UUID;
 public class CompanyService {
 
     private final CompanyRepository companyRepository;
+    private final CompanyDeliveryAddressRepository companyDeliveryAddressRepository;
 
     @Transactional
     public CompanyDto createCompany(CompanyCreateCommand command) {
@@ -135,5 +140,26 @@ public class CompanyService {
 
     public boolean existsCompany(UUID companyId) {
         return companyRepository.findById(companyId).isPresent();
+    }
+
+    @Transactional
+    public CompanyDeliveryAddressDto createAddress(CompanyDeliveryAddressCreateCommand command) {
+        if (!existsCompany(command.getCompanyId())) {
+            throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
+        }
+
+        CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
+                .companyId(command.getCompanyId())
+                .addressName(command.getAddressName())
+                .recipientName(command.getRecipientName())
+                .phone(command.getPhone())
+                .address(command.getAddress())
+                .addressDetail(command.getAddressDetail())
+                .postalCode(command.getPostalCode())
+                .isDefault(command.getIsDefault())
+                .build();
+
+        CompanyDeliveryAddress savedAddress = companyDeliveryAddressRepository.save(address);
+        return CompanyDeliveryAddressDto.from(savedAddress);
     }
 }
