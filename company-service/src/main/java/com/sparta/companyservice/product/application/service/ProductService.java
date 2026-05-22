@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
+import com.sparta.companyservice.product.application.dto.ProductStatusUpdateCommand;
 import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
 import com.sparta.companyservice.product.application.port.CompanyQueryPort;
 import com.sparta.companyservice.product.domain.core.Product;
@@ -63,12 +64,7 @@ public class ProductService {
 
         validateCompanyAndCategory(command.getCompanyId(), command.getCategoryId());
 
-        ProductStatusEnum status;
-        try {
-            status = ProductStatusEnum.valueOf(command.getStatus());
-        } catch (IllegalArgumentException e) {
-            throw new BusinessException(CompanyErrorCode.INVALID_PRODUCT_STATUS);
-        }
+        ProductStatusEnum status = parseProductStatus(command.getStatus());
 
         product.update(
                 command.getCompanyId(),
@@ -90,6 +86,26 @@ public class ProductService {
 
         product.softDelete("system");
         return ProductDto.from(product);
+    }
+
+    @Transactional
+    public ProductDto updateProductStatus(UUID productId, ProductStatusUpdateCommand command) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_NOT_FOUND));
+
+        ProductStatusEnum status = parseProductStatus(command.getStatus());
+
+        product.updateStatus(status);
+
+        return ProductDto.from(product);
+    }
+
+    private ProductStatusEnum parseProductStatus(String status) {
+        try {
+            return ProductStatusEnum.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException(CompanyErrorCode.INVALID_PRODUCT_STATUS);
+        }
     }
 
     private void validateCompanyAndCategory(UUID companyId, UUID categoryId) {

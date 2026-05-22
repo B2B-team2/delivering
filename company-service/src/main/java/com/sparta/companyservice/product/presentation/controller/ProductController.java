@@ -8,6 +8,8 @@ import com.sparta.companyservice.product.application.service.ProductService;
 import com.sparta.companyservice.product.presentation.dto.ProductCreateRequest;
 import com.sparta.companyservice.product.presentation.dto.ProductDeleteResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductResponse;
+import com.sparta.companyservice.product.presentation.dto.ProductStatusUpdateRequest;
+import com.sparta.companyservice.product.presentation.dto.ProductStatusUpdateResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +67,14 @@ public class ProductController {
             @RequestBody @Valid ProductUpdateRequest request) {
         ProductDto resultDto = productService.updateProduct(productId, request.toCommand());
         return ResponseEntity.ok(ApiResponse.success(ProductResponse.from(resultDto)));
+    }
+
+    @PatchMapping("/{productId}/status")
+    public ResponseEntity<ApiResponse<ProductStatusUpdateResponse>> patchProductStatus(
+            @PathVariable UUID productId,
+            @RequestBody @Valid ProductStatusUpdateRequest request) {
+        ProductDto resultDto = productService.updateProductStatus(productId, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(ProductStatusUpdateResponse.from(resultDto)));
     }
 
     @DeleteMapping("/{productId}")
