@@ -77,4 +77,28 @@ class ProductEntityTest {
         assertThat(product.getStatus()).isEqualTo(newStatus);
     }
 
+    @Test
+    @DisplayName("updateStatus() 메서드를 통해 상품 상태만 변경된다")
+    void updateStatus_Method_Changes_Only_Status_Correctly() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        Product product = Product.builder()
+                .companyId(companyId)
+                .categoryId(UUID.randomUUID())
+                .name("상품명")
+                .price(BigDecimal.valueOf(1000))
+                .description("설명")
+                .thumbnailUrl("http://url")
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        // when
+        product.updateStatus(ProductStatusEnum.SOLD_OUT);
+
+        // then
+        assertThat(product.getStatus()).isEqualTo(ProductStatusEnum.SOLD_OUT);
+        assertThat(product.getCompanyId()).isEqualTo(companyId);
+        assertThat(product.getName()).isEqualTo("상품명");
+    }
+
 }

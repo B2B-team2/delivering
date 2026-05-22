@@ -24,7 +24,9 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -213,6 +215,51 @@ class ProductControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/v1/products/{productId}", productId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 판매상태 변경 API 성공 검증")
+    void patchProductStatusSuccessTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        Map<String, String> request = new HashMap<>();
+        request.put("status", "SOLD_OUT");
+
+        ProductDto responseDto = ProductDto.builder()
+                .productId(productId)
+                .status("SOLD_OUT")
+                .build();
+
+        when(productService.updateProductStatus(eq(productId), any())).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/products/{productId}/status", productId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.data.status").value("SOLD_OUT"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 판매상태 변경 API 실패 검증: 상태 누락")
+    void patchProductStatusFailTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        Map<String, String> request = new HashMap<>();
+        request.put("status", ""); // NotBlank 위반
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/products/{productId}/status", productId)
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
