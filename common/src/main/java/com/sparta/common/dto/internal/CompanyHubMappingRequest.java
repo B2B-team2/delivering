@@ -1,4 +1,4 @@
-package com.sparta.companyservice.company.presentation.dto;
+package com.sparta.common.dto.internal;
 
 import jakarta.validation.constraints.NotEmpty;
 import lombok.AccessLevel;
@@ -13,7 +13,6 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 @AllArgsConstructor
 public class CompanyHubMappingRequest {
-
     @NotEmpty(message = "업체 ID 목록은 비어있을 수 없습니다.")
     private List<UUID> companyIds;
 }
