@@ -13,8 +13,6 @@ public class WarehouseInventoryAdjustResponse {
 
     private final UUID inventoryId;
     private final UUID productOptionId;
-    private final String productName;
-    private final String optionsName;
     private final int previousQuantity;
     private final int changeQuantity;
     private final int currentQuantity;
@@ -30,8 +28,6 @@ public class WarehouseInventoryAdjustResponse {
         return WarehouseInventoryAdjustResponse.builder()
                 .inventoryId(dto.getInventoryId())
                 .productOptionId(dto.getProductOptionId())
-                .productName(dto.getProductName())
-                .optionsName(dto.getOptionsName())
                 .previousQuantity(dto.getPreviousQuantity())
                 .changeQuantity(dto.getChangeQuantity())
                 .currentQuantity(dto.getCurrentQuantity())

@@ -14,8 +14,6 @@ public class WarehouseInventoryAdjustDto {
 
     private final UUID inventoryId;
     private final UUID productOptionId;
-    private final String productName;    // product 서비스 Feign 연동 필요, 현재 null
-    private final String optionsName;    // product 서비스 Feign 연동 필요, 현재 null
     private final int previousQuantity;
     private final int changeQuantity;
     private final int currentQuantity;
@@ -33,8 +31,6 @@ public class WarehouseInventoryAdjustDto {
         return WarehouseInventoryAdjustDto.builder()
                 .inventoryId(inventory.getInventoryId())
                 .productOptionId(inventory.getProductOptionId())
-                .productName(null)
-                .optionsName(null)
                 .previousQuantity(previousQuantity)
                 .changeQuantity(changeQuantity)
                 .currentQuantity(inventory.getQuantity())
