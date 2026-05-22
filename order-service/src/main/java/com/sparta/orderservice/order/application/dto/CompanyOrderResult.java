@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.UUID;
 
 // Application 계층 응답 DTO — Service → Controller 전달용
-// Domain 엔티티(CompanyOrder)를 직접 참조할 수 있는 계층
 public record CompanyOrderResult(
         UUID companyOrderId,
+        UUID orderId,
         UUID companyId,
         BigDecimal subtotalPrice,
         BigDecimal subtotalDeliveryFee,
@@ -36,6 +36,7 @@ public record CompanyOrderResult(
 
         return new CompanyOrderResult(
                 co.getCompanyOrderId(),
+                co.getOrder().getOrderId(),
                 co.getCompanyId(),
                 co.getSubtotalPrice(),
                 co.getSubtotalDeliveryFee(),
