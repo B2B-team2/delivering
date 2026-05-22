@@ -20,4 +20,6 @@ public interface InventoryHistoryRepository {
                                          Pageable pageable);
 
     List<InventoryHistory> findByOrderIdAndChangeType(UUID orderId, InventoryChangeType changeType);
+
+    List<InventoryHistory> findByCompanyOrderIdAndChangeType(UUID companyOrderId, InventoryChangeType changeType);
 }

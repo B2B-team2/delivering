@@ -3,6 +3,7 @@ package com.sparta.hubservice.inventory.presentation.controller;
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.hubservice.inventory.application.dto.InventoryItemCommand;
 import com.sparta.hubservice.inventory.application.service.InventoryService;
+import com.sparta.hubservice.inventory.presentation.dto.CancelCompanyRequest;
 import com.sparta.hubservice.inventory.presentation.dto.CancelReservationRequest;
 import com.sparta.hubservice.inventory.presentation.dto.InventoryBulkRequest;
 
@@ -24,13 +25,19 @@ public class InternalInventoryController {
 
     @PostMapping("/reserve")
     public ResponseEntity<ApiResponse<Void>> reserve(@Valid @RequestBody InventoryBulkRequest request) {
-        inventoryService.reserveStock(request.getOrderId(), toCommands(request));
+        inventoryService.reserveStock(request.getOrderId(), request.getCompanyOrderId(), toCommands(request));
         return ResponseEntity.ok(ApiResponse.success());
     }
 
     @PostMapping("/cancel")
     public ResponseEntity<ApiResponse<Void>> cancel(@Valid @RequestBody CancelReservationRequest request) {
         inventoryService.cancelReservation(request.getOrderId());
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @PostMapping("/cancel/company")
+    public ResponseEntity<ApiResponse<Void>> cancelCompany(@Valid @RequestBody CancelCompanyRequest request) {
+        inventoryService.cancelCompanyReservation(request.getCompanyOrderId());
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -48,7 +55,7 @@ public class InternalInventoryController {
 
     private List<InventoryItemCommand> toCommands(InventoryBulkRequest request) {
         return request.getItems().stream()
-                .map(i -> new InventoryItemCommand(i.getInventoryId(), i.getQuantity()))
+                .map(i -> new InventoryItemCommand(i.getProductOptionId(), i.getQuantity()))
                 .toList();
     }
 }

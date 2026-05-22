@@ -13,4 +13,6 @@ public interface InventoryHistoryJpaRepository extends JpaRepository<InventoryHi
     List<InventoryHistory> findByInventoryId(UUID inventoryId);
 
     List<InventoryHistory> findByOrderIdAndChangeTypeAndDeletedAtIsNull(UUID orderId, InventoryChangeType changeType);
+
+    List<InventoryHistory> findByCompanyOrderIdAndChangeTypeAndDeletedAtIsNull(UUID companyOrderId, InventoryChangeType changeType);
 }

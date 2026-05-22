@@ -9,6 +9,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class InventoryItemCommand {
 
-    private final UUID inventoryId;
+    private final UUID productOptionId;
     private final int quantity;
 }

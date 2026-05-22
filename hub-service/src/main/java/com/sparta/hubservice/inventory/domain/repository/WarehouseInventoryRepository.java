@@ -14,6 +14,8 @@ public interface WarehouseInventoryRepository {
 
     Optional<WarehouseInventory> findByWarehouseIdAndProductOptionId(UUID warehouseId, UUID productOptionId);
 
+    List<WarehouseInventory> findByProductOptionId(UUID productOptionId);
+
     List<WarehouseInventory> findByWarehouseId(UUID warehouseId);
 
     void delete(WarehouseInventory inventory);

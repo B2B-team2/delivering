@@ -113,14 +113,14 @@ public class InventoryService {
     }
 
     @Transactional
-    public void reserveStock(UUID orderId, List<InventoryItemCommand> items) {
+    public void reserveStock(UUID orderId, UUID companyOrderId, List<InventoryItemCommand> items) {
         for (var item : items) {
-            WarehouseInventory inventory = inventoryRepository.findById(item.getInventoryId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            WarehouseInventory inventory = findByProductOptionId(item.getProductOptionId());
             inventory.reserve(item.getQuantity());
             historyRepository.save(InventoryHistory.builder()
-                    .inventoryId(item.getInventoryId())
+                    .inventoryId(inventory.getInventoryId())
                     .orderId(orderId)
+                    .companyOrderId(companyOrderId)
                     .changeQuantity(item.getQuantity())
                     .changeType(InventoryChangeType.RESERVED)
                     .build());
@@ -147,13 +147,31 @@ public class InventoryService {
     }
 
     @Transactional
+    public void cancelCompanyReservation(UUID companyOrderId) {
+        List<InventoryHistory> reservations = historyRepository.findByCompanyOrderIdAndChangeType(companyOrderId, InventoryChangeType.RESERVED);
+        if (reservations.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+        }
+        for (InventoryHistory reservation : reservations) {
+            WarehouseInventory inventory = inventoryRepository.findById(reservation.getInventoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            inventory.cancelReservation(reservation.getChangeQuantity());
+            historyRepository.save(InventoryHistory.builder()
+                    .inventoryId(reservation.getInventoryId())
+                    .companyOrderId(companyOrderId)
+                    .changeQuantity(-reservation.getChangeQuantity())
+                    .changeType(InventoryChangeType.CANCELLED)
+                    .build());
+        }
+    }
+
+    @Transactional
     public void deductStock(UUID orderId, List<InventoryItemCommand> items) {
         for (var item : items) {
-            WarehouseInventory inventory = inventoryRepository.findById(item.getInventoryId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            WarehouseInventory inventory = findByProductOptionId(item.getProductOptionId());
             inventory.deduct(item.getQuantity());
             historyRepository.save(InventoryHistory.builder()
-                    .inventoryId(item.getInventoryId())
+                    .inventoryId(inventory.getInventoryId())
                     .orderId(orderId)
                     .changeQuantity(-item.getQuantity())
                     .changeType(InventoryChangeType.OUTBOUND)
@@ -164,16 +182,21 @@ public class InventoryService {
     @Transactional
     public void returnStock(UUID orderId, List<InventoryItemCommand> items) {
         for (var item : items) {
-            WarehouseInventory inventory = inventoryRepository.findById(item.getInventoryId())
-                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            WarehouseInventory inventory = findByProductOptionId(item.getProductOptionId());
             inventory.returnStock(item.getQuantity());
             historyRepository.save(InventoryHistory.builder()
-                    .inventoryId(item.getInventoryId())
+                    .inventoryId(inventory.getInventoryId())
                     .orderId(orderId)
                     .changeQuantity(item.getQuantity())
                     .changeType(InventoryChangeType.RETURNED)
                     .build());
         }
+    }
+
+    private WarehouseInventory findByProductOptionId(UUID productOptionId) {
+        return inventoryRepository.findByProductOptionId(productOptionId).stream()
+                .findFirst()
+                .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
     }
 
     @Transactional
