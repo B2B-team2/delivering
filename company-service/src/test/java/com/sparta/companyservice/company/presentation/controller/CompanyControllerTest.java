@@ -299,4 +299,37 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$.errors[0].field").value("companyId"))
                 .andExpect(jsonPath("$.errors[0].message").value(org.hamcrest.Matchers.containsString("유효한 UUID 형식이 아닙니다.")));
     }
+
+    @Test
+    @WithMockUser
+    @DisplayName("배송지 등록 API 성공 검증")
+    void createAddressSuccessTest() throws Exception {
+        UUID companyId = UUID.randomUUID();
+        CompanyAddressCreateRequest request = CompanyAddressCreateRequest.builder()
+                .companyId(companyId)
+                .addressName("집")
+                .recipientName("홍길동")
+                .phone("010-1234-5678")
+                .address("주소")
+                .postalCode("12345")
+                .isDefault(false)
+                .build();
+
+        CompanyAddressDto responseDto = CompanyAddressDto.builder()
+                .addressId(UUID.randomUUID())
+                .companyId(companyId)
+                .addressName(request.getAddressName())
+                .build();
+
+        when(companyAddressService.registerAddress(eq(companyId), any())).thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(201))
+                .andExpect(jsonPath("$.message").value("CREATED"))
+                .andExpect(jsonPath("$.data.addressName").value(request.getAddressName()));
+    }
 }
