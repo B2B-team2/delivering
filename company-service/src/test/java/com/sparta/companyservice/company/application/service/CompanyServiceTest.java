@@ -446,6 +446,34 @@ class CompanyServiceTest {
     }
 
     @Test
+    @DisplayName("허브 소속 업체 존재 확인: 업체가 존재할 경우 true를 반환하는가?")
+    void existsCompanyInHubTrueTest() {
+        // given
+        UUID hubId = UUID.randomUUID();
+        when(companyRepository.existsByHubId(hubId)).thenReturn(true);
+
+        // when
+        boolean exists = companyService.existsCompanyInHub(hubId);
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("허브 소속 업체 존재 확인: 업체가 존재하지 않을 경우 false를 반환하는가?")
+    void existsCompanyInHubFalseTest() {
+        // given
+        UUID hubId = UUID.randomUUID();
+        when(companyRepository.existsByHubId(hubId)).thenReturn(false);
+
+        // when
+        boolean exists = companyService.existsCompanyInHub(hubId);
+
+        // then
+        assertThat(exists).isFalse();
+    }
+
+    @Test
     @DisplayName("배송지 등록 성공: 기본 배송지 설정 시 기존 설정 해제 로직이 호출되는가?")
     void createAddressWithDefaultTest() {
         // given

@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -70,6 +71,29 @@ class InternalCompanyControllerTest {
         mockMvc.perform(post("/api/v1/internal/companies/hub-mapping")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("허브 소속 업체 존재 확인 성공: 200 OK와 Boolean 결과 응답 확인")
+    void existsCompanyInHubSuccess() throws Exception {
+        // given
+        UUID hubId = UUID.randomUUID();
+        when(companyService.existsCompanyInHub(hubId)).thenReturn(true);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/internal/companies/exists")
+                        .param("hubId", hubId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.data").value(true));
+    }
+
+    @Test
+    @DisplayName("허브 소속 업체 존재 확인 실패: hubId 파라미터 누락 시 400 Bad Request 확인")
+    void existsCompanyInHubFail_MissingParam() throws Exception {
+        // when & then
+        mockMvc.perform(get("/api/v1/internal/companies/exists"))
                 .andExpect(status().isBadRequest());
     }
 }
