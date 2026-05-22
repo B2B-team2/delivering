@@ -11,8 +11,7 @@ CREATE SCHEMA IF NOT EXISTS "order-db";
 CREATE TABLE IF NOT EXISTS "order-db".p_orders
 (
     order_id             UUID         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    requester_company_id UUID         NOT NULL,                 -- 요청(공급)업체
-    receiver_company_id  UUID         NOT NULL,                 -- 수령업체
+    receiver_company_id  UUID         NOT NULL,                 -- 수령업체 (주문자 소속 업체)
     recipient_name       VARCHAR(100) NOT NULL,                 -- 수령인 실명
     phone                VARCHAR(20)  NOT NULL,                 -- 수령인 연락처
     slack_id             VARCHAR(36),                           -- 수령인 Slack ID (nullable)

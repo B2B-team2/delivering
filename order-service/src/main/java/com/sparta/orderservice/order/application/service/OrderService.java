@@ -12,6 +12,8 @@ import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
+import com.sparta.orderservice.order.application.port.CompanyPort;
+import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
@@ -24,7 +26,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -36,6 +40,8 @@ public class OrderService {
     private final CompanyOrderRepository companyOrderRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final HubStockPort hubStockPort;
+    private final CompanyPort companyPort;
+    private final DeliveryPort deliveryPort;
 
     // 주문 생성
     @Transactional
@@ -80,10 +86,21 @@ public class OrderService {
 
         orderRepository.save(order);
 
-        // TODO: [Hub Service] 재고 예약
-        // - items 필드 스펙 확정 대기 중 (productOptionId)
-        // - 실패 시 예외 전파 → 주문 생성 전체 롤백
-        // hubStockPort.reserveStock(order.getOrderId());
+        // 관련된 모든 업체 ID를 모아 Company Service에 단 1회 일괄 조회
+        List<UUID> allCompanyIds = new ArrayList<>();
+        allCompanyIds.add(order.getReceiverCompanyId());
+        order.getCompanyOrders().forEach(co -> allCompanyIds.add(co.getCompanyId()));
+
+        // companyId → hubId 전체 매핑 (수령업체 + 공급업체 모두 포함)
+        Map<UUID, UUID> hubIdMap = companyPort.getHubIds(allCompanyIds);
+        UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId()); // 수령업체 소속 허브
+
+        // 재고 예약: 실패 시 예외 전파 → 주문 생성 전체 롤백
+        hubStockPort.reserveStock(order);
+
+        // 배송 일괄 생성: 공급업체 소속 허브(출발) → 수령업체 소속 허브(도착), 단 1회 호출
+        // hubIdMap에서 각 공급업체의 departureHubId를 조회하여 사용
+        deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
 
         // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
         eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), totalPrice));
@@ -115,9 +132,8 @@ public class OrderService {
         order.getCompanyOrders().forEach(co -> co.cancel(requesterId.toString()));
         order.cancel(requesterId.toString());
 
-        // TODO: [Hub Service] 재고 예약 전체 취소
-        // companyOrderId 기준 개별 취소
-        // hubStockPort.cancelStock(orderId);
+        // 재고 예약 전체 취소 (orderId 기준)
+        hubStockPort.cancelStock(orderId);
     }
 
     // 서브 주문 상세 조회
@@ -130,8 +146,8 @@ public class OrderService {
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
         findCompanyOrderOrThrow(companyOrderId).cancel(requesterId.toString());
 
-        // TODO: [Hub Service] 재고 예약 부분 취소
-        // hubStockPort.cancelStock(companyOrderId);
+        // 재고 예약 부분 취소 (companyOrderId 기준)
+        hubStockPort.cancelCompanyStock(companyOrderId);
     }
 
     // 출고 준비 확인: ORDERED → PREPARING
@@ -154,8 +170,8 @@ public class OrderService {
         }
         companyOrder.ship();
 
-        // TODO: [Hub Service] 재고 차감
-        // hubStockPort.deductStock(companyOrderId);
+        // 실재고 차감
+        hubStockPort.deductStock(companyOrder);
 
         return CompanyOrderResult.from(companyOrder);
     }
