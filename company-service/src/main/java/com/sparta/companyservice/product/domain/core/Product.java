@@ -69,4 +69,8 @@ public class Product extends BaseEntity {
         this.status = status;
     }
 
+    public void updateStatus(ProductStatusEnum status) {
+        this.status = status;
+    }
+
 }

@@ -9,6 +9,7 @@ import java.util.UUID;
 // GET /orders/company/{company_order_id} 응답
 public record CompanyOrderResponse(
         UUID companyOrderId,
+        UUID orderId,
         UUID companyId,
         BigDecimal subtotalPrice,
         BigDecimal subtotalDeliveryFee,
@@ -23,7 +24,7 @@ public record CompanyOrderResponse(
             BigDecimal unitPrice
     ) {}
 
-    // Application DTO(CompanyOrderResult)로부터 변환 — 도메인 직접 의존 없음
+    // Application DTO(CompanyOrderResult)로부터 변환
     public static CompanyOrderResponse from(CompanyOrderResult result) {
         List<OrderItemSummary> items = result.orderItems().stream()
                 .map(item -> new OrderItemSummary(
@@ -36,6 +37,7 @@ public record CompanyOrderResponse(
 
         return new CompanyOrderResponse(
                 result.companyOrderId(),
+                result.orderId(),
                 result.companyId(),
                 result.subtotalPrice(),
                 result.subtotalDeliveryFee(),
