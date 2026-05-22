@@ -6,6 +6,8 @@ import com.sparta.hubservice.hubroute.application.service.HubRouteService;
 import com.sparta.hubservice.hubroute.presentation.dto.HubRouteCreateRequest;
 import com.sparta.hubservice.hubroute.presentation.dto.HubRouteResponse;
 import com.sparta.hubservice.hubroute.presentation.dto.HubRouteUpdateRequest;
+import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchRequest;
+import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
@@ -29,6 +31,14 @@ import java.util.UUID;
 public class HubRouteController {
 
     private final HubRouteService hubRouteService;
+
+    @PostMapping("/search")
+    public ResponseEntity<ApiResponse<RouteSearchResponse>> searchRoute(
+            @Valid @RequestBody RouteSearchRequest request) {
+        RouteSearchResponse response = RouteSearchResponse.from(
+                hubRouteService.findRoute(request.getFromHubId(), request.getToHubId()));
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<HubRouteResponse>> createHubRoute(
