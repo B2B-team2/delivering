@@ -8,7 +8,7 @@ eureka:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/delivering?currentSchema=hub-db
+    url: jdbc:postgresql://localhost:5432/delivering
     username: postgres
     password: password
     driver-class-name: org.postgresql.Driver

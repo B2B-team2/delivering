@@ -3,6 +3,8 @@ package com.sparta.companyservice.company.infrastructure.repository;
 import com.sparta.companyservice.company.domain.core.Company;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -25,11 +27,21 @@ public class CompanyRepositoryImpl implements CompanyRepository {
 
     @Override
     public Optional<Company> findById(UUID id) {
-        return jpaRepository.findById(id);
+        return jpaRepository.findByCompanyIdAndDeletedAtIsNull(id);
+    }
+
+    @Override
+    public Page<Company> findAll(Pageable pageable) {
+        return jpaRepository.findAllByDeletedAtIsNull(pageable);
     }
 
     @Override
     public long count() {
         return jpaRepository.count();
+    }
+
+    @Override
+    public Optional<Company> findByBusinessNumberAnyStatus(String businessNumber) {
+        return jpaRepository.findByBusinessNumber(businessNumber);
     }
 }

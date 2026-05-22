@@ -20,7 +20,7 @@ public abstract class BaseArchitectureTest {
      * 아직 모든 도메인이 구현되지 않은 개발 초기 단계에서는 true로 설정하여
      * 특정 레이어의 클래스가 없더라도 테스트를 통과(skip)하도록 관리합니다.
      */
-    protected static final boolean ALLOW_EMPTY = true;
+    protected static final boolean ALLOW_EMPTY = false;
 
     /**
      * [Presentation 계층 규칙]
@@ -142,8 +142,8 @@ public abstract class BaseArchitectureTest {
 
             // Presentation: 오직 외부만 바라보며, 내부로는 Application 레이어에만 접근 가능
             .whereLayer("Presentation").mayNotBeAccessedByAnyLayer()
-            // Application: Presentation 또는 Global(초기화)에서 접근 가능
-            .whereLayer("Application").mayOnlyBeAccessedByLayers("Presentation")
+            // Application: Presentation 또는 Infrastructure(Port 구현체)에서 접근 가능
+            .whereLayer("Application").mayOnlyBeAccessedByLayers("Presentation", "Infrastructure")
             // Domain: Application, Infrastructure(구현체), Global(초기화)에서 접근 가능. Presentation은 금지(DTO가 대신함)
             .whereLayer("Domain").mayOnlyBeAccessedByLayers("Application", "Infrastructure")
             // Infrastructure: 도메인 로직을 실행하는 Application 또는 Global에서 접근 가능. Domain은 인터페이스만 가지며 Infra를 호출하지 않음
