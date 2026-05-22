@@ -16,4 +16,13 @@ public class HubArchitectureTest extends BaseArchitectureTest {
 
     @ArchTest
     public static final ArchRule 허브_도메인_네이밍_규칙 = domain_prefix_naming_rule("Hub");
+
+    @ArchTest
+    public static final ArchRule 허브라우트_도메인_네이밍_규칙 = domain_prefix_naming_rule("HubRoute");
+
+    @ArchTest
+    public static final ArchRule 인벤토리_도메인_네이밍_규칙 = domain_prefix_naming_rule("Inventory");
+
+    @ArchTest
+    public static final ArchRule 창고_도메인_네이밍_규칙 = domain_prefix_naming_rule("Warehouse");
 }

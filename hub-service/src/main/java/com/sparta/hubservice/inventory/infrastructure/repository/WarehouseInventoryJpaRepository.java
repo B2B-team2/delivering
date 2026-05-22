@@ -14,4 +14,6 @@ public interface WarehouseInventoryJpaRepository extends JpaRepository<Warehouse
     Optional<WarehouseInventory> findByWarehouseIdAndProductOptionIdAndDeletedAtIsNull(UUID warehouseId, UUID productOptionId);
 
     List<WarehouseInventory> findByWarehouseIdAndDeletedAtIsNull(UUID warehouseId);
+
+    List<WarehouseInventory> findByProductOptionIdAndDeletedAtIsNull(UUID productOptionId);
 }

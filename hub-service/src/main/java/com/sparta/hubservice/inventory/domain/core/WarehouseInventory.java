@@ -67,7 +67,7 @@ public class WarehouseInventory extends BaseEntity {
 
     public void cancelReservation(int qty) {
         if (this.reservedQuantity < qty) {
-            throw new BusinessException(com.sparta.hubservice.global.exception.ErrorCode.INVALID_STOCK_OPERATION);
+            throw new BusinessException(com.sparta.hubservice.global.exception.ErrorCode.CANCEL_QUANTITY_EXCEEDED);
         }
         this.reservedQuantity -= qty;
     }
@@ -81,6 +81,10 @@ public class WarehouseInventory extends BaseEntity {
     }
 
     public void adjust(int qty) {
+        this.quantity += qty;
+    }
+
+    public void returnStock(int qty) {
         this.quantity += qty;
     }
 

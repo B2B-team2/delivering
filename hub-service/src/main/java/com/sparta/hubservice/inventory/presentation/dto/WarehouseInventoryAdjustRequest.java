@@ -8,15 +8,19 @@ import lombok.Getter;
 public class WarehouseInventoryAdjustRequest {
 
     @NotNull
-    private int adjustQuantity;
+    private Integer changeQuantity;
 
-    private Integer safetyStock;
+    @NotNull
+    private String changeType;
 
     private String reason;
 
+    private Integer safetyStock;
+
     public WarehouseInventoryAdjustCommand toCommand() {
         return WarehouseInventoryAdjustCommand.builder()
-                .adjustQuantity(adjustQuantity)
+                .changeQuantity(changeQuantity)
+                .changeType(changeType)
                 .safetyStock(safetyStock)
                 .reason(reason)
                 .build();
