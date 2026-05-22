@@ -15,6 +15,8 @@ public class InventoryBulkRequest {
     @NotNull
     private UUID orderId;
 
+    private UUID companyOrderId;
+
     @Valid
     @NotEmpty
     private List<InventoryItemRequest> items;
@@ -23,7 +25,7 @@ public class InventoryBulkRequest {
     public static class InventoryItemRequest {
 
         @NotNull
-        private UUID inventoryId;
+        private UUID productOptionId;
 
         @Positive
         private int quantity;
