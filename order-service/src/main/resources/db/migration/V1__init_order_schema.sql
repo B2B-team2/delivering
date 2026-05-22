@@ -3,6 +3,7 @@
 -- 스키마: order-db
 -- 테이블: p_orders, p_company_orders, p_order_items, p_payments
 -- ============================================================
+CREATE SCHEMA IF NOT EXISTS "order-db";
 
 -- ============================================================
 -- 1. p_orders (주문)

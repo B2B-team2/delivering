@@ -1,12 +1,16 @@
 package com.sparta.orderservice.order.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.common.dto.PageResponse;
 import com.sparta.orderservice.order.application.service.OrderService;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import com.sparta.orderservice.order.presentation.dto.OrderCreateRequest;
 import com.sparta.orderservice.order.presentation.dto.OrderResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -18,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -37,15 +40,16 @@ public class OrderController {
                 .body(ApiResponse.created(OrderResponse.from(orderService.createOrder(request.toCommand(), requesterId))));
     }
 
-    // 전체 주문 조회
+    // 전체 주문 조회 (페이징)
+    // TODO: 권한별 필터링 (마스터/허브관리자 → 전체, 업체 담당자 → 자기 회사 주문만)
     @GetMapping
-    public ResponseEntity<ApiResponse<List<OrderResponse>>> getOrders(
-        @RequestHeader("X-User-Id") UUID requesterId
+    public ResponseEntity<ApiResponse<PageResponse<OrderResponse>>> getOrders(
+        @RequestHeader("X-User-Id") UUID requesterId,
+        @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        List<OrderResponse> responses = orderService.getOrders(requesterId).stream()
-                .map(OrderResponse::from)
-                .toList();
-        return ResponseEntity.ok(ApiResponse.success(responses));
+        PageResponse<OrderResponse> response = new PageResponse<>(
+                orderService.getOrders(requesterId, pageable).map(OrderResponse::from));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     // 주문 단건 상세 조회
@@ -82,15 +86,22 @@ public class OrderController {
         return ResponseEntity.ok(ApiResponse.success());
     }
 
-//    // todo 출고 준비
-//    @Put? Patch?
-//    public ResponseEntity<Void> prepareShipment(@PathVariable UUID companyOrderId) {
-//    }
-//
-//    // 출고 완료 (재고 차감 + SHIPPED 상태 변경)
-//    @Put? Patch?
-//    public ResponseEntity<Void> completeShipment(@PathVariable UUID companyOrderId) {
-//        orderService.completeShipment(companyOrderId);
-//        return ResponseEntity.ok().build();
-//    }
+    // 출고 준비 확인: ORDERED → PREPARING
+    @PatchMapping("/company/{companyOrderId}/preparing")
+    public ResponseEntity<ApiResponse<CompanyOrderResponse>> prepareCompanyOrder(
+            @PathVariable UUID companyOrderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                CompanyOrderResponse.from(orderService.prepareCompanyOrder(companyOrderId))));
+    }
+
+    // 출고 완료: PREPARING → SHIPPED
+    // TODO: Hub Service FeignClient 재고 차감 연동
+    @PatchMapping("/company/{companyOrderId}/shipped")
+    public ResponseEntity<ApiResponse<CompanyOrderResponse>> shipCompanyOrder(
+            @PathVariable UUID companyOrderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                CompanyOrderResponse.from(orderService.shipCompanyOrder(companyOrderId))));
+    }
 }

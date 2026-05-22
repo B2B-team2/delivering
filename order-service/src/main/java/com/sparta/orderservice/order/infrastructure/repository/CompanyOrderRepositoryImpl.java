@@ -12,7 +12,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CompanyOrderRepositoryImpl implements CompanyOrderRepository {
 
-    // JPA 구현체 — 이 클래스 내부에서만 사용
     private final CompanyOrderJpaRepository companyOrderJpaRepository;
 
     @Override
