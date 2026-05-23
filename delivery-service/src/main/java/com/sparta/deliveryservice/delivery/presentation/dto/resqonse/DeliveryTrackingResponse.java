@@ -1,5 +1,6 @@
 package com.sparta.deliveryservice.delivery.presentation.dto.resqonse;
 
+import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +22,7 @@ public class DeliveryTrackingResponse {
     private String status;
     private String departureHubName;
     private String destinationHubName;
-    private String deliveryAddress;
+    private DeliveryAddress deliveryAddress;
     private String recipientName;
     private String deliveryManagerName;
     private LocalDateTime finalDispatchDeadlineAt;
@@ -29,7 +30,6 @@ public class DeliveryTrackingResponse {
     private LocalDateTime completedAt;
     private CurrentLocationDto currentLocation;
     private List<DeliveryRouteOverviewDto> routes;
-    private LocalDateTime createdAt;
 
     @Getter
     @Builder
