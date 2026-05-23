@@ -10,6 +10,7 @@ import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressDeleteResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressResponse;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressUpdateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
@@ -74,6 +75,14 @@ public class CompanyController {
         // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
         CompanyAddressDeleteResponse response = companyAddressService.deleteAddress(addressId, "system");
         return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PatchMapping("/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<CompanyAddressResponse>> updateAddress(
+            @PathVariable UUID addressId,
+            @RequestBody @Valid CompanyAddressUpdateRequest request) {
+        CompanyAddressDto resultDto = companyAddressService.updateAddress(addressId, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(CompanyAddressResponse.from(resultDto)));
     }
 
     @PatchMapping("/{companyId}")
