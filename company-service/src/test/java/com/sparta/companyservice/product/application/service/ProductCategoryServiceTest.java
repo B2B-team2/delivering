@@ -7,7 +7,6 @@ import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
 import com.sparta.companyservice.product.application.dto.ProductCategoryUpdateCommand;
 import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
-import com.sparta.companyservice.product.presentation.dto.ProductCategoryDeleteResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -211,7 +210,7 @@ class ProductCategoryServiceTest {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
 
         // when
-        ProductCategoryDeleteResponse result = categoryService.deleteCategory(categoryId, "test-user");
+        ProductCategoryDto result = categoryService.deleteCategory(categoryId, "test-user");
 
         // then
         assertThat(result.getCategoryId()).isEqualTo(categoryId);

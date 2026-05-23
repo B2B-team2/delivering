@@ -75,7 +75,7 @@ public class ProductCategoryController {
     @DeleteMapping("/{categoryId}")
     public ResponseEntity<ApiResponse<ProductCategoryDeleteResponse>> deleteCategory(@PathVariable UUID categoryId) {
         // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
-        ProductCategoryDeleteResponse response = categoryService.deleteCategory(categoryId, "system");
-        return ResponseEntity.ok(ApiResponse.success(response));
+        ProductCategoryDto resultDto = categoryService.deleteCategory(categoryId, "system");
+        return ResponseEntity.ok(ApiResponse.success(ProductCategoryDeleteResponse.of(resultDto.getCategoryId(), resultDto.getDeletedAt())));
     }
 }
