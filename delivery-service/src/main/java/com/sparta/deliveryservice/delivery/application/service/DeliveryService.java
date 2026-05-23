@@ -23,9 +23,9 @@ import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliverySta
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryTrackingResponse;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
-import com.sparta.deliveryservice.deliveryRoute.domin.core.DeliveryRoute;
-import com.sparta.deliveryservice.deliveryRoute.domin.core.RouteStatus;
-import com.sparta.deliveryservice.deliveryRoute.domin.repository.DeliveryRouteRepository;
+import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
+import com.sparta.deliveryservice.deliveryRoute.domain.core.RouteStatus;
+import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -222,11 +222,11 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     public DeliveryAddressResponse getDeliveryAddress(UUID deliveryId, UUID addressId) {
-        Delivery delivery = deliveryRepository.findByAddressId(deliveryId)
+        Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 배송건이 존재하지 않습니다. ID: " + deliveryId));
 
         return DeliveryAddressResponse.builder()
-                .addressId(delivery.getDeliveryId())
+                .addressId(addressId)
                 .companyId(delivery.getCompanyReceiveId())
                 .address(delivery.getDeliveryAddress().getAddress())
                 .addressDetail(delivery.getDeliveryAddress().getAddressDetail())
