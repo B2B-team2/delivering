@@ -1,7 +1,6 @@
 package com.sparta.companyservice.product.application.dto;
 
 import com.sparta.companyservice.product.domain.core.ProductOption;
-import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -21,7 +20,7 @@ public class ProductOptionDto {
     private UUID productId;
     private String optionsName;
     private BigDecimal extraPrice;
-    private ProductStatusEnum status;
+    private String status;
     private Integer displayOrder;
     private LocalDateTime deletedAt;
 
@@ -31,7 +30,7 @@ public class ProductOptionDto {
                 .productId(entity.getProduct().getProductId())
                 .optionsName(entity.getOptionsName())
                 .extraPrice(entity.getExtraPrice())
-                .status(entity.getStatus())
+                .status(entity.getStatus() != null ? entity.getStatus().name() : null)
                 .displayOrder(entity.getDisplayOrder())
                 .deletedAt(entity.getDeletedAt())
                 .build();

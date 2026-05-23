@@ -7,6 +7,7 @@ import com.sparta.companyservice.product.application.dto.ProductOptionDto;
 import com.sparta.companyservice.product.application.dto.ProductOptionUpdateCommand;
 import com.sparta.companyservice.product.domain.core.Product;
 import com.sparta.companyservice.product.domain.core.ProductOption;
+import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
 import com.sparta.companyservice.product.domain.repository.ProductOptionRepository;
 import com.sparta.companyservice.product.domain.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -30,11 +31,13 @@ public class ProductOptionService {
         Product product = productRepository.findById(command.getProductId())
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_NOT_FOUND));
 
+        ProductStatusEnum status = parseProductStatus(command.getStatus());
+
         ProductOption productOption = ProductOption.builder()
                 .product(product)
                 .optionsName(command.getOptionsName())
                 .extraPrice(command.getExtraPrice())
-                .status(command.getStatus())
+                .status(status)
                 .displayOrder(command.getDisplayOrder())
                 .build();
 
@@ -57,10 +60,12 @@ public class ProductOptionService {
         ProductOption productOption = productOptionRepository.findById(productOptionId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_OPTION_NOT_FOUND));
 
+        ProductStatusEnum status = parseProductStatus(command.getStatus());
+
         productOption.update(
                 command.getOptionsName(),
                 command.getExtraPrice(),
-                command.getStatus(),
+                status,
                 command.getDisplayOrder()
         );
 
@@ -75,5 +80,16 @@ public class ProductOptionService {
         productOption.softDelete(deletedBy);
 
         return ProductOptionDto.from(productOption);
+    }
+
+    private ProductStatusEnum parseProductStatus(String status) {
+        if (status == null) {
+            return ProductStatusEnum.ON_SALE;
+        }
+        try {
+            return ProductStatusEnum.valueOf(status);
+        } catch (IllegalArgumentException e) {
+            return ProductStatusEnum.ON_SALE;
+        }
     }
 }

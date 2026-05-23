@@ -67,7 +67,7 @@ class ProductOptionControllerTest {
                 .productId(productId)
                 .optionsName("테스트 옵션")
                 .extraPrice(new BigDecimal("10000"))
-                .status(ProductStatusEnum.ON_SALE)
+                .status(ProductStatusEnum.ON_SALE.name())
                 .displayOrder(1)
                 .build();
 
@@ -76,7 +76,7 @@ class ProductOptionControllerTest {
                 .productId(productId)
                 .optionsName("테스트 옵션")
                 .extraPrice(new BigDecimal("10000"))
-                .status(ProductStatusEnum.ON_SALE)
+                .status(ProductStatusEnum.ON_SALE.name())
                 .displayOrder(1)
                 .build();
 
@@ -98,6 +98,7 @@ class ProductOptionControllerTest {
                 .productOptionId(UUID.randomUUID())
                 .productId(UUID.randomUUID())
                 .optionsName("목록 테스트")
+                .status(ProductStatusEnum.ON_SALE.name())
                 .displayOrder(1)
                 .build();
 
@@ -114,6 +115,28 @@ class ProductOptionControllerTest {
     }
 
     @Test
+    @DisplayName("상품 옵션 상세 조회 API 성공 검증")
+    void getProductOptionSuccessTest() throws Exception {
+        // given
+        UUID optionId = UUID.randomUUID();
+        ProductOptionDto dto = ProductOptionDto.builder()
+                .productOptionId(optionId)
+                .productId(UUID.randomUUID())
+                .optionsName("상세 조회")
+                .status(ProductStatusEnum.ON_SALE.name())
+                .displayOrder(1)
+                .build();
+
+        when(productOptionService.getProductOption(optionId)).thenReturn(dto);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/product-options/{productOptionId}", optionId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.optionsName").value("상세 조회"));
+    }
+
+    @Test
     @DisplayName("상품 옵션 수정 API 성공 검증")
     void updateProductOptionSuccessTest() throws Exception {
         // given
@@ -121,7 +144,7 @@ class ProductOptionControllerTest {
         ProductOptionUpdateRequest request = ProductOptionUpdateRequest.builder()
                 .optionsName("수정된 이름")
                 .extraPrice(new BigDecimal("20000"))
-                .status(ProductStatusEnum.SOLD_OUT)
+                .status(ProductStatusEnum.SOLD_OUT.name())
                 .displayOrder(2)
                 .build();
 
@@ -130,7 +153,7 @@ class ProductOptionControllerTest {
                 .productId(UUID.randomUUID())
                 .optionsName("수정된 이름")
                 .extraPrice(new BigDecimal("20000"))
-                .status(ProductStatusEnum.SOLD_OUT)
+                .status(ProductStatusEnum.SOLD_OUT.name())
                 .displayOrder(2)
                 .build();
 

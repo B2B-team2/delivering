@@ -55,7 +55,7 @@ class ProductOptionServiceTest {
                 .productId(productId)
                 .optionsName("블랙/256GB")
                 .extraPrice(new BigDecimal("150000"))
-                .status(ProductStatusEnum.ON_SALE)
+                .status(ProductStatusEnum.ON_SALE.name())
                 .displayOrder(1)
                 .build();
 
@@ -64,7 +64,7 @@ class ProductOptionServiceTest {
                 .product(product)
                 .optionsName(command.getOptionsName())
                 .extraPrice(command.getExtraPrice())
-                .status(command.getStatus())
+                .status(ProductStatusEnum.ON_SALE)
                 .displayOrder(command.getDisplayOrder())
                 .build();
 
@@ -76,6 +76,7 @@ class ProductOptionServiceTest {
 
         // then
         assertThat(result.getOptionsName()).isEqualTo(command.getOptionsName());
+        assertThat(result.getStatus()).isEqualTo(ProductStatusEnum.ON_SALE.name());
         verify(productOptionRepository, times(1)).save(any(ProductOption.class));
     }
 
@@ -89,6 +90,7 @@ class ProductOptionServiceTest {
                 .productOptionId(UUID.randomUUID())
                 .product(product)
                 .optionsName("화이트")
+                .status(ProductStatusEnum.ON_SALE)
                 .build();
 
         when(productOptionRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(option)));
@@ -99,6 +101,7 @@ class ProductOptionServiceTest {
         // then
         assertThat(result.getContent()).hasSize(1);
         assertThat(result.getContent().get(0).getOptionsName()).isEqualTo("화이트");
+        assertThat(result.getContent().get(0).getStatus()).isEqualTo(ProductStatusEnum.ON_SALE.name());
     }
 
     @Test
@@ -111,12 +114,13 @@ class ProductOptionServiceTest {
                 .productOptionId(optionId)
                 .product(product)
                 .optionsName("기존 이름")
+                .status(ProductStatusEnum.ON_SALE)
                 .build();
 
         ProductOptionUpdateCommand command = ProductOptionUpdateCommand.builder()
                 .optionsName("수정된 이름")
                 .extraPrice(new BigDecimal("200000"))
-                .status(ProductStatusEnum.SOLD_OUT)
+                .status(ProductStatusEnum.SOLD_OUT.name())
                 .displayOrder(5)
                 .build();
 
@@ -127,7 +131,7 @@ class ProductOptionServiceTest {
 
         // then
         assertThat(result.getOptionsName()).isEqualTo("수정된 이름");
-        assertThat(result.getStatus()).isEqualTo(ProductStatusEnum.SOLD_OUT);
+        assertThat(result.getStatus()).isEqualTo(ProductStatusEnum.SOLD_OUT.name());
     }
 
     @Test
@@ -139,6 +143,7 @@ class ProductOptionServiceTest {
         ProductOption option = ProductOption.builder()
                 .productOptionId(optionId)
                 .product(product)
+                .status(ProductStatusEnum.ON_SALE)
                 .build();
 
         when(productOptionRepository.findById(optionId)).thenReturn(Optional.of(option));

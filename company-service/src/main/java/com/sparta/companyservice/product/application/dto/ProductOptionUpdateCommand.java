@@ -1,6 +1,5 @@
 package com.sparta.companyservice.product.application.dto;
 
-import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -16,6 +15,6 @@ import java.math.BigDecimal;
 public class ProductOptionUpdateCommand {
     private String optionsName;
     private BigDecimal extraPrice;
-    private ProductStatusEnum status;
+    private String status;
     private Integer displayOrder;
 }
