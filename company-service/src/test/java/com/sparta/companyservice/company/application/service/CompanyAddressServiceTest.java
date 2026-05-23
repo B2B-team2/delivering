@@ -5,21 +5,27 @@ import com.sparta.companyservice.company.application.dto.CompanyAddressCreateCom
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
+import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
-import com.sparta.companyservice.product.application.port.CompanyQueryPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -31,7 +37,7 @@ class CompanyAddressServiceTest {
     private CompanyDeliveryAddressRepository companyDeliveryAddressRepository;
 
     @Mock
-    private CompanyQueryPort companyQueryPort;
+    private CompanyRepository companyRepository;
 
     @InjectMocks
     private CompanyAddressService companyAddressService;
@@ -60,7 +66,7 @@ class CompanyAddressServiceTest {
                 .isDefault(command.getIsDefault())
                 .build();
 
-        when(companyQueryPort.existsCompanyById(companyId)).thenReturn(true);
+        when(companyRepository.existsById(companyId)).thenReturn(true);
         when(companyDeliveryAddressRepository.save(any(CompanyDeliveryAddress.class))).thenReturn(savedAddress);
 
         CompanyAddressDto result = companyAddressService.registerAddress(companyId, command);
@@ -79,7 +85,7 @@ class CompanyAddressServiceTest {
                 .isDefault(true)
                 .build();
 
-        when(companyQueryPort.existsCompanyById(companyId)).thenReturn(true);
+        when(companyRepository.existsById(companyId)).thenReturn(true);
         when(companyDeliveryAddressRepository.save(any(CompanyDeliveryAddress.class)))
                 .thenReturn(CompanyDeliveryAddress.builder().build());
 
@@ -92,9 +98,49 @@ class CompanyAddressServiceTest {
     @DisplayName("배송지 등록 실패: 존재하지 않는 업체")
     void registerAddressFail_CompanyNotFound() {
         UUID companyId = UUID.randomUUID();
-        when(companyQueryPort.existsCompanyById(companyId)).thenReturn(false);
+        when(companyRepository.existsById(companyId)).thenReturn(false);
 
         assertThatThrownBy(() -> companyAddressService.registerAddress(companyId, any()))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("배송지 목록 조회 성공")
+    void getAddressesSuccessTest() {
+        UUID companyId = UUID.randomUUID();
+        Pageable pageable = PageRequest.of(0, 10);
+        CompanyDeliveryAddress address1 = CompanyDeliveryAddress.builder()
+                .addressName("기본배송지")
+                .isDefault(true)
+                .build();
+        CompanyDeliveryAddress address2 = CompanyDeliveryAddress.builder()
+                .addressName("일반배송지")
+                .isDefault(false)
+                .build();
+
+        Page<CompanyDeliveryAddress> addressPage = new PageImpl<>(List.of(address1, address2));
+
+        when(companyRepository.existsById(companyId)).thenReturn(true);
+        when(companyDeliveryAddressRepository.findAllByCompanyIdAndDeletedAtIsNull(companyId, pageable))
+                .thenReturn(addressPage);
+
+        Page<CompanyAddressDto> result = companyAddressService.getAddresses(companyId, pageable);
+
+        assertThat(result).hasSize(2);
+        assertThat(result.getContent().get(0).getIsDefault()).isTrue();
+        assertThat(result.getContent().get(1).getIsDefault()).isFalse();
+    }
+
+    @Test
+    @DisplayName("배송지 목록 조회 실패: 존재하지 않는 업체")
+    void getAddressesFail_CompanyNotFound() {
+        UUID companyId = UUID.randomUUID();
+        Pageable pageable = PageRequest.of(0, 10);
+
+        when(companyRepository.existsById(companyId)).thenReturn(false);
+
+        assertThatThrownBy(() -> companyAddressService.getAddresses(companyId, pageable))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage());
     }
