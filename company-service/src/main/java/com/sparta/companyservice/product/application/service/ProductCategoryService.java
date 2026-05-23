@@ -7,6 +7,7 @@ import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
 import com.sparta.companyservice.product.application.dto.ProductCategoryUpdateCommand;
 import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
+import com.sparta.companyservice.product.presentation.dto.ProductCategoryDeleteResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -61,12 +62,12 @@ public class ProductCategoryService {
     }
 
     @Transactional
-    public ProductCategoryDto deleteCategory(UUID categoryId, String deletedBy) {
+    public ProductCategoryDeleteResponse deleteCategory(UUID categoryId, String deletedBy) {
         ProductCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.CATEGORY_NOT_FOUND));
-        
+
         category.softDelete(deletedBy);
-        
-        return ProductCategoryDto.from(category);
+
+        return ProductCategoryDeleteResponse.of(category.getCategoryId(), category.getDeletedAt());
     }
 }

@@ -6,6 +6,7 @@ import com.sparta.common.util.PageableUtil;
 import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
 import com.sparta.companyservice.product.application.service.ProductCategoryService;
 import com.sparta.companyservice.product.presentation.dto.ProductCategoryCreateRequest;
+import com.sparta.companyservice.product.presentation.dto.ProductCategoryDeleteResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductCategoryResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductCategoryUpdateRequest;
 import jakarta.validation.Valid;
@@ -72,9 +73,9 @@ public class ProductCategoryController {
     }
 
     @DeleteMapping("/{categoryId}")
-    public ResponseEntity<ApiResponse<ProductCategoryResponse>> deleteCategory(@PathVariable UUID categoryId) {
+    public ResponseEntity<ApiResponse<ProductCategoryDeleteResponse>> deleteCategory(@PathVariable UUID categoryId) {
         // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
-        ProductCategoryDto resultDto = categoryService.deleteCategory(categoryId, "system");
-        return ResponseEntity.ok(ApiResponse.success(ProductCategoryResponse.from(resultDto)));
+        ProductCategoryDeleteResponse response = categoryService.deleteCategory(categoryId, "system");
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

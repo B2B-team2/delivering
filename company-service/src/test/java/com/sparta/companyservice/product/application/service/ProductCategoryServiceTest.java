@@ -7,6 +7,7 @@ import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
 import com.sparta.companyservice.product.application.dto.ProductCategoryUpdateCommand;
 import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
+import com.sparta.companyservice.product.presentation.dto.ProductCategoryDeleteResponse;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -210,12 +211,11 @@ class ProductCategoryServiceTest {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
 
         // when
-        ProductCategoryDto result = categoryService.deleteCategory(categoryId, "test-user");
+        ProductCategoryDeleteResponse result = categoryService.deleteCategory(categoryId, "test-user");
 
         // then
         assertThat(result.getCategoryId()).isEqualTo(categoryId);
         verify(categoryRepository, times(1)).findById(categoryId);
-        // Soft delete 필드는 BaseEntity에 있으므로 실제 값 검증보다는 예외 미발생 및 findById 호출 확인
     }
 
     @Test
