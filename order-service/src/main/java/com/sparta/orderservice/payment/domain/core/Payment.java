@@ -1,9 +1,7 @@
 package com.sparta.orderservice.payment.domain.core;
 
 
-import com.sparta.common.dto.BusinessException;
 import com.sparta.common.entity.BaseEntity;
-import com.sparta.orderservice.global.exception.PaymentErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -42,49 +40,29 @@ public class Payment extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private PaymentStatus status = PaymentStatus.PENDING;
+    private PaymentStatus status = PaymentStatus.COMPLETED;
 
     @Column(name = "pg_transaction_id", length = 255)
     private String pgTransactionId;                 // 거래 ID (실제 PG 연동 X, mock UUID 자동 생성)
 
     /**
-     * 결제 생성 (PENDING 상태)
-     * 결제 금액·결제 수단은 이 시점에 확정되며, 거래 ID는 confirm 단계에서 자동 생성됨
+     * 선결제 완료: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
+     * mock UUID를 pgTransactionId로 자동 생성
      */
-    public static Payment ready(UUID orderId, PaymentMethod paymentMethod, BigDecimal amount) {
+    public static Payment complete(UUID orderId, PaymentMethod paymentMethod, BigDecimal amount) {
         Payment payment = new Payment();
         payment.orderId = orderId;
         payment.paymentMethod = paymentMethod;
         payment.amount = amount;
+        payment.pgTransactionId = UUID.randomUUID().toString();
+        payment.status = PaymentStatus.COMPLETED;
         return payment;
     }
 
     /**
-     * 결제 승인 확정: PENDING → COMPLETED
-     * 실제 PG 연동 X, mock UUID를 거래 ID로 자동 생성
-     */
-    public void confirm() {
-        if (this.status == PaymentStatus.COMPLETED) {
-            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_COMPLETED);
-        }
-        if (this.status == PaymentStatus.CANCELLED) {
-            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
-        }
-        this.pgTransactionId = UUID.randomUUID().toString();
-        this.status = PaymentStatus.COMPLETED;
-    }
-
-    /**
-     * 결제 취소: PENDING → CANCELLED
-     * COMPLETED 상태(결제 완료)는 취소 불가
+     * 결제 취소/환불: COMPLETED → CANCELLED
      */
     public void cancel(String cancelledBy) {
-        if (this.status == PaymentStatus.CANCELLED) {
-            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
-        }
-        if (this.status == PaymentStatus.COMPLETED) {
-            throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_COMPLETED);
-        }
         this.status = PaymentStatus.CANCELLED;
         this.softDelete(cancelledBy);
     }

@@ -31,8 +31,4 @@ public class ProductRepositoryImpl implements ProductRepository {
         return productJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
 
-    @Override
-    public void delete(Product product) {
-        productJpaRepository.delete(product);
-    }
 }

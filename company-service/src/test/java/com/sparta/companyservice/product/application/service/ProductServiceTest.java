@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
+import com.sparta.companyservice.product.application.dto.ProductStatusUpdateCommand;
 import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
 import com.sparta.companyservice.product.application.port.CompanyQueryPort;
 import com.sparta.companyservice.product.domain.core.Product;
@@ -279,5 +280,56 @@ class ProductServiceTest {
         assertThatThrownBy(() -> productService.deleteProduct(productId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 판매상태 변경 성공")
+    void updateProductStatusSuccessTest() {
+        UUID productId = UUID.randomUUID();
+        Product existingProduct = Product.builder()
+                .productId(productId)
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        ProductStatusUpdateCommand command = new ProductStatusUpdateCommand("SOLD_OUT");
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+
+        ProductDto result = productService.updateProductStatus(productId, command);
+
+        assertThat(result).isNotNull();
+        assertThat(result.getStatus()).isEqualTo("SOLD_OUT");
+        assertThat(existingProduct.getStatus()).isEqualTo(ProductStatusEnum.SOLD_OUT);
+    }
+
+    @Test
+    @DisplayName("상품 판매상태 변경 실패: 존재하지 않는 상품")
+    void updateProductStatusFail_NotFound() {
+        UUID productId = UUID.randomUUID();
+        ProductStatusUpdateCommand command = new ProductStatusUpdateCommand("SOLD_OUT");
+
+        when(productRepository.findById(productId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> productService.updateProductStatus(productId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 판매상태 변경 실패: 유효하지 않은 상품 상태")
+    void updateProductStatusFail_InvalidStatus() {
+        UUID productId = UUID.randomUUID();
+        Product existingProduct = Product.builder()
+                .productId(productId)
+                .status(ProductStatusEnum.ON_SALE)
+                .build();
+
+        ProductStatusUpdateCommand command = new ProductStatusUpdateCommand("INVALID_STATUS");
+
+        when(productRepository.findById(productId)).thenReturn(Optional.of(existingProduct));
+
+        assertThatThrownBy(() -> productService.updateProductStatus(productId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.INVALID_PRODUCT_STATUS.getMessage());
     }
 }

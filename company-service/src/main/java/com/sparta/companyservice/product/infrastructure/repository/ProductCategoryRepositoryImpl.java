@@ -25,12 +25,6 @@ public class ProductCategoryRepositoryImpl implements ProductCategoryRepository 
     }
 
     @Override
-    public void delete(ProductCategory category) {
-        category.softDelete(category.getCreatedBy()); // BaseEntity 삭제 로직
-        categoryJpaRepository.save(category);
-    }
-
-    @Override
     public long count() {
         return categoryJpaRepository.count();
     }
