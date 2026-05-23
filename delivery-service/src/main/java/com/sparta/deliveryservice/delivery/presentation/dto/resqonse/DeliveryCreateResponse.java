@@ -1,5 +1,6 @@
 package com.sparta.deliveryservice.delivery.presentation.dto.resqonse;
 
+import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
+import java.sql.Time;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -19,14 +21,17 @@ public class DeliveryCreateResponse {
 
     private UUID deliveryId;
     private UUID companyOrderId;
+    private UUID companyReceiveId;
     private String trackingNumber;
     private String status;
     private UUID departureHubId;
     private String departureHubName;
     private UUID destinationHubId;
     private String destinationHubName;
-    private String deliveryAddress;
+    private DeliveryAddress deliveryAddress;
     private String recipientName;
+    private String phone;
+    private String postalCode;
     private String recipientSlackId;
     private UUID deliveryManagerId;
     private String memo;
@@ -34,8 +39,6 @@ public class DeliveryCreateResponse {
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
     private List<DeliveryRouteResponseDto> routes;
-    private LocalDateTime createdAt;
-    private String createdBy;
 
     @Getter
     @Builder
@@ -47,7 +50,7 @@ public class DeliveryCreateResponse {
         private UUID fromHubId;
         private UUID toHubId;
         private BigDecimal estimatedDistance;
-        private String estimatedDuration;
+        private Time estimatedDuration;
         private String status;
     }
 }
