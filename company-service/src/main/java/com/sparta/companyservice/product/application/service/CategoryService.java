@@ -24,6 +24,10 @@ public class CategoryService {
 
     @Transactional
     public CategoryDto createCategory(CategoryCreateCommand command) {
+        if (categoryRepository.existsByName(command.getName())) {
+            throw new BusinessException(CompanyErrorCode.DUPLICATE_CATEGORY_NAME);
+        }
+
         ProductCategory category = ProductCategory.builder()
                 .name(command.getName())
                 .depth(command.getDepth())

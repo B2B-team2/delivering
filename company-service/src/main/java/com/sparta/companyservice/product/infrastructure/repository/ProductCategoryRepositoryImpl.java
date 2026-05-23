@@ -40,4 +40,9 @@ public class ProductCategoryRepositoryImpl implements ProductCategoryRepository 
     public boolean existsById(UUID categoryId) {
         return categoryJpaRepository.existsByCategoryIdAndDeletedAtIsNull(categoryId);
     }
+
+    @Override
+    public boolean existsByName(String name) {
+        return categoryJpaRepository.existsByNameAndDeletedAtIsNull(name);
+    }
 }

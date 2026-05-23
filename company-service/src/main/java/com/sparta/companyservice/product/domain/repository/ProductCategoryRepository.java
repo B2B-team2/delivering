@@ -13,4 +13,5 @@ public interface ProductCategoryRepository {
     Page<ProductCategory> findAll(Pageable pageable);
     long count();
     boolean existsById(UUID categoryId);
+    boolean existsByName(String name);
 }
