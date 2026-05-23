@@ -50,9 +50,13 @@ public class ProductCategoryService {
     public ProductCategoryDto updateCategory(UUID categoryId, ProductCategoryUpdateCommand command) {
         ProductCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.CATEGORY_NOT_FOUND));
-        
+
+        if (!category.getName().equals(command.getName()) && categoryRepository.existsByName(command.getName())) {
+            throw new BusinessException(CompanyErrorCode.DUPLICATE_CATEGORY_NAME);
+        }
+
         category.update(command.getName(), command.getDepth());
-        
+
         return ProductCategoryDto.from(category);
     }
 

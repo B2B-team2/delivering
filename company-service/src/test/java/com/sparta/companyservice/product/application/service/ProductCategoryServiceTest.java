@@ -25,6 +25,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -121,18 +122,45 @@ class ProductCategoryServiceTest {
     }
 
     @Test
-    @DisplayName("카테고리 수정 성공")
-    void updateCategorySuccessTest() {
+    @DisplayName("카테고리 수정 성공: 이름 변경 시 중복 체크 수행")
+    void updateCategorySuccessWithNewNameTest() {
         // given
         UUID categoryId = UUID.randomUUID();
         ProductCategory category = ProductCategory.builder()
                 .categoryId(categoryId)
-                .name("구버전 이름")
+                .name("기존 이름")
                 .depth(1)
                 .build();
 
         ProductCategoryUpdateCommand command = ProductCategoryUpdateCommand.builder()
-                .name("신버전 이름")
+                .name("새로운 이름")
+                .depth(1)
+                .build();
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(categoryRepository.existsByName("새로운 이름")).thenReturn(false);
+
+        // when
+        ProductCategoryDto result = categoryService.updateCategory(categoryId, command);
+
+        // then
+        assertThat(result.getName()).isEqualTo("새로운 이름");
+        verify(categoryRepository, times(1)).existsByName("새로운 이름");
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 성공: 이름 변경 없을 시 중복 체크 건너뜀")
+    void updateCategorySuccessWithoutNameChangeTest() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(categoryId)
+                .name("기존 이름")
+                .depth(1)
+                .build();
+
+        ProductCategoryUpdateCommand command = ProductCategoryUpdateCommand.builder()
+                .name("기존 이름")
                 .depth(2)
                 .build();
 
@@ -142,8 +170,31 @@ class ProductCategoryServiceTest {
         ProductCategoryDto result = categoryService.updateCategory(categoryId, command);
 
         // then
-        assertThat(result.getName()).isEqualTo("신버전 이름");
         assertThat(result.getDepth()).isEqualTo(2);
+        verify(categoryRepository, never()).existsByName(any());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패: 변경하려는 이름이 중복됨")
+    void updateCategoryFail_DuplicateName() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(categoryId)
+                .name("기존 이름")
+                .build();
+
+        ProductCategoryUpdateCommand command = ProductCategoryUpdateCommand.builder()
+                .name("중복된 이름")
+                .build();
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(categoryRepository.existsByName("중복된 이름")).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> categoryService.updateCategory(categoryId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.DUPLICATE_CATEGORY_NAME.getMessage());
     }
 
     @Test
