@@ -3,6 +3,8 @@ package com.sparta.companyservice.product.infrastructure.repository;
 import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -25,7 +27,17 @@ public class ProductCategoryRepositoryImpl implements ProductCategoryRepository 
     }
 
     @Override
+    public Page<ProductCategory> findAll(Pageable pageable) {
+        return categoryJpaRepository.findAllByDeletedAtIsNull(pageable);
+    }
+
+    @Override
     public long count() {
         return categoryJpaRepository.count();
+    }
+
+    @Override
+    public boolean existsById(UUID categoryId) {
+        return categoryJpaRepository.existsByCategoryIdAndDeletedAtIsNull(categoryId);
     }
 }
