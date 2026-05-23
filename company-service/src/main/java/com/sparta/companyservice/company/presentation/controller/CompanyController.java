@@ -49,7 +49,7 @@ public class CompanyController {
     public ResponseEntity<ApiResponse<CompanyAddressResponse>> createAddress(
             @PathVariable UUID companyId,
             @RequestBody @Valid CompanyAddressCreateRequest request) {
-        CompanyAddressDto resultDto = companyAddressService.registerAddress(companyId, request.toCommand());
+        CompanyAddressDto resultDto = companyAddressService.registerAddress(companyId, request.toCommand(companyId));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(CompanyAddressResponse.from(resultDto)));
     }

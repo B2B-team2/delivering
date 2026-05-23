@@ -16,8 +16,6 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class CompanyAddressCreateRequest {
-    @NotNull(message = "업체 ID는 필수입니다.")
-    private UUID companyId;
 
     @NotBlank(message = "주소 별칭은 필수입니다.")
     private String addressName;
@@ -39,9 +37,9 @@ public class CompanyAddressCreateRequest {
     @Builder.Default
     private Boolean isDefault = false;
 
-    public CompanyAddressCreateCommand toCommand() {
+    public CompanyAddressCreateCommand toCommand(UUID companyId) {
         return CompanyAddressCreateCommand.builder()
-                .companyId(this.companyId)
+                .companyId(companyId)
                 .addressName(this.addressName)
                 .recipientName(this.recipientName)
                 .phone(this.phone)

@@ -312,7 +312,6 @@ class CompanyControllerTest {
     void createAddressSuccessTest() throws Exception {
         UUID companyId = UUID.randomUUID();
         CompanyAddressCreateRequest request = CompanyAddressCreateRequest.builder()
-                .companyId(companyId)
                 .addressName("집")
                 .recipientName("홍길동")
                 .phone("010-1234-5678")
@@ -346,7 +345,6 @@ class CompanyControllerTest {
         // given
         UUID companyId = UUID.randomUUID();
         CompanyAddressCreateRequest invalidRequest = CompanyAddressCreateRequest.builder()
-                .companyId(companyId)
                 .addressName("") // NotBlank 위반
                 .build();
 
