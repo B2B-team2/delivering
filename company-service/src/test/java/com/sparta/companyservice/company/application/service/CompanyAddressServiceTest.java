@@ -3,6 +3,7 @@ package com.sparta.companyservice.company.application.service;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
+import com.sparta.companyservice.company.application.dto.CompanyAddressUpdateCommand;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
@@ -27,6 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -177,5 +179,56 @@ class CompanyAddressServiceTest {
         assertThatThrownBy(() -> companyAddressService.deleteAddress(addressId, "system"))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.ADDRESS_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("배송지 수정 성공: 일반 정보 수정")
+    void updateAddressSuccessTest() {
+        // given
+        UUID addressId = UUID.randomUUID();
+        CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
+                .addressId(addressId)
+                .addressName("기존 이름")
+                .isDefault(false)
+                .build();
+
+        CompanyAddressUpdateCommand command = CompanyAddressUpdateCommand.builder()
+                .addressName("수정된 이름")
+                .isDefault(false)
+                .build();
+
+        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.of(address));
+
+        // when
+        CompanyAddressDto result = companyAddressService.updateAddress(addressId, command);
+
+        // then
+        assertThat(result.getAddressName()).isEqualTo("수정된 이름");
+        verify(companyDeliveryAddressRepository, never()).updateAllIsDefaultFalseByCompanyId(any());
+    }
+
+    @Test
+    @DisplayName("배송지 수정 성공: 기본 배송지로 변경 시 기존 설정 해제 호출 확인")
+    void updateAddressDefaultChangeTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        UUID addressId = UUID.randomUUID();
+        CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
+                .addressId(addressId)
+                .companyId(companyId)
+                .isDefault(false)
+                .build();
+
+        CompanyAddressUpdateCommand command = CompanyAddressUpdateCommand.builder()
+                .isDefault(true)
+                .build();
+
+        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.of(address));
+
+        // when
+        companyAddressService.updateAddress(addressId, command);
+
+        // then
+        verify(companyDeliveryAddressRepository, times(1)).updateAllIsDefaultFalseByCompanyId(companyId);
     }
 }
