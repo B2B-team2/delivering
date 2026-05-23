@@ -1,6 +1,6 @@
 package com.sparta.companyservice.product.presentation.dto;
 
-import com.sparta.companyservice.product.application.dto.CategoryCreateCommand;
+import com.sparta.companyservice.product.application.dto.ProductCategoryCreateCommand;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class CategoryCreateRequest {
+public class ProductCategoryCreateRequest {
 
     @NotBlank(message = "카테고리 이름은 필수입니다.")
     private String name;
@@ -21,8 +21,8 @@ public class CategoryCreateRequest {
     @NotNull(message = "카테고리 깊이는 필수입니다.")
     private Integer depth;
 
-    public CategoryCreateCommand toCommand() {
-        return CategoryCreateCommand.builder()
+    public ProductCategoryCreateCommand toCommand() {
+        return ProductCategoryCreateCommand.builder()
                 .name(this.name)
                 .depth(this.depth)
                 .build();

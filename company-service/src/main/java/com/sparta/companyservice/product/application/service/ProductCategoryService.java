@@ -2,9 +2,9 @@ package com.sparta.companyservice.product.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
-import com.sparta.companyservice.product.application.dto.CategoryCreateCommand;
-import com.sparta.companyservice.product.application.dto.CategoryDto;
-import com.sparta.companyservice.product.application.dto.CategoryUpdateCommand;
+import com.sparta.companyservice.product.application.dto.ProductCategoryCreateCommand;
+import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
+import com.sparta.companyservice.product.application.dto.ProductCategoryUpdateCommand;
 import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,12 +18,12 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class CategoryService {
+public class ProductCategoryService {
 
     private final ProductCategoryRepository categoryRepository;
 
     @Transactional
-    public CategoryDto createCategory(CategoryCreateCommand command) {
+    public ProductCategoryDto createCategory(ProductCategoryCreateCommand command) {
         if (categoryRepository.existsByName(command.getName())) {
             throw new BusinessException(CompanyErrorCode.DUPLICATE_CATEGORY_NAME);
         }
@@ -32,37 +32,37 @@ public class CategoryService {
                 .name(command.getName())
                 .depth(command.getDepth())
                 .build();
-        return CategoryDto.from(categoryRepository.save(category));
+        return ProductCategoryDto.from(categoryRepository.save(category));
     }
 
-    public Page<CategoryDto> getCategories(Pageable pageable) {
+    public Page<ProductCategoryDto> getCategories(Pageable pageable) {
         return categoryRepository.findAll(pageable)
-                .map(CategoryDto::from);
+                .map(ProductCategoryDto::from);
     }
 
-    public CategoryDto getCategory(UUID categoryId) {
+    public ProductCategoryDto getCategory(UUID categoryId) {
         ProductCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.CATEGORY_NOT_FOUND));
-        return CategoryDto.from(category);
+        return ProductCategoryDto.from(category);
     }
 
     @Transactional
-    public CategoryDto updateCategory(UUID categoryId, CategoryUpdateCommand command) {
+    public ProductCategoryDto updateCategory(UUID categoryId, ProductCategoryUpdateCommand command) {
         ProductCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.CATEGORY_NOT_FOUND));
         
         category.update(command.getName(), command.getDepth());
         
-        return CategoryDto.from(category);
+        return ProductCategoryDto.from(category);
     }
 
     @Transactional
-    public CategoryDto deleteCategory(UUID categoryId, String deletedBy) {
+    public ProductCategoryDto deleteCategory(UUID categoryId, String deletedBy) {
         ProductCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.CATEGORY_NOT_FOUND));
         
         category.softDelete(deletedBy);
         
-        return CategoryDto.from(category);
+        return ProductCategoryDto.from(category);
     }
 }

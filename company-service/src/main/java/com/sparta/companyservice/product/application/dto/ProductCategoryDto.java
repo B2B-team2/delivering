@@ -13,13 +13,13 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class CategoryDto {
+public class ProductCategoryDto {
     private UUID categoryId;
     private String name;
     private Integer depth;
 
-    public static CategoryDto from(ProductCategory entity) {
-        return CategoryDto.builder()
+    public static ProductCategoryDto from(ProductCategory entity) {
+        return ProductCategoryDto.builder()
                 .categoryId(entity.getCategoryId())
                 .name(entity.getName())
                 .depth(entity.getDepth())

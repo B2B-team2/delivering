@@ -10,7 +10,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class CategoryCreateCommand {
+public class ProductCategoryUpdateCommand {
     private String name;
     private Integer depth;
 }

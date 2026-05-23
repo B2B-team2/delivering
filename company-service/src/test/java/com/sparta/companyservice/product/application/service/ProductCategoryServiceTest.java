@@ -2,9 +2,9 @@ package com.sparta.companyservice.product.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
-import com.sparta.companyservice.product.application.dto.CategoryCreateCommand;
-import com.sparta.companyservice.product.application.dto.CategoryDto;
-import com.sparta.companyservice.product.application.dto.CategoryUpdateCommand;
+import com.sparta.companyservice.product.application.dto.ProductCategoryCreateCommand;
+import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
+import com.sparta.companyservice.product.application.dto.ProductCategoryUpdateCommand;
 import com.sparta.companyservice.product.domain.core.ProductCategory;
 import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -30,19 +30,19 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class CategoryServiceTest {
+class ProductCategoryServiceTest {
 
     @Mock
     private ProductCategoryRepository categoryRepository;
 
     @InjectMocks
-    private CategoryService categoryService;
+    private ProductCategoryService categoryService;
 
     @Test
     @DisplayName("카테고리 등록 성공")
     void createCategorySuccessTest() {
         // given
-        CategoryCreateCommand command = CategoryCreateCommand.builder()
+        ProductCategoryCreateCommand command = ProductCategoryCreateCommand.builder()
                 .name("가전제품")
                 .depth(1)
                 .build();
@@ -56,11 +56,28 @@ class CategoryServiceTest {
         when(categoryRepository.save(any(ProductCategory.class))).thenReturn(savedCategory);
 
         // when
-        CategoryDto result = categoryService.createCategory(command);
+        ProductCategoryDto result = categoryService.createCategory(command);
 
         // then
         assertThat(result.getName()).isEqualTo(command.getName());
+        verify(categoryRepository, times(1)).existsByName(command.getName());
         verify(categoryRepository, times(1)).save(any(ProductCategory.class));
+    }
+
+    @Test
+    @DisplayName("카테고리 등록 실패: 중복된 이름")
+    void createCategoryFail_DuplicateName() {
+        // given
+        ProductCategoryCreateCommand command = ProductCategoryCreateCommand.builder()
+                .name("중복이름")
+                .build();
+
+        when(categoryRepository.existsByName(command.getName())).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> categoryService.createCategory(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.DUPLICATE_CATEGORY_NAME.getMessage());
     }
 
     @Test
@@ -76,7 +93,7 @@ class CategoryServiceTest {
         when(categoryRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(category)));
 
         // when
-        Page<CategoryDto> result = categoryService.getCategories(pageable);
+        Page<ProductCategoryDto> result = categoryService.getCategories(pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
@@ -96,7 +113,7 @@ class CategoryServiceTest {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
 
         // when
-        CategoryDto result = categoryService.getCategory(categoryId);
+        ProductCategoryDto result = categoryService.getCategory(categoryId);
 
         // then
         assertThat(result.getCategoryId()).isEqualTo(categoryId);
@@ -114,7 +131,7 @@ class CategoryServiceTest {
                 .depth(1)
                 .build();
 
-        CategoryUpdateCommand command = CategoryUpdateCommand.builder()
+        ProductCategoryUpdateCommand command = ProductCategoryUpdateCommand.builder()
                 .name("신버전 이름")
                 .depth(2)
                 .build();
@@ -122,7 +139,7 @@ class CategoryServiceTest {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
 
         // when
-        CategoryDto result = categoryService.updateCategory(categoryId, command);
+        ProductCategoryDto result = categoryService.updateCategory(categoryId, command);
 
         // then
         assertThat(result.getName()).isEqualTo("신버전 이름");
@@ -142,7 +159,7 @@ class CategoryServiceTest {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
 
         // when
-        CategoryDto result = categoryService.deleteCategory(categoryId, "test-user");
+        ProductCategoryDto result = categoryService.deleteCategory(categoryId, "test-user");
 
         // then
         assertThat(result.getCategoryId()).isEqualTo(categoryId);

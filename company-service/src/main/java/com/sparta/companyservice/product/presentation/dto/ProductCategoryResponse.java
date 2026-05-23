@@ -1,6 +1,6 @@
 package com.sparta.companyservice.product.presentation.dto;
 
-import com.sparta.companyservice.product.application.dto.CategoryDto;
+import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,13 +13,13 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
-public class CategoryResponse {
+public class ProductCategoryResponse {
     private UUID categoryId;
     private String name;
     private Integer depth;
 
-    public static CategoryResponse from(CategoryDto dto) {
-        return CategoryResponse.builder()
+    public static ProductCategoryResponse from(ProductCategoryDto dto) {
+        return ProductCategoryResponse.builder()
                 .categoryId(dto.getCategoryId())
                 .name(dto.getName())
                 .depth(dto.getDepth())
