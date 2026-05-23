@@ -8,6 +8,7 @@ import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.application.service.CompanyAddressService;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressDeleteResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
@@ -64,6 +65,14 @@ public class CompanyController {
         PageResponse<CompanyAddressResponse> response = new PageResponse<>(
                 companyAddressService.getAddresses(companyId, validatedPageable).map(CompanyAddressResponse::from)
         );
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @DeleteMapping("/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<CompanyAddressDeleteResponse>> deleteAddress(
+            @PathVariable UUID addressId) {
+        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
+        CompanyAddressDeleteResponse response = companyAddressService.deleteAddress(addressId, "system");
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

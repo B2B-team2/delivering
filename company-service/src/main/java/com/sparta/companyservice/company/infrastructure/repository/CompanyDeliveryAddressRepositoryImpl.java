@@ -23,7 +23,7 @@ public class CompanyDeliveryAddressRepositoryImpl implements CompanyDeliveryAddr
 
     @Override
     public Optional<CompanyDeliveryAddress> findById(UUID addressId) {
-        return deliveryAddressJpaRepository.findById(addressId);
+        return deliveryAddressJpaRepository.findByAddressIdAndDeletedAtIsNull(addressId);
     }
 
     @Override

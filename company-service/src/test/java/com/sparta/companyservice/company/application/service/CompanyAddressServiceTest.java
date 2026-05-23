@@ -6,6 +6,7 @@ import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressDeleteResponse;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -143,5 +144,38 @@ class CompanyAddressServiceTest {
         assertThatThrownBy(() -> companyAddressService.getAddresses(companyId, pageable))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("배송지 삭제 성공")
+    void deleteAddressSuccessTest() {
+        // given
+        UUID addressId = UUID.randomUUID();
+        CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
+                .addressId(addressId)
+                .build();
+
+        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.of(address));
+
+        // when
+        CompanyAddressDeleteResponse result = companyAddressService.deleteAddress(addressId, "system");
+
+        // then
+        assertThat(result.getAddressId()).isEqualTo(addressId);
+        assertThat(result.getDeletedAt()).isNotNull();
+        verify(companyDeliveryAddressRepository, times(1)).findById(addressId);
+    }
+
+    @Test
+    @DisplayName("배송지 삭제 실패: 존재하지 않는 배송지")
+    void deleteAddressFail_AddressNotFound() {
+        // given
+        UUID addressId = UUID.randomUUID();
+        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> companyAddressService.deleteAddress(addressId, "system"))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.ADDRESS_NOT_FOUND.getMessage());
     }
 }
