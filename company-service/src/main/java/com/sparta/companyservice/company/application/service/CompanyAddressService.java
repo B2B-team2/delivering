@@ -5,9 +5,11 @@ import com.sparta.companyservice.company.application.dto.CompanyAddressCreateCom
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
+import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
-import com.sparta.companyservice.product.application.port.CompanyQueryPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +21,11 @@ import java.util.UUID;
 public class CompanyAddressService {
 
     private final CompanyDeliveryAddressRepository companyDeliveryAddressRepository;
-    private final CompanyQueryPort companyQueryPort;
+    private final CompanyRepository companyRepository;
 
     @Transactional
     public CompanyAddressDto registerAddress(UUID companyId, CompanyAddressCreateCommand command) {
-        if (!companyQueryPort.existsCompanyById(companyId)) {
+        if (!companyRepository.existsById(companyId)) {
             throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
         }
 
@@ -43,5 +45,13 @@ public class CompanyAddressService {
                 .build();
 
         return CompanyAddressDto.from(companyDeliveryAddressRepository.save(address));
+    }
+
+    public Page<CompanyAddressDto> getAddresses(UUID companyId, Pageable pageable) {
+        if (!companyRepository.existsById(companyId)) {
+            throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
+        }
+        return companyDeliveryAddressRepository.findAllByCompanyIdAndDeletedAtIsNull(companyId, pageable)
+                .map(CompanyAddressDto::from);
     }
 }

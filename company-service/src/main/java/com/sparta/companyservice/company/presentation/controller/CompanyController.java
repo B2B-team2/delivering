@@ -54,6 +54,19 @@ public class CompanyController {
                 .body(ApiResponse.created(CompanyAddressResponse.from(resultDto)));
     }
 
+    @GetMapping("/{companyId}/addresses")
+    public ResponseEntity<ApiResponse<PageResponse<CompanyAddressResponse>>> getAddresses(
+            @PathVariable UUID companyId,
+            @PageableDefault(size = 10, sort = {"isDefault", "createdAt"}, direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Pageable validatedPageable = PageableUtil.validatePageSize(pageable);
+
+        PageResponse<CompanyAddressResponse> response = new PageResponse<>(
+                companyAddressService.getAddresses(companyId, validatedPageable).map(CompanyAddressResponse::from)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
     @PatchMapping("/{companyId}")
     public ResponseEntity<ApiResponse<CompanyResponse>> patchCompany(
             @PathVariable UUID companyId,
