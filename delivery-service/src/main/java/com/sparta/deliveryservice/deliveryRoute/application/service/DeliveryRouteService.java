@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
-import com.sparta.deliveryservice.deliveryRoute.domain.core.RouteStatus;
+import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
 import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteDeleteRequest;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteStatusUpdateRequest;
@@ -76,7 +76,7 @@ public class DeliveryRouteService {
         DeliveryRoute route = deliveryRouteRepository.findById(routeId).orElse(null);
 
         String previousStatus = route != null ? route.getStatus().name() : "PENDING";
-        RouteStatus nextStatus = RouteStatus.valueOf(request.getStatus().toUpperCase());
+        DeliveryRouteStatus nextStatus = DeliveryRouteStatus.valueOf(request.getStatus().toUpperCase());
 
         String previousValueJson = "";
         if (route != null) {
