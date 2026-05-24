@@ -9,6 +9,7 @@ import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.Delive
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.DeliveryRouteDetailResponse;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.DeliveryRouteStatusUpdateResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,21 +28,21 @@ public class DeliveryRouteController {
     private final DeliveryRouteService deliveryRouteService;
 
     @GetMapping("/deliveries/{delivery_id}/routes")
-    public ApiResponse<DeliveryRouteDetailResponse> getDeliveryDetailRoutes(@PathVariable("delivery_id") UUID deliveryId) {
+    public ResponseEntity<ApiResponse<DeliveryRouteDetailResponse>> getDeliveryDetailRoutes(@PathVariable("delivery_id") UUID deliveryId) {
         DeliveryRouteDetailResponse response = deliveryRouteService.getDeliveryDetailRoutes(deliveryId);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/deliveries/{delivery_id}/routes/{route_id}")
-    public ApiResponse<DeliveryRouteStatusUpdateResponse> getDeliveryRouteStatusUpdate(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestBody DeliveryRouteStatusUpdateRequest request) throws JsonProcessingException {
+    public ResponseEntity<ApiResponse<DeliveryRouteStatusUpdateResponse>> getDeliveryRouteStatusUpdate(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestBody DeliveryRouteStatusUpdateRequest request) throws JsonProcessingException {
         DeliveryRouteStatusUpdateResponse response = deliveryRouteService.updateRouteStatus(deliveryId, routeId, request);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/deliveries/{delivery_id}/routes/{route_id}")
-    public ApiResponse<DeliveryRouteDeleteResponse> getDeliveryRouteStatusDelete(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestBody DeliveryRouteDeleteRequest request) throws JsonProcessingException {
+    public ResponseEntity<ApiResponse<DeliveryRouteDeleteResponse>> getDeliveryRouteStatusDelete(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestBody DeliveryRouteDeleteRequest request) throws JsonProcessingException {
         DeliveryRouteDeleteResponse response = deliveryRouteService.deleteRoute(deliveryId, routeId, request);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
 }

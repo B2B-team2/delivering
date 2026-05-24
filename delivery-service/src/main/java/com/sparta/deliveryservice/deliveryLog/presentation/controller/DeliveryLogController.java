@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -23,7 +24,7 @@ public class DeliveryLogController {
     private final DeliveryLogService deliveryLogService;
 
     @GetMapping("/deliveries/{deliveryId}/logs")
-    public ApiResponse<PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto>> getDeliveryLogs(
+    public ResponseEntity<ApiResponse<PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto>>> getDeliveryLogs(
             @PathVariable("deliveryId") UUID deliveryId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
@@ -33,6 +34,6 @@ public class DeliveryLogController {
         PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto> response =
                 DeliveryLogSearchResponse.of(logPage);
         
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 }
