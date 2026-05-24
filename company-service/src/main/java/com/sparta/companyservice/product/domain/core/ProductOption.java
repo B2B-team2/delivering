@@ -51,4 +51,11 @@ public class ProductOption extends BaseEntity {
 
     private Integer displayOrder;
 
+    public void update(String optionsName, BigDecimal extraPrice, ProductStatusEnum status, Integer displayOrder) {
+        this.optionsName = optionsName;
+        this.extraPrice = extraPrice;
+        this.status = status;
+        this.displayOrder = displayOrder;
+    }
+
 }

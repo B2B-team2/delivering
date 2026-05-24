@@ -3,6 +3,8 @@ package com.sparta.companyservice.product.infrastructure.repository;
 import com.sparta.companyservice.product.domain.core.ProductOption;
 import com.sparta.companyservice.product.domain.repository.ProductOptionRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -12,26 +14,25 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ProductOptionRepositoryImpl implements ProductOptionRepository {
 
-    private final ProductOptionJpaRepository optionJpaRepository;
+    private final ProductOptionJpaRepository productOptionJpaRepository;
 
     @Override
-    public ProductOption save(ProductOption option) {
-        return optionJpaRepository.save(option);
+    public ProductOption save(ProductOption productOption) {
+        return productOptionJpaRepository.save(productOption);
     }
 
     @Override
     public Optional<ProductOption> findById(UUID productOptionId) {
-        return optionJpaRepository.findByProductOptionIdAndDeletedAtIsNull(productOptionId);
+        return productOptionJpaRepository.findByProductOptionIdAndDeletedAtIsNull(productOptionId);
     }
 
     @Override
-    public void delete(ProductOption option) {
-        option.softDelete(option.getCreatedBy()); // BaseEntity 삭제 로직
-        optionJpaRepository.save(option);
+    public Page<ProductOption> findAll(Pageable pageable) {
+        return productOptionJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
 
     @Override
-    public long count() {
-        return optionJpaRepository.count();
+    public boolean existsById(UUID productOptionId) {
+        return productOptionJpaRepository.existsByProductOptionIdAndDeletedAtIsNull(productOptionId);
     }
 }
