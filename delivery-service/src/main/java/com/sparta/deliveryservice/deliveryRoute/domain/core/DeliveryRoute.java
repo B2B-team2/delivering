@@ -57,12 +57,12 @@ public class DeliveryRoute extends BaseEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private RouteStatus status = RouteStatus.PENDING;
+    private DeliveryRouteStatus status = DeliveryRouteStatus.PENDING;
 
     @Builder
     public DeliveryRoute(UUID deliveryId, Integer sequence, UUID fromHubId, UUID toHubId,
                          BigDecimal estimatedDistance, Time estimatedDuration,
-                         BigDecimal actualDistance, Time actualDuration, RouteStatus status) {
+                         BigDecimal actualDistance, Time actualDuration, DeliveryRouteStatus status) {
         this.deliveryId = deliveryId;
         this.sequence = sequence;
         this.fromHubId = fromHubId;
@@ -71,7 +71,7 @@ public class DeliveryRoute extends BaseEntity {
         this.estimatedDuration = estimatedDuration;
         this.actualDistance = actualDistance;
         this.actualDuration = actualDuration;
-        this.status = (status != null) ? status : RouteStatus.PENDING;
+        this.status = (status != null) ? status : DeliveryRouteStatus.PENDING;
     }
 
     public void updateRoute(Integer sequence, UUID fromHubId, UUID toHubId,
@@ -86,7 +86,7 @@ public class DeliveryRoute extends BaseEntity {
         this.actualDuration = actualDuration;
     }
 
-    public void updateStatus(RouteStatus status, BigDecimal actualDistance, Time actualDuration) {
+    public void updateStatus(DeliveryRouteStatus status, BigDecimal actualDistance, Time actualDuration) {
         this.status = status;
         this.actualDistance = actualDistance;
         this.actualDuration = actualDuration;

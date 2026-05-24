@@ -24,7 +24,7 @@ import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryTra
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
-import com.sparta.deliveryservice.deliveryRoute.domain.core.RouteStatus;
+import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
 import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -105,7 +105,7 @@ public class DeliveryService {
                             .toHubId(dto.getToHubId())
                             .estimatedDistance(dto.getDistance())
                             .estimatedDuration(dto.getDuration())
-                            .status(RouteStatus.PENDING)
+                            .status(DeliveryRouteStatus.PENDING)
                             .build();
 
                     deliveryRoutes.add(deliveryRouteRepository.save(route));
@@ -307,7 +307,7 @@ public class DeliveryService {
         List<DeliveryCancelResponse.CancelledRouteDto> cancelledRouteDtos = new ArrayList<>();
 
         for (DeliveryRoute route : deliveryRoutes) {
-            route.updateStatus(RouteStatus.CANCELLED, null, null);
+            route.updateStatus(DeliveryRouteStatus.CANCELLED, null, null);
 
             cancelledRouteDtos.add(DeliveryCancelResponse.CancelledRouteDto.builder()
                     .routeId(route.getRouteId())
