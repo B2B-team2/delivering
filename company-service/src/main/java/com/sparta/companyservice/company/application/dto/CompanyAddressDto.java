@@ -7,6 +7,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -23,6 +24,7 @@ public class CompanyAddressDto {
     private String addressDetail;
     private String postalCode;
     private Boolean isDefault;
+    private LocalDateTime deletedAt;
 
     public static CompanyAddressDto from(CompanyDeliveryAddress entity) {
         return CompanyAddressDto.builder()
@@ -35,6 +37,7 @@ public class CompanyAddressDto {
                 .addressDetail(entity.getAddressDetail())
                 .postalCode(entity.getPostalCode())
                 .isDefault(entity.getIsDefault())
+                .deletedAt(entity.getDeletedAt())
                 .build();
     }
 }

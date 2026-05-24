@@ -1,7 +1,7 @@
 package com.sparta.companyservice.product.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sparta.common.handler.GlobalExceptionHandler;
+import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
 import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
 import com.sparta.companyservice.product.application.dto.ProductDto;
 import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
