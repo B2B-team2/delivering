@@ -20,6 +20,7 @@ public class WarehouseDto {
     private final String status;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
+    private final String updatedBy;
 
     public static WarehouseDto from(Warehouse warehouse) {
         return WarehouseDto.builder()
@@ -32,6 +33,7 @@ public class WarehouseDto {
                 .status(warehouse.getStatus().name())
                 .createdAt(warehouse.getCreatedAt())
                 .updatedAt(warehouse.getUpdatedAt())
+                .updatedBy(warehouse.getUpdatedBy())
                 .build();
     }
 }
