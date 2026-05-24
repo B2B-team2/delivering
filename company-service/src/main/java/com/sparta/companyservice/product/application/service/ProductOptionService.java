@@ -3,6 +3,7 @@ package com.sparta.companyservice.product.application.service;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductOptionCreateCommand;
+import com.sparta.companyservice.product.application.dto.ProductOptionDetailDto;
 import com.sparta.companyservice.product.application.dto.ProductOptionDto;
 import com.sparta.companyservice.product.application.dto.ProductOptionUpdateCommand;
 import com.sparta.companyservice.product.domain.core.Product;
@@ -16,7 +17,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,6 +29,16 @@ public class ProductOptionService {
 
     private final ProductOptionRepository productOptionRepository;
     private final ProductRepository productRepository;
+
+    public Map<UUID, ProductOptionDetailDto> getProductOptionDetails(List<UUID> productOptionIds) {
+        List<ProductOption> options = productOptionRepository.findAllByIdsAndDeletedAtIsNull(productOptionIds);
+
+        return options.stream()
+                .collect(Collectors.toMap(
+                        ProductOption::getProductOptionId,
+                        ProductOptionDetailDto::from
+                ));
+    }
 
     @Transactional
     public ProductOptionDto createProductOption(ProductOptionCreateCommand command) {

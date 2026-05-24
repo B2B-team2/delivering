@@ -3,6 +3,8 @@ package com.sparta.orderservice.order.infrastructure.feign;
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.orderservice.order.infrastructure.feign.dto.CompanyHubMappingRequest;
 import com.sparta.orderservice.order.infrastructure.feign.dto.CompanyHubMappingResponse;
+import com.sparta.orderservice.order.infrastructure.feign.dto.ProductOptionDetailsRequest;
+import com.sparta.orderservice.order.infrastructure.feign.dto.ProductOptionDetailsResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,4 +15,7 @@ public interface CompanyClient {
 
     @PostMapping("/api/v1/internal/companies/hub-mapping")
     ResponseEntity<ApiResponse<CompanyHubMappingResponse>> getHubMapping(@RequestBody CompanyHubMappingRequest request);
+
+    @PostMapping("/api/v1/internal/product-options/details")
+    ResponseEntity<ApiResponse<ProductOptionDetailsResponse>> getProductOptionDetails(@RequestBody ProductOptionDetailsRequest request);
 }
