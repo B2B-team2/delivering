@@ -136,4 +136,4 @@ public class CompanyService {
     public boolean existsCompany(UUID companyId) {
         return companyRepository.findById(companyId).isPresent();
     }
-}ㅋ
+}
