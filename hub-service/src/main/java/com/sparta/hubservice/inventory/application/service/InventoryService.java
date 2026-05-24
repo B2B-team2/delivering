@@ -203,6 +203,9 @@ public class InventoryService {
     public void deleteInventory(UUID inventoryId, String deletedBy) {
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+        if (inventory.getQuantity() > 0 || inventory.getReservedQuantity() > 0) {
+            throw new BusinessException(ErrorCode.INVENTORY_HAS_STOCK);
+        }
         inventory.softDelete(deletedBy);
         inventoryRepository.save(inventory);
     }

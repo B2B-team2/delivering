@@ -34,6 +34,18 @@ public class GlobalExceptionHandler {
             return ResponseEntity.status(code.getHttpStatus()).body(response);
         }
 
+        if (code == ErrorCode.INVENTORY_HAS_STOCK) {
+            ErrorResponse response = ErrorResponse.builder()
+                    .status(code.getHttpStatus().value())
+                    .message(code.getMessage())
+                    .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
+                            .field("inventoryId")
+                            .message(code.getMessage())
+                            .build()))
+                    .build();
+            return ResponseEntity.status(code.getHttpStatus()).body(response);
+        }
+
         ErrorResponse response = ErrorResponse.builder()
                 .status(code.getHttpStatus().value())
                 .message(code.getMessage())
