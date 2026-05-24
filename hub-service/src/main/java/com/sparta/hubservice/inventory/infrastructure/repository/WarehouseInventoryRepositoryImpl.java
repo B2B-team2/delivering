@@ -36,6 +36,11 @@ public class WarehouseInventoryRepositoryImpl implements WarehouseInventoryRepos
     }
 
     @Override
+    public List<WarehouseInventory> findByProductOptionId(UUID productOptionId) {
+        return warehouseInventoryJpaRepository.findByProductOptionIdAndDeletedAtIsNull(productOptionId);
+    }
+
+    @Override
     public void delete(WarehouseInventory inventory, String deletedBy) {
         inventory.softDelete(deletedBy);
         warehouseInventoryJpaRepository.save(inventory);
