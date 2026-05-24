@@ -11,6 +11,7 @@ public enum ErrorCode implements com.sparta.common.dto.ErrorCode {
     // Hub
     HUB_NOT_FOUND(HttpStatus.NOT_FOUND, "H001", "허브를 찾을 수 없습니다."),
     ROUTE_NOT_FOUND(HttpStatus.NOT_FOUND, "H002", "허브 경로를 찾을 수 없습니다."),
+    DUPLICATE_ROUTE(HttpStatus.CONFLICT, "H004", "해당 구간의 허브 경로가 이미 존재합니다."),
     HUB_IN_USE(HttpStatus.CONFLICT, "H003", "HUB_IN_USE"),
 
     // Warehouse

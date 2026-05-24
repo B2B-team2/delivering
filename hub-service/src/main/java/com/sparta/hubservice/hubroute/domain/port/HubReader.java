@@ -6,5 +6,6 @@ import java.util.UUID;
 
 public interface HubReader {
     Map<UUID, String> findAllHubNames();
+    Map<UUID, HubInfo> findAllHubInfos();
     List<UUID> findCentralHubIds();
 }

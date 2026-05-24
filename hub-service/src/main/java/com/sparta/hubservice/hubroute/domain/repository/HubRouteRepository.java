@@ -1,6 +1,8 @@
 package com.sparta.hubservice.hubroute.domain.repository;
 
 import com.sparta.hubservice.hubroute.domain.core.HubRoute;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +17,8 @@ public interface HubRouteRepository {
     Optional<HubRoute> findByFromHubIdAndToHubId(UUID fromHubId, UUID toHubId);
 
     List<HubRoute> findAll();
+
+    Page<HubRoute> findAll(Pageable pageable);
 
     List<HubRoute> findByFromHubId(UUID fromHubId);
 

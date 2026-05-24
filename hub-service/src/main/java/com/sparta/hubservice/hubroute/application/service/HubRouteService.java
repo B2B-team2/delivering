@@ -3,6 +3,7 @@ package com.sparta.hubservice.hubroute.application.service;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.hubservice.global.exception.ErrorCode;
 import com.sparta.hubservice.hubroute.application.dto.HubRouteCreateCommand;
+import com.sparta.hubservice.hubroute.domain.port.HubInfo;
 import com.sparta.hubservice.hubroute.domain.port.HubReader;
 import com.sparta.hubservice.hubroute.application.dto.HubRouteDto;
 import com.sparta.hubservice.hubroute.application.dto.HubRouteUpdateCommand;
@@ -10,6 +11,8 @@ import com.sparta.hubservice.hubroute.application.dto.RouteSearchResult;
 import com.sparta.hubservice.hubroute.domain.core.HubRoute;
 import com.sparta.hubservice.hubroute.domain.repository.HubRouteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,25 +36,39 @@ public class HubRouteService {
 
     @Transactional
     public HubRouteDto createHubRoute(HubRouteCreateCommand command) {
+        hubRouteRepository.findByFromHubIdAndToHubId(command.getFromHubId(), command.getToHubId())
+                .ifPresent(r -> { throw new BusinessException(ErrorCode.DUPLICATE_ROUTE); });
+
         HubRoute hubRoute = HubRoute.builder()
                 .fromHubId(command.getFromHubId())
                 .toHubId(command.getToHubId())
                 .duration(command.getDuration())
                 .distance(command.getDistance())
                 .build();
-        return HubRouteDto.from(hubRouteRepository.save(hubRoute));
+        HubRoute saved = hubRouteRepository.save(hubRoute);
+        Map<UUID, HubInfo> hubInfos = hubReader.findAllHubInfos();
+        return HubRouteDto.from(saved, hubInfos.get(saved.getFromHubId()), hubInfos.get(saved.getToHubId()));
     }
 
-    public List<HubRouteDto> getAllHubRoutes() {
-        return hubRouteRepository.findAll().stream()
-                .map(HubRouteDto::from)
-                .toList();
+    public Page<HubRouteDto> getAllHubRoutes(Pageable pageable) {
+        Map<UUID, HubInfo> hubInfos = hubReader.findAllHubInfos();
+        return hubRouteRepository.findAll(pageable)
+                .map(route -> HubRouteDto.from(
+                        route,
+                        hubInfos.get(route.getFromHubId()),
+                        hubInfos.get(route.getToHubId())
+                ));
     }
 
     public HubRouteDto getHubRoute(UUID routeId) {
         HubRoute hubRoute = hubRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROUTE_NOT_FOUND));
-        return HubRouteDto.from(hubRoute);
+        Map<UUID, HubInfo> hubInfos = hubReader.findAllHubInfos();
+        return HubRouteDto.from(
+                hubRoute,
+                hubInfos.get(hubRoute.getFromHubId()),
+                hubInfos.get(hubRoute.getToHubId())
+        );
     }
 
     public List<HubRouteDto> getRoutesByHub(UUID fromHubId) {
@@ -65,7 +82,8 @@ public class HubRouteService {
         HubRoute hubRoute = hubRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROUTE_NOT_FOUND));
         hubRoute.update(command.getDuration(), command.getDistance());
-        return HubRouteDto.from(hubRoute);
+        Map<UUID, HubInfo> hubInfos = hubReader.findAllHubInfos();
+        return HubRouteDto.from(hubRoute, hubInfos.get(hubRoute.getFromHubId()), hubInfos.get(hubRoute.getToHubId()));
     }
 
     @Transactional
@@ -82,7 +100,7 @@ public class HubRouteService {
         Map<UUID, Map<UUID, HubRoute>> routeMap = hubRouteRepository.findAll().stream()
                 .collect(Collectors.groupingBy(
                         HubRoute::getFromHubId,
-                        Collectors.toMap(HubRoute::getToHubId, r -> r)
+                        Collectors.toMap(HubRoute::getToHubId, r -> r, (r1, r2) -> r1)
                 ));
 
         Map<UUID, String> hubNames = hubReader.findAllHubNames();
