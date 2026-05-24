@@ -18,7 +18,6 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryCreateResponse {
-
     private UUID deliveryId;
     private UUID companyOrderId;
     private UUID companyReceiveId;

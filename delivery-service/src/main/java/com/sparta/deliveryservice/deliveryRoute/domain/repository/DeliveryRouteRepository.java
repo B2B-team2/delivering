@@ -1,7 +1,6 @@
-package com.sparta.deliveryservice.deliveryRoute.domin.repository;
+package com.sparta.deliveryservice.deliveryRoute.domain.repository;
 
-import com.sparta.deliveryservice.deliveryRoute.domin.core.DeliveryRoute;
-import org.springframework.data.repository.query.Param;
+import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 
 import java.util.List;
 import java.util.Optional;

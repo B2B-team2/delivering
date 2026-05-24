@@ -7,7 +7,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
@@ -26,6 +25,5 @@ public class DeliveryRouteStatusUpdateResponse {
     private BigDecimal actualDistance;
     private String actualDuration;
     private UUID logId;
-    private LocalDateTime updatedAt;
-    private String updatedBy;
+
 }

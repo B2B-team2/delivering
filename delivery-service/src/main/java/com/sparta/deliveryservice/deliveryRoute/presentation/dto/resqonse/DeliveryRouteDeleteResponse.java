@@ -21,7 +21,7 @@ public class DeliveryRouteDeleteResponse {
     private List<RemainingRouteDto> remainingRoutes;
     private UUID logId;
     private LocalDateTime deletedAt;
-    private String deletedBy;
+    private UUID deletedBy;
 
     @Getter
     @Builder

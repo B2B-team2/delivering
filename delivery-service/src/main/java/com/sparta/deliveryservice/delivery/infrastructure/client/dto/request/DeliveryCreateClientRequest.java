@@ -14,6 +14,7 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryCreateClientRequest {
+    private UUID addressId;
     private UUID companyOrderId;
     private UUID companyReceiveId;
     private UUID departureHubId;

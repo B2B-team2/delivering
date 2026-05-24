@@ -2,7 +2,10 @@ package com.sparta.deliveryservice.deliveryLog.infrastructure.persistence;
 
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
+
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -29,6 +32,11 @@ public class DeliveryLogRepositoryImpl implements DeliveryLogRepository {
     @Override
     public List<DeliveryLog> findAll() {
         return deliveryLogJpaRepository.findAll();
+    }
+
+    @Override
+    public Page<DeliveryLog> findByDeliveryId(UUID deliveryId, Pageable pageable) {
+        return deliveryLogJpaRepository.findByDeliveryId(deliveryId, pageable);
     }
 
 }

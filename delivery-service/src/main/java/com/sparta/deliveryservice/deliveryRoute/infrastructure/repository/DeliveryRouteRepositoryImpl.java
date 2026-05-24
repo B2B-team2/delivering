@@ -1,7 +1,7 @@
 package com.sparta.deliveryservice.deliveryRoute.infrastructure.repository;
 
-import com.sparta.deliveryservice.deliveryRoute.domin.core.DeliveryRoute;
-import com.sparta.deliveryservice.deliveryRoute.domin.repository.DeliveryRouteRepository;
+import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
+import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

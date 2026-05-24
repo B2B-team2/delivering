@@ -1,5 +1,6 @@
  package com.sparta.deliveryservice.deliveryLog.domin.core;
 
+ import com.sparta.common.entity.BaseEntity;
  import jakarta.persistence.Column;
  import jakarta.persistence.Entity;
  import jakarta.persistence.EntityListeners;
@@ -7,19 +8,16 @@
  import jakarta.persistence.GenerationType;
  import jakarta.persistence.Id;
  import jakarta.persistence.Table;
-import lombok.AccessLevel;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.annotations.SQLRestriction;
-import org.hibernate.type.SqlTypes;
-import org.springframework.data.annotation.CreatedBy;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+ import lombok.AccessLevel;
+ import lombok.Builder;
+ import lombok.Getter;
+ import lombok.NoArgsConstructor;
+ import org.hibernate.annotations.JdbcTypeCode;
+ import org.hibernate.annotations.SQLRestriction;
+ import org.hibernate.type.SqlTypes;
+ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import java.time.LocalDateTime;
-import java.util.UUID;
+ import java.util.UUID;
 
 @Getter
 @Entity
@@ -27,7 +25,7 @@ import java.util.UUID;
 @Table(name = "p_delivery_log")
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class DeliveryLog {
+public class DeliveryLog extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -43,7 +41,6 @@ public class DeliveryLog {
     @Column(name = "event_type", nullable = false, length = 30)
     private String eventType;
 
-    // 💡 PostgreSQL/MySQL 등의 JSON 타입을 자바의 String 형태로 안전하게 매핑
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "previous_value", columnDefinition = "json")
     private String previousValue;
@@ -54,14 +51,6 @@ public class DeliveryLog {
 
     @Column(name = "reason", columnDefinition = "TEXT")
     private String reason;
-
-    @CreatedDate // 🌟 데이터 생성 시 현재 시간이 자동으로 기록됩니다.
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @CreatedBy // 🌟 데이터를 생성한 유저의 식별자(ID)가 자동으로 기록됩니다.
-    @Column(name = "created_by", length = 36, updatable = false)
-    private String createdBy;
 
     @Builder
     public DeliveryLog(UUID deliveryId, UUID routeId, String eventType, 

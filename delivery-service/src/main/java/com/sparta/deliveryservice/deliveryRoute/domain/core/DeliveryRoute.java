@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.deliveryRoute.domin.core;
+package com.sparta.deliveryservice.deliveryRoute.domain.core;
 
 import com.sparta.common.entity.BaseEntity;
 import jakarta.persistence.Column;
@@ -16,7 +16,7 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.sql.Time;
 import java.util.UUID;
 
 @Getter
@@ -43,19 +43,17 @@ public class DeliveryRoute extends BaseEntity {
     @Column(name = "to_hub_id", nullable = false)
     private UUID toHubId;
 
-    // 소수점 8자리 중 소수점 아래 2자리 표현 (NUMERIC(8,2))
     @Column(name = "estimated_distance", precision = 8, scale = 2)
     private BigDecimal estimatedDistance;
 
-    // 테이블 스펙 상 TIMESTAMP 타입으로 기록된 예상 소요 시간/시각
     @Column(name = "estimated_duration")
-    private LocalDateTime estimatedDuration;
+    private Time estimatedDuration;
 
     @Column(name = "actual_distance", precision = 8, scale = 2)
     private BigDecimal actualDistance;
 
     @Column(name = "actual_duration")
-    private LocalDateTime actualDuration;
+    private Time actualDuration;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
@@ -63,8 +61,8 @@ public class DeliveryRoute extends BaseEntity {
 
     @Builder
     public DeliveryRoute(UUID deliveryId, Integer sequence, UUID fromHubId, UUID toHubId,
-                         BigDecimal estimatedDistance, LocalDateTime estimatedDuration,
-                         BigDecimal actualDistance, LocalDateTime actualDuration, RouteStatus status) {
+                         BigDecimal estimatedDistance, Time estimatedDuration,
+                         BigDecimal actualDistance, Time actualDuration, RouteStatus status) {
         this.deliveryId = deliveryId;
         this.sequence = sequence;
         this.fromHubId = fromHubId;
@@ -77,8 +75,8 @@ public class DeliveryRoute extends BaseEntity {
     }
 
     public void updateRoute(Integer sequence, UUID fromHubId, UUID toHubId,
-                            BigDecimal estimatedDistance, LocalDateTime estimatedDuration,
-                            BigDecimal actualDistance, LocalDateTime actualDuration) {
+                            BigDecimal estimatedDistance, Time estimatedDuration,
+                            BigDecimal actualDistance, Time actualDuration) {
         this.sequence = sequence;
         this.fromHubId = fromHubId;
         this.toHubId = toHubId;
@@ -88,7 +86,7 @@ public class DeliveryRoute extends BaseEntity {
         this.actualDuration = actualDuration;
     }
 
-    public void updateStatus(RouteStatus status, BigDecimal actualDistance, LocalDateTime actualDuration) {
+    public void updateStatus(RouteStatus status, BigDecimal actualDistance, Time actualDuration) {
         this.status = status;
         this.actualDistance = actualDistance;
         this.actualDuration = actualDuration;
