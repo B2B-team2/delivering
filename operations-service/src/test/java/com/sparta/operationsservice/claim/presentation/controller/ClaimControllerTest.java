@@ -145,13 +145,16 @@ class ClaimControllerTest {
     void updateClaimStatusApiResponseFormatTest() throws Exception {
         // given
         UUID claimId = UUID.randomUUID();
+        BigDecimal refundAmount = BigDecimal.valueOf(45000.00);
         ClaimStatusUpdateRequest request = ClaimStatusUpdateRequest.builder()
                 .status("COMPLETED")
+                .refundAmount(refundAmount)
                 .build();
 
         ClaimDto responseDto = ClaimDto.builder()
                 .claimId(claimId)
                 .status("COMPLETED")
+                .refundAmount(refundAmount)
                 .build();
 
         when(claimService.updateClaimStatus(eq(claimId), any(ClaimStatusUpdateCommand.class))).thenReturn(responseDto);
@@ -163,6 +166,7 @@ class ClaimControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data.status").value("COMPLETED"));
+                .andExpect(jsonPath("$.data.status").value("COMPLETED"))
+                .andExpect(jsonPath("$.data.refundAmount").value(45000.00));
     }
 }

@@ -187,6 +187,37 @@ class ClaimServiceTest {
     }
 
     @Test
+    @DisplayName("클레임 상태 및 환불 금액 업데이트 성공: 상태와 금액이 모두 정상적으로 변경되는가?")
+    void updateClaimStatusWithAmountSuccessTest() {
+        // given
+        UUID claimId = UUID.randomUUID();
+        OrderClaim claim = OrderClaim.builder()
+                .claimId(claimId)
+                .orderItemId(UUID.randomUUID())
+                .claimType(ClaimType.RETURN)
+                .status(ClaimStatus.REQUESTED)
+                .reason("reason")
+                .refundAmount(BigDecimal.ZERO)
+                .build();
+        BigDecimal updateAmount = BigDecimal.valueOf(45000.00);
+        ClaimStatusUpdateCommand command = ClaimStatusUpdateCommand.builder()
+                .status("COMPLETED")
+                .refundAmount(updateAmount)
+                .build();
+
+        when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
+
+        // when
+        ClaimDto result = claimService.updateClaimStatus(claimId, command);
+
+        // then
+        assertThat(result.getStatus()).isEqualTo("COMPLETED");
+        assertThat(result.getRefundAmount()).isEqualByComparingTo(updateAmount);
+        assertThat(claim.getStatus()).isEqualTo(ClaimStatus.COMPLETED);
+        assertThat(claim.getRefundAmount()).isEqualByComparingTo(updateAmount);
+    }
+
+    @Test
     @DisplayName("클레임 상태 업데이트 실패: 잘못된 상태 문자열 전달 시 INVALID_CLAIM_STATUS 예외가 발생하는가?")
     void updateClaimStatusInvalidStatusTest() {
         // given

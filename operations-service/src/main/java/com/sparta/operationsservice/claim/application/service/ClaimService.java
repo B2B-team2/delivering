@@ -57,7 +57,10 @@ public class ClaimService {
                 .orElseThrow(() -> new BusinessException(OperationErrorCode.CLAIM_NOT_FOUND));
 
         try {
-            claim.updateStatus(ClaimStatus.valueOf(command.getStatus()));
+            claim.updateStatusAndAmount(
+                    ClaimStatus.valueOf(command.getStatus()),
+                    command.getRefundAmount()
+            );
         } catch (IllegalArgumentException e) {
             throw new BusinessException(OperationErrorCode.INVALID_CLAIM_STATUS);
         }

@@ -53,4 +53,11 @@ public class OrderClaim extends BaseEntity {
         this.status = status;
     }
 
+    public void updateStatusAndAmount(ClaimStatus status, BigDecimal refundAmount) {
+        this.status = status;
+        if (refundAmount != null) {
+            this.refundAmount = refundAmount;
+        }
+    }
+
 }

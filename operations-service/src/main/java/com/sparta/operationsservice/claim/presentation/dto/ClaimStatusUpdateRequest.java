@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+
 @Getter
 @Builder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -17,9 +19,12 @@ public class ClaimStatusUpdateRequest {
     @NotBlank(message = "상태값은 필수입니다.")
     private String status;
 
+    private BigDecimal refundAmount;
+
     public ClaimStatusUpdateCommand toCommand() {
         return ClaimStatusUpdateCommand.builder()
                 .status(this.status)
+                .refundAmount(this.refundAmount)
                 .build();
     }
 }
