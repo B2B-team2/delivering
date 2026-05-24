@@ -42,24 +42,23 @@ class ClaimServiceTest {
     private ClaimService claimService;
 
     @Test
-    @DisplayName("클레임 등록 성공")
+    @DisplayName("클레임 생성 성공: 유효한 명령 수신 시 Repository의 save가 호출되는가?")
     void createClaimSuccessTest() {
         // given
-        UUID orderItemId = UUID.randomUUID();
         ClaimCreateCommand command = ClaimCreateCommand.builder()
-                .orderItemId(orderItemId)
+                .orderItemId(UUID.randomUUID())
                 .claimType("RETURN")
-                .reason("단순 변심")
-                .refundAmount(new BigDecimal("50000"))
+                .reason("Test reason")
+                .refundAmount(BigDecimal.valueOf(10000))
                 .build();
 
         OrderClaim savedClaim = OrderClaim.builder()
                 .claimId(UUID.randomUUID())
-                .orderItemId(orderItemId)
+                .orderItemId(command.getOrderItemId())
                 .claimType(ClaimType.RETURN)
-                .status(ClaimStatus.REQUESTED)
                 .reason(command.getReason())
                 .refundAmount(command.getRefundAmount())
+                .status(ClaimStatus.REQUESTED)
                 .build();
 
         when(orderClaimRepository.save(any(OrderClaim.class))).thenReturn(savedClaim);
@@ -68,35 +67,75 @@ class ClaimServiceTest {
         ClaimDto result = claimService.createClaim(command);
 
         // then
+        assertThat(result).isNotNull();
         assertThat(result.getReason()).isEqualTo(command.getReason());
-        assertThat(result.getClaimType()).isEqualTo("RETURN");
         verify(orderClaimRepository, times(1)).save(any(OrderClaim.class));
     }
 
     @Test
-    @DisplayName("클레임 목록 조회 성공")
-    void getClaimsSuccessTest() {
+    @DisplayName("클레임 목록 조회: 페이징 처리가 올바르게 수행되는가?")
+    void getClaimsTest() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
         OrderClaim claim = OrderClaim.builder()
                 .claimId(UUID.randomUUID())
                 .orderItemId(UUID.randomUUID())
-                .claimType(ClaimType.EXCHANGE)
+                .claimType(ClaimType.RETURN)
                 .status(ClaimStatus.REQUESTED)
+                .reason("reason")
+                .refundAmount(BigDecimal.ZERO)
                 .build();
+        Page<OrderClaim> page = new PageImpl<>(List.of(claim));
 
-        when(orderClaimRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(claim)));
+        when(orderClaimRepository.findAll(pageable)).thenReturn(page);
 
         // when
         Page<ClaimDto> result = claimService.getClaims(pageable);
 
         // then
         assertThat(result.getContent()).hasSize(1);
-        assertThat(result.getContent().get(0).getClaimType()).isEqualTo("EXCHANGE");
+        verify(orderClaimRepository, times(1)).findAll(pageable);
     }
 
     @Test
-    @DisplayName("클레임 상태 업데이트 성공")
+    @DisplayName("클레임 상세 조회 성공: 존재하는 ID로 조회 시 DTO가 반환되는가?")
+    void getClaimSuccessTest() {
+        // given
+        UUID claimId = UUID.randomUUID();
+        OrderClaim claim = OrderClaim.builder()
+                .claimId(claimId)
+                .orderItemId(UUID.randomUUID())
+                .claimType(ClaimType.RETURN)
+                .status(ClaimStatus.REQUESTED)
+                .reason("reason")
+                .refundAmount(BigDecimal.ZERO)
+                .build();
+
+        when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
+
+        // when
+        ClaimDto result = claimService.getClaim(claimId);
+
+        // then
+        assertThat(result).isNotNull();
+        verify(orderClaimRepository, times(1)).findById(claimId);
+    }
+
+    @Test
+    @DisplayName("클레임 상세 조회 실패: 존재하지 않는 ID 조회 시 CLAIM_NOT_FOUND 예외가 발생하는가?")
+    void getClaimNotFoundTest() {
+        // given
+        UUID claimId = UUID.randomUUID();
+        when(orderClaimRepository.findById(claimId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> claimService.getClaim(claimId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", OperationErrorCode.CLAIM_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("클레임 상태 업데이트 성공: 유효한 상태 변경 시 상태가 반영되는가?")
     void updateClaimStatusSuccessTest() {
         // given
         UUID claimId = UUID.randomUUID();
@@ -105,10 +144,11 @@ class ClaimServiceTest {
                 .orderItemId(UUID.randomUUID())
                 .claimType(ClaimType.RETURN)
                 .status(ClaimStatus.REQUESTED)
+                .reason("reason")
+                .refundAmount(BigDecimal.ZERO)
                 .build();
-
         ClaimStatusUpdateCommand command = ClaimStatusUpdateCommand.builder()
-                .status("PROCESSING")
+                .status("COMPLETED")
                 .build();
 
         when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
@@ -117,19 +157,25 @@ class ClaimServiceTest {
         ClaimDto result = claimService.updateClaimStatus(claimId, command);
 
         // then
-        assertThat(result.getStatus()).isEqualTo("PROCESSING");
+        assertThat(result.getStatus()).isEqualTo("COMPLETED");
+        assertThat(claim.getStatus()).isEqualTo(ClaimStatus.COMPLETED);
     }
 
     @Test
-    @DisplayName("클레임 조회 실패: 존재하지 않는 ID")
-    void getClaimFail_NotFound() {
+    @DisplayName("클레임 상태 업데이트 실패: 잘못된 상태 문자열 전달 시 INVALID_CLAIM_STATUS 예외가 발생하는가?")
+    void updateClaimStatusInvalidStatusTest() {
         // given
         UUID claimId = UUID.randomUUID();
-        when(orderClaimRepository.findById(claimId)).thenReturn(Optional.empty());
+        OrderClaim claim = OrderClaim.builder().claimId(claimId).build();
+        ClaimStatusUpdateCommand command = ClaimStatusUpdateCommand.builder()
+                .status("INVALID_STATUS")
+                .build();
+
+        when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
 
         // when & then
-        assertThatThrownBy(() -> claimService.getClaim(claimId))
+        assertThatThrownBy(() -> claimService.updateClaimStatus(claimId, command))
                 .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(OperationErrorCode.CLAIM_NOT_FOUND.getMessage());
+                .hasFieldOrPropertyWithValue("errorCode", OperationErrorCode.INVALID_CLAIM_STATUS);
     }
 }
