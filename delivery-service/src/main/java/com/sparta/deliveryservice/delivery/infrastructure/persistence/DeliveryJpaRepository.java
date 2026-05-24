@@ -10,6 +10,5 @@ import java.util.UUID;
 
 @Repository
 public interface DeliveryJpaRepository extends JpaRepository<Delivery, UUID> {
-    Optional<Delivery> findByAddressId(UUID id);
     Optional<Delivery> findByTrackingNumber(String trackingNumber);
 }

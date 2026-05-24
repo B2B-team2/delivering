@@ -11,6 +11,5 @@ public interface DeliveryRepository {
     Delivery save(Delivery delivery);
     Optional<Delivery> findById(UUID id);
     Page<Delivery> findAll(Pageable pageable);
-    Optional<Delivery> findByAddressId(UUID id);
     Optional<Delivery> findByTrackingNumber(String trackingNumber);
 }

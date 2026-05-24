@@ -32,8 +32,5 @@ public class DeliveryRepositoryImpl implements DeliveryRepository {
     public Page<Delivery> findAll(Pageable pageable) { return deliveryJpaRepository.findAll(pageable); }
 
     @Override
-    public Optional<Delivery> findByAddressId(UUID id) {return deliveryJpaRepository.findByAddressId(id);}
-
-    @Override
     public Optional<Delivery> findByTrackingNumber(String trackingNumber) {return deliveryJpaRepository.findByTrackingNumber(trackingNumber);}
 }
