@@ -1,6 +1,6 @@
 package com.sparta.deliveryservice.deliveryRoute.domain.core;
 
-public enum RouteStatus {
+public enum DeliveryRouteStatus {
     PENDING,      // 이동 대기
     IN_TRANSIT,   // 이동 중
     ARRIVED,      // 해당 허브 도착 완료
