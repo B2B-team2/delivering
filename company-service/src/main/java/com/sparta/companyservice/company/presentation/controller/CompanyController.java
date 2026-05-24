@@ -73,7 +73,8 @@ public class CompanyController {
     public ResponseEntity<ApiResponse<CompanyAddressDeleteResponse>> deleteAddress(
             @PathVariable UUID addressId) {
         // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
-        CompanyAddressDeleteResponse response = companyAddressService.deleteAddress(addressId, "system");
+        CompanyAddressDto resultDto = companyAddressService.deleteAddress(addressId, "system");
+        CompanyAddressDeleteResponse response = CompanyAddressDeleteResponse.of(resultDto.getAddressId(), resultDto.getDeletedAt());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

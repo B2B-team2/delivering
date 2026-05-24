@@ -7,7 +7,6 @@ import com.sparta.companyservice.company.application.dto.CompanyAddressUpdateCom
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
-import com.sparta.companyservice.company.presentation.dto.CompanyAddressDeleteResponse;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -58,13 +57,13 @@ public class CompanyAddressService {
     }
 
     @Transactional
-    public CompanyAddressDeleteResponse deleteAddress(UUID addressId, String deletedBy) {
+    public CompanyAddressDto deleteAddress(UUID addressId, String deletedBy) {
         CompanyDeliveryAddress address = companyDeliveryAddressRepository.findById(addressId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.ADDRESS_NOT_FOUND));
 
         address.softDelete(deletedBy);
 
-        return CompanyAddressDeleteResponse.of(address.getAddressId(), address.getDeletedAt());
+        return CompanyAddressDto.from(address);
     }
 
     @Transactional
