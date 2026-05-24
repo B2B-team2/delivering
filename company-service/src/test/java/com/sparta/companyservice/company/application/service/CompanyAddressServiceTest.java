@@ -160,7 +160,7 @@ class CompanyAddressServiceTest {
         when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.of(address));
 
         // when
-        CompanyAddressDeleteResponse result = companyAddressService.deleteAddress(addressId, "system");
+        CompanyAddressDto result = companyAddressService.deleteAddress(addressId, "system");
 
         // then
         assertThat(result.getAddressId()).isEqualTo(addressId);

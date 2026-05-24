@@ -1,7 +1,7 @@
 package com.sparta.companyservice.company.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sparta.common.handler.GlobalExceptionHandler;
+import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
@@ -10,6 +10,7 @@ import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
+import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
