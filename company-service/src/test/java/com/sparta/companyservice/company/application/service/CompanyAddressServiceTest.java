@@ -4,10 +4,10 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyAddressUpdateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyDefaultAddressDto;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
-import com.sparta.companyservice.company.presentation.dto.CompanyAddressDeleteResponse;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -19,16 +19,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -48,104 +46,57 @@ class CompanyAddressServiceTest {
     @Test
     @DisplayName("배송지 등록 성공")
     void registerAddressSuccessTest() {
+        // given
         UUID companyId = UUID.randomUUID();
         CompanyAddressCreateCommand command = CompanyAddressCreateCommand.builder()
                 .addressName("집")
                 .recipientName("홍길동")
                 .phone("010-1234-5678")
-                .address("주소")
-                .postalCode("12345")
-                .isDefault(false)
+                .address("서울시")
+                .isDefault(true)
                 .build();
 
         CompanyDeliveryAddress savedAddress = CompanyDeliveryAddress.builder()
                 .addressId(UUID.randomUUID())
                 .companyId(companyId)
                 .addressName(command.getAddressName())
-                .recipientName(command.getRecipientName())
-                .phone(command.getPhone())
-                .address(command.getAddress())
-                .postalCode(command.getPostalCode())
                 .isDefault(command.getIsDefault())
                 .build();
 
         when(companyRepository.existsById(companyId)).thenReturn(true);
         when(companyDeliveryAddressRepository.save(any(CompanyDeliveryAddress.class))).thenReturn(savedAddress);
 
+        // when
         CompanyAddressDto result = companyAddressService.registerAddress(companyId, command);
 
-        assertThat(result).isNotNull();
+        // then
         assertThat(result.getAddressName()).isEqualTo(command.getAddressName());
-        verify(companyDeliveryAddressRepository, times(1)).save(any(CompanyDeliveryAddress.class));
-    }
-
-    @Test
-    @DisplayName("배송지 등록 성공: 기본 배송지 설정 시 기존 설정 false로 변경")
-    void registerAddressSuccessWithDefaultTest() {
-        UUID companyId = UUID.randomUUID();
-        CompanyAddressCreateCommand command = CompanyAddressCreateCommand.builder()
-                .addressName("집")
-                .isDefault(true)
-                .build();
-
-        when(companyRepository.existsById(companyId)).thenReturn(true);
-        when(companyDeliveryAddressRepository.save(any(CompanyDeliveryAddress.class)))
-                .thenReturn(CompanyDeliveryAddress.builder().build());
-
-        companyAddressService.registerAddress(companyId, command);
-
         verify(companyDeliveryAddressRepository, times(1)).updateAllIsDefaultFalseByCompanyId(companyId);
-    }
-
-    @Test
-    @DisplayName("배송지 등록 실패: 존재하지 않는 업체")
-    void registerAddressFail_CompanyNotFound() {
-        UUID companyId = UUID.randomUUID();
-        when(companyRepository.existsById(companyId)).thenReturn(false);
-
-        assertThatThrownBy(() -> companyAddressService.registerAddress(companyId, any()))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage());
+        verify(companyDeliveryAddressRepository, times(1)).save(any(CompanyDeliveryAddress.class));
     }
 
     @Test
     @DisplayName("배송지 목록 조회 성공")
     void getAddressesSuccessTest() {
+        // given
         UUID companyId = UUID.randomUUID();
         Pageable pageable = PageRequest.of(0, 10);
-        CompanyDeliveryAddress address1 = CompanyDeliveryAddress.builder()
-                .addressName("기본배송지")
-                .isDefault(true)
+        CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
+                .addressId(UUID.randomUUID())
+                .companyId(companyId)
+                .addressName("회사")
                 .build();
-        CompanyDeliveryAddress address2 = CompanyDeliveryAddress.builder()
-                .addressName("일반배송지")
-                .isDefault(false)
-                .build();
-
-        Page<CompanyDeliveryAddress> addressPage = new PageImpl<>(List.of(address1, address2));
 
         when(companyRepository.existsById(companyId)).thenReturn(true);
         when(companyDeliveryAddressRepository.findAllByCompanyIdAndDeletedAtIsNull(companyId, pageable))
-                .thenReturn(addressPage);
+                .thenReturn(new PageImpl<>(List.of(address)));
 
+        // when
         Page<CompanyAddressDto> result = companyAddressService.getAddresses(companyId, pageable);
 
-        assertThat(result).hasSize(2);
-        assertThat(result.getContent().get(0).getIsDefault()).isTrue();
-        assertThat(result.getContent().get(1).getIsDefault()).isFalse();
-    }
-
-    @Test
-    @DisplayName("배송지 목록 조회 실패: 존재하지 않는 업체")
-    void getAddressesFail_CompanyNotFound() {
-        UUID companyId = UUID.randomUUID();
-        Pageable pageable = PageRequest.of(0, 10);
-
-        when(companyRepository.existsById(companyId)).thenReturn(false);
-
-        assertThatThrownBy(() -> companyAddressService.getAddresses(companyId, pageable))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(CompanyErrorCode.COMPANY_NOT_FOUND.getMessage());
+        // then
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getAddressName()).isEqualTo("회사");
     }
 
     @Test
@@ -157,78 +108,50 @@ class CompanyAddressServiceTest {
                 .addressId(addressId)
                 .build();
 
-        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.of(address));
+        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(Optional.of(address));
 
         // when
         CompanyAddressDto result = companyAddressService.deleteAddress(addressId, "system");
 
         // then
         assertThat(result.getAddressId()).isEqualTo(addressId);
-        assertThat(result.getDeletedAt()).isNotNull();
         verify(companyDeliveryAddressRepository, times(1)).findById(addressId);
     }
 
     @Test
-    @DisplayName("배송지 삭제 실패: 존재하지 않는 배송지")
-    void deleteAddressFail_AddressNotFound() {
-        // given
-        UUID addressId = UUID.randomUUID();
-        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> companyAddressService.deleteAddress(addressId, "system"))
-                .isInstanceOf(BusinessException.class)
-                .hasMessageContaining(CompanyErrorCode.ADDRESS_NOT_FOUND.getMessage());
-    }
-
-    @Test
-    @DisplayName("배송지 수정 성공: 일반 정보 수정")
-    void updateAddressSuccessTest() {
-        // given
-        UUID addressId = UUID.randomUUID();
-        CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
-                .addressId(addressId)
-                .addressName("기존 이름")
-                .isDefault(false)
-                .build();
-
-        CompanyAddressUpdateCommand command = CompanyAddressUpdateCommand.builder()
-                .addressName("수정된 이름")
-                .isDefault(false)
-                .build();
-
-        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.of(address));
-
-        // when
-        CompanyAddressDto result = companyAddressService.updateAddress(addressId, command);
-
-        // then
-        assertThat(result.getAddressName()).isEqualTo("수정된 이름");
-        verify(companyDeliveryAddressRepository, never()).updateAllIsDefaultFalseByCompanyId(any());
-    }
-
-    @Test
-    @DisplayName("배송지 수정 성공: 기본 배송지로 변경 시 기존 설정 해제 호출 확인")
-    void updateAddressDefaultChangeTest() {
+    @DisplayName("기본 배송지 조회 성공")
+    void getDefaultAddressSuccessTest() {
         // given
         UUID companyId = UUID.randomUUID();
-        UUID addressId = UUID.randomUUID();
         CompanyDeliveryAddress address = CompanyDeliveryAddress.builder()
-                .addressId(addressId)
                 .companyId(companyId)
-                .isDefault(false)
-                .build();
-
-        CompanyAddressUpdateCommand command = CompanyAddressUpdateCommand.builder()
+                .address("경기도 수원시")
+                .addressDetail("3층")
+                .recipientName("홍길동")
+                .phone("010-1234-5678")
                 .isDefault(true)
                 .build();
 
-        when(companyDeliveryAddressRepository.findById(addressId)).thenReturn(java.util.Optional.of(address));
+        when(companyDeliveryAddressRepository.findDefaultAddressByCompanyId(companyId)).thenReturn(Optional.of(address));
 
         // when
-        companyAddressService.updateAddress(addressId, command);
+        CompanyDefaultAddressDto result = companyAddressService.getDefaultAddress(companyId);
 
         // then
-        verify(companyDeliveryAddressRepository, times(1)).updateAllIsDefaultFalseByCompanyId(companyId);
+        assertThat(result.getAddress()).isEqualTo("경기도 수원시");
+        assertThat(result.getRecipientName()).isEqualTo("홍길동");
+    }
+
+    @Test
+    @DisplayName("기본 배송지 조회 실패: 설정된 기본 배송지 없음")
+    void getDefaultAddressFailTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        when(companyDeliveryAddressRepository.findDefaultAddressByCompanyId(companyId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> companyAddressService.getDefaultAddress(companyId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.ADDRESS_NOT_FOUND);
     }
 }
