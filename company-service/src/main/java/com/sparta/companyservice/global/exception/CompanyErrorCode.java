@@ -15,7 +15,8 @@ public enum CompanyErrorCode implements ErrorCode {
     ADDRESS_NOT_FOUND(HttpStatus.NOT_FOUND, "A001", "배송지 정보를 찾을 수 없습니다.", null),
     PRODUCT_NOT_FOUND(HttpStatus.NOT_FOUND, "P002", "상품을 찾을 수 없습니다.", null),
     INVALID_PRODUCT_STATUS(HttpStatus.BAD_REQUEST, "P003", "유효하지 않은 상품 상태입니다.", "status"),
-    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "P004", "카테고리를 찾을 수 없습니다.", null);
+    CATEGORY_NOT_FOUND(HttpStatus.NOT_FOUND, "P004", "카테고리를 찾을 수 없습니다.", null),
+    DUPLICATE_CATEGORY_NAME(HttpStatus.CONFLICT, "P005", "이미 존재하는 카테고리 이름입니다.", "name");
 
     private final HttpStatus httpStatus;
     private final String code;
