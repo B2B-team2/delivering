@@ -18,17 +18,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
-import org.springframework.stereotype.Controller;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
-@Controller
+@RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1")
 public class DeliveryController {
@@ -36,53 +37,62 @@ public class DeliveryController {
     private final DeliveryService deliveryService;
 
     @GetMapping("/deliveries")
-    public ApiResponse<PageResponse<DeliverySearchResponse.DeliveryResponseDto>> searchDeliveries(@PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
+    public ResponseEntity<ApiResponse<PageResponse<DeliverySearchResponse.DeliveryResponseDto>>> searchDeliveries(
+            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
         Page<DeliverySearchResponse.DeliveryResponseDto> deliveryPage = deliveryService.searchDeliveries(pageable);
         PageResponse<DeliverySearchResponse.DeliveryResponseDto> response = DeliverySearchResponse.of(deliveryPage);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/deliveries/{delivery_id}")
-    public ApiResponse<DeliveryDetailResponse> getDeliveryDetail(@PathVariable("delivery_id") UUID deliveryId) {
+    public ResponseEntity<ApiResponse<DeliveryDetailResponse>> getDeliveryDetail(
+            @PathVariable("delivery_id") UUID deliveryId) {
         DeliveryDetailResponse response = deliveryService.getDeliveryDetail(deliveryId);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/delivery-addresses/{delivery_id}/{address_id}")
-    public ApiResponse<DeliveryAddressResponse> getDeliveryAddress(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("address_id") UUID addressId) {
+    public ResponseEntity<ApiResponse<DeliveryAddressResponse>> getDeliveryAddress(
+            @PathVariable("delivery_id") UUID deliveryId,
+            @PathVariable("address_id") UUID addressId) {
         DeliveryAddressResponse response = deliveryService.getDeliveryAddress(deliveryId, addressId);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/deliveries/tracking/{tracking_number}")
-    public ApiResponse<DeliveryTrackingResponse> getDeliveryTracking(@PathVariable("tracking_number") String trackingNumber) {
+    public ResponseEntity<ApiResponse<DeliveryTrackingResponse>> getDeliveryTracking(
+            @PathVariable("tracking_number") String trackingNumber) {
         DeliveryTrackingResponse response = deliveryService.trackDelivery(trackingNumber);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/deliveries/{delivery_id}/status")
-    public ApiResponse<DeliveryStatusUpdateResponse> getDeliveryStatus(@PathVariable("delivery_id") UUID deliveryId, @RequestBody DeliveryStatusUpdateRequest request) throws JsonProcessingException {
+    public ResponseEntity<ApiResponse<DeliveryStatusUpdateResponse>> getDeliveryStatus(
+            @PathVariable("delivery_id") UUID deliveryId,
+            @RequestBody DeliveryStatusUpdateRequest request) throws JsonProcessingException {
         DeliveryStatusUpdateResponse response = deliveryService.updateDeliveryStatus(deliveryId, request);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
+
     @PutMapping("/deliveries/{deliveryId}/cancel")
-    public ApiResponse<DeliveryCancelResponse> cancelDelivery(
+    public ResponseEntity<ApiResponse<DeliveryCancelResponse>> cancelDelivery(
             @PathVariable("deliveryId") UUID deliveryId,
             @Valid @RequestBody DeliveryCancelRequest request) {
         DeliveryCancelResponse response = deliveryService.cancelDelivery(deliveryId, request);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/start/{trackingNumber}")
-    public ApiResponse<DeliveryStatusResponse> startDelivery(@PathVariable("trackingNumber") String trackingNumber) {
+    public ResponseEntity<ApiResponse<DeliveryStatusResponse>> startDelivery(
+            @PathVariable("trackingNumber") String trackingNumber) {
         DeliveryStatusResponse response = deliveryService.startDelivery(trackingNumber);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/complete/{trackingNumber}")
-    public ApiResponse<DeliveryStatusResponse> completeDelivery(@PathVariable("trackingNumber") String trackingNumber) {
+    public ResponseEntity<ApiResponse<DeliveryStatusResponse>> completeDelivery(
+            @PathVariable("trackingNumber") String trackingNumber) {
         DeliveryStatusResponse response = deliveryService.completeDelivery(trackingNumber);
-        return ApiResponse.success(response);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
-
 }
