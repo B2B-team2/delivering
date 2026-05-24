@@ -18,5 +18,5 @@ public interface WarehouseInventoryRepository {
 
     List<WarehouseInventory> findByWarehouseId(UUID warehouseId);
 
-    void delete(WarehouseInventory inventory, String deletedBy);
+    void delete(WarehouseInventory inventory, UUID deletedBy);
 }

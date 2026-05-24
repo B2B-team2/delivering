@@ -77,7 +77,7 @@ public class WarehouseService {
 
     @Transactional
     @CacheEvict(value = "warehouses", allEntries = true)
-    public void deleteWarehouse(UUID warehouseId, String deletedBy) {
+    public void deleteWarehouse(UUID warehouseId, UUID deletedBy) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WAREHOUSE_NOT_FOUND));
         warehouse.softDelete(deletedBy);

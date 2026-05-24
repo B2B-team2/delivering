@@ -200,7 +200,7 @@ public class InventoryService {
     }
 
     @Transactional
-    public void deleteInventory(UUID inventoryId, String deletedBy) {
+    public void deleteInventory(UUID inventoryId, UUID deletedBy) {
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
         inventory.softDelete(deletedBy);

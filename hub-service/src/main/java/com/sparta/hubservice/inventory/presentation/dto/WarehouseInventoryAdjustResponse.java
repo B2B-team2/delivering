@@ -22,7 +22,7 @@ public class WarehouseInventoryAdjustResponse {
     private final Long version;
     private final UUID historyId;
     private final LocalDateTime updatedAt;
-    private final String updatedBy;
+    private final UUID updatedBy;
 
     public static WarehouseInventoryAdjustResponse from(WarehouseInventoryAdjustDto dto) {
         return WarehouseInventoryAdjustResponse.builder()

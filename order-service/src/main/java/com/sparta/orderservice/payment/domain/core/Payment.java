@@ -62,7 +62,7 @@ public class Payment extends BaseEntity {
     /**
      * 결제 취소/환불: COMPLETED → CANCELLED
      */
-    public void cancel(String cancelledBy) {
+    public void cancel(UUID cancelledBy) {
         this.status = PaymentStatus.CANCELLED;
         this.softDelete(cancelledBy);
     }
