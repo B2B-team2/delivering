@@ -19,9 +19,9 @@ public class HubDto {
     private final String contactPhone;
     private final String status;
     private final LocalDateTime createdAt;
-    private final String createdBy;
+    private final UUID createdBy;
     private final LocalDateTime updatedAt;
-    private final String updatedBy;
+    private final UUID updatedBy;
 
     public static HubDto from(Hub hub) {
         return HubDto.builder()

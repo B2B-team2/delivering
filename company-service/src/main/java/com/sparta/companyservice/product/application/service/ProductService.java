@@ -80,11 +80,11 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDto deleteProduct(UUID productId) {
+    public ProductDto deleteProduct(UUID productId, UUID userId) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_NOT_FOUND));
 
-        product.softDelete("system");
+        product.softDelete(userId);
         return ProductDto.from(product);
     }
 

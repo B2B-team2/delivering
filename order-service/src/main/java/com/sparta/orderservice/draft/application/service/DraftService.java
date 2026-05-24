@@ -68,7 +68,7 @@ public class DraftService {
     public void deleteDraft(UUID draftId, UUID userId) {
         Draft draft = findDraftOrThrow(draftId);
         checkOwnership(draft, userId);
-        draft.delete(userId.toString());
+        draft.delete(userId);
     }
 
     // 임시주문으로 주문 생성

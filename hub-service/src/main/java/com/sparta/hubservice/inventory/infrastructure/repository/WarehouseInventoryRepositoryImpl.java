@@ -41,7 +41,7 @@ public class WarehouseInventoryRepositoryImpl implements WarehouseInventoryRepos
     }
 
     @Override
-    public void delete(WarehouseInventory inventory, String deletedBy) {
+    public void delete(WarehouseInventory inventory, UUID deletedBy) {
         inventory.softDelete(deletedBy);
         warehouseInventoryJpaRepository.save(inventory);
     }
