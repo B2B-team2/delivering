@@ -30,4 +30,9 @@ public class OrderClaimRepositoryImpl implements OrderClaimRepository {
     public Page<OrderClaim> findAll(Pageable pageable) {
         return orderClaimJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
+
+    @Override
+    public long count() {
+        return orderClaimJpaRepository.count();
+    }
 }

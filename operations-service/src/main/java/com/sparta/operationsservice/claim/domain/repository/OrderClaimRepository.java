@@ -11,4 +11,5 @@ public interface OrderClaimRepository {
     OrderClaim save(OrderClaim claim);
     Optional<OrderClaim> findById(UUID claimId);
     Page<OrderClaim> findAll(Pageable pageable);
+    long count();
 }

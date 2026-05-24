@@ -13,7 +13,7 @@ CREATE TABLE p_order_claims (
     
     -- BaseEntity 필드
     created_at TIMESTAMP NOT NULL,
-    created_by VARCHAR(100) NOT NULL,
+    created_by VARCHAR(100),
     updated_at TIMESTAMP,
     updated_by VARCHAR(100),
     deleted_at TIMESTAMP,
