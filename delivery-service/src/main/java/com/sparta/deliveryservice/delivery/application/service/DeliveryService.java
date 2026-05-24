@@ -5,10 +5,10 @@ import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
-import com.sparta.deliveryservice.delivery.infrastructure.client.HubServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryHubServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
-import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.HubRouteSearchRequest;
-import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.HubRouteSearchResponse;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryHubRouteSearchResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryCancelRequest;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryManagerUpdateRequest;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryStatusUpdateRequest;
@@ -48,7 +48,7 @@ public class DeliveryService {
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteRepository deliveryRouteRepository;
     private final DeliveryLogRepository deliveryLogRepository;
-    private final HubServiceClient hubServiceClient;
+    private final DeliveryHubServiceClient DeliveryHubServiceClient;
     private final ObjectMapper objectMapper;
 
     @Transactional
@@ -78,19 +78,19 @@ public class DeliveryService {
 
             Delivery savedDelivery = deliveryRepository.save(delivery);
 
-            HubRouteSearchRequest hubRequest = HubRouteSearchRequest.builder()
+            DeliveryHubRouteSearchRequest hubRequest = DeliveryHubRouteSearchRequest.builder()
                     .fromHubId(request.getDepartureHubId())
                     .toHubId(request.getDestinationHubId())
                     .build();
 
-            HubRouteSearchResponse hubClientResponse = hubServiceClient.searchHubRoutes(hubRequest);
+            DeliveryHubRouteSearchResponse hubClientResponse = DeliveryHubServiceClient.searchHubRoutes(hubRequest);
 
             List<DeliveryRoute> deliveryRoutes = new ArrayList<>();
             String departureHubName = "출발 센터";
             String destinationHubName = "도착 센터";
 
             if ( hubClientResponse != null &&  hubClientResponse.getRoutes() != null) {
-                for (HubRouteSearchResponse.HubRouteDto dto :  hubClientResponse.getRoutes()) {
+                for (DeliveryHubRouteSearchResponse.HubRouteDto dto :  hubClientResponse.getRoutes()) {
                     if (dto.getSequence() == 1) {
                         departureHubName = dto.getFromHubName();
                     }

@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.deliveryLog.infrastructure.persistence;
+package com.sparta.deliveryservice.deliveryLog.infrastructure.repository;
 
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;

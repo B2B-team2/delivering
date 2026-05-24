@@ -12,7 +12,7 @@ import java.util.UUID;
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class HubRouteSearchRequest {
+public class DeliveryHubRouteSearchRequest {
     private UUID fromHubId;
     private UUID toHubId;
 }

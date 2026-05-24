@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.delivery.infrastructure.persistence;
+package com.sparta.deliveryservice.delivery.infrastructure.repository;
 
 
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
