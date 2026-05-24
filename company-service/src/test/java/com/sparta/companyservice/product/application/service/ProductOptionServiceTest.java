@@ -3,6 +3,7 @@ package com.sparta.companyservice.product.application.service;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import com.sparta.companyservice.product.application.dto.ProductOptionCreateCommand;
+import com.sparta.companyservice.product.application.dto.ProductOptionDetailDto;
 import com.sparta.companyservice.product.application.dto.ProductOptionDto;
 import com.sparta.companyservice.product.application.dto.ProductOptionUpdateCommand;
 import com.sparta.companyservice.product.domain.core.Product;
@@ -23,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -50,7 +52,11 @@ class ProductOptionServiceTest {
     void createProductOptionSuccessTest() {
         // given
         UUID productId = UUID.randomUUID();
-        Product product = Product.builder().productId(productId).build();
+        Product product = Product.builder()
+                .productId(productId)
+                .companyId(UUID.randomUUID())
+                .price(BigDecimal.ZERO)
+                .build();
         ProductOptionCreateCommand command = ProductOptionCreateCommand.builder()
                 .productId(productId)
                 .optionsName("블랙/256GB")
@@ -85,7 +91,11 @@ class ProductOptionServiceTest {
     void getProductOptionsSuccessTest() {
         // given
         Pageable pageable = PageRequest.of(0, 10);
-        Product product = Product.builder().productId(UUID.randomUUID()).build();
+        Product product = Product.builder()
+                .productId(UUID.randomUUID())
+                .companyId(UUID.randomUUID())
+                .price(BigDecimal.ZERO)
+                .build();
         ProductOption option = ProductOption.builder()
                 .productOptionId(UUID.randomUUID())
                 .product(product)
@@ -109,7 +119,11 @@ class ProductOptionServiceTest {
     void updateProductOptionSuccessTest() {
         // given
         UUID optionId = UUID.randomUUID();
-        Product product = Product.builder().productId(UUID.randomUUID()).build();
+        Product product = Product.builder()
+                .productId(UUID.randomUUID())
+                .companyId(UUID.randomUUID())
+                .price(BigDecimal.ZERO)
+                .build();
         ProductOption option = ProductOption.builder()
                 .productOptionId(optionId)
                 .product(product)
@@ -139,7 +153,11 @@ class ProductOptionServiceTest {
     void deleteProductOptionSuccessTest() {
         // given
         UUID optionId = UUID.randomUUID();
-        Product product = Product.builder().productId(UUID.randomUUID()).build();
+        Product product = Product.builder()
+                .productId(UUID.randomUUID())
+                .companyId(UUID.randomUUID())
+                .price(BigDecimal.ZERO)
+                .build();
         ProductOption option = ProductOption.builder()
                 .productOptionId(optionId)
                 .product(product)
@@ -167,5 +185,36 @@ class ProductOptionServiceTest {
         assertThatThrownBy(() -> productOptionService.getProductOption(optionId))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.PRODUCT_OPTION_NOT_FOUND.getMessage());
+    }
+
+    @Test
+    @DisplayName("상품 옵션 상세 정보 조회 성공: 상품 가격 + 옵션 추가 금액이 합산되는가?")
+    void getProductOptionDetailsSuccessTest() {
+        // given
+        UUID productId = UUID.randomUUID();
+        UUID companyId = UUID.randomUUID();
+        Product product = Product.builder()
+                .productId(productId)
+                .companyId(companyId)
+                .price(BigDecimal.valueOf(10000))
+                .build();
+
+        UUID optionId = UUID.randomUUID();
+        ProductOption option = ProductOption.builder()
+                .productOptionId(optionId)
+                .product(product)
+                .extraPrice(BigDecimal.valueOf(2000))
+                .build();
+
+        when(productOptionRepository.findAllByIdsAndDeletedAtIsNull(List.of(optionId))).thenReturn(List.of(option));
+
+        // when
+        Map<UUID, ProductOptionDetailDto> result = productOptionService.getProductOptionDetails(List.of(optionId));
+
+        // then
+        assertThat(result).containsKey(optionId);
+        ProductOptionDetailDto dto = result.get(optionId);
+        assertThat(dto.getCompanyId()).isEqualTo(companyId);
+        assertThat(dto.getUnitPrice()).isEqualByComparingTo(BigDecimal.valueOf(12000));
     }
 }
