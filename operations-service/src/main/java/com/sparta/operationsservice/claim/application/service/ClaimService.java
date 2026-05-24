@@ -26,6 +26,10 @@ public class ClaimService {
 
     @Transactional
     public ClaimDto createClaim(ClaimCreateCommand command) {
+        if (orderClaimRepository.existsByOrderItemId(command.getOrderItemId())) {
+            throw new BusinessException(OperationErrorCode.DUPLICATE_CLAIM);
+        }
+
         OrderClaim claim = OrderClaim.builder()
                 .orderItemId(command.getOrderItemId())
                 .claimType(ClaimType.valueOf(command.getClaimType()))

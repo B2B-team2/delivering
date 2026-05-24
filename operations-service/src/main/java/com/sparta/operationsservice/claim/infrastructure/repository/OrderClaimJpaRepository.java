@@ -11,4 +11,5 @@ import java.util.UUID;
 public interface OrderClaimJpaRepository extends JpaRepository<OrderClaim, UUID> {
     Optional<OrderClaim> findByClaimIdAndDeletedAtIsNull(UUID claimId);
     Page<OrderClaim> findAllByDeletedAtIsNull(Pageable pageable);
+    boolean existsByOrderItemIdAndDeletedAtIsNull(UUID orderItemId);
 }

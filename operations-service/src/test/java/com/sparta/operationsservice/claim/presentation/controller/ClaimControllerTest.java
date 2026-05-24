@@ -1,6 +1,7 @@
 package com.sparta.operationsservice.claim.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.common.handler.GlobalExceptionHandler;
 import com.sparta.operationsservice.claim.application.dto.ClaimCreateCommand;
 import com.sparta.operationsservice.claim.application.dto.ClaimDto;
@@ -8,6 +9,7 @@ import com.sparta.operationsservice.claim.application.dto.ClaimStatusUpdateComma
 import com.sparta.operationsservice.claim.application.service.ClaimService;
 import com.sparta.operationsservice.claim.presentation.dto.ClaimCreateRequest;
 import com.sparta.operationsservice.claim.presentation.dto.ClaimStatusUpdateRequest;
+import com.sparta.operationsservice.global.exception.OperationErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -77,6 +79,30 @@ class ClaimControllerTest {
                 .andExpect(jsonPath("$.status").value(201))
                 .andExpect(jsonPath("$.message").value("CREATED"))
                 .andExpect(jsonPath("$.data.reason").value(request.getReason()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("API 응답 규격 검증: 중복된 orderItemId로 생성 요청 시 409 Conflict 응답이 반환되는가?")
+    void createClaimDuplicateErrorResponseTest() throws Exception {
+        // given
+        ClaimCreateRequest request = ClaimCreateRequest.builder()
+                .orderItemId(UUID.randomUUID())
+                .claimType("RETURN")
+                .reason("Duplicate reason")
+                .build();
+
+        when(claimService.createClaim(any(ClaimCreateCommand.class)))
+                .thenThrow(new BusinessException(OperationErrorCode.DUPLICATE_CLAIM));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/claims")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.message").value("DUPLICATE_CLAIM"));
     }
 
     @Test

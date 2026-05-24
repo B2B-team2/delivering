@@ -28,6 +28,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +62,7 @@ class ClaimServiceTest {
                 .status(ClaimStatus.REQUESTED)
                 .build();
 
+        when(orderClaimRepository.existsByOrderItemId(command.getOrderItemId())).thenReturn(false);
         when(orderClaimRepository.save(any(OrderClaim.class))).thenReturn(savedClaim);
 
         // when
@@ -69,7 +71,30 @@ class ClaimServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result.getReason()).isEqualTo(command.getReason());
+        verify(orderClaimRepository, times(1)).existsByOrderItemId(command.getOrderItemId());
         verify(orderClaimRepository, times(1)).save(any(OrderClaim.class));
+    }
+
+    @Test
+    @DisplayName("클레임 생성 실패: 이미 존재하는 orderItemId로 요청 시 DUPLICATE_CLAIM 예외가 발생하는가?")
+    void createClaimDuplicateOrderItemTest() {
+        // given
+        UUID duplicateId = UUID.randomUUID();
+        ClaimCreateCommand command = ClaimCreateCommand.builder()
+                .orderItemId(duplicateId)
+                .claimType("RETURN")
+                .reason("Test reason")
+                .build();
+
+        when(orderClaimRepository.existsByOrderItemId(duplicateId)).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> claimService.createClaim(command))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", OperationErrorCode.DUPLICATE_CLAIM);
+
+        verify(orderClaimRepository, times(1)).existsByOrderItemId(duplicateId);
+        verify(orderClaimRepository, never()).save(any(OrderClaim.class));
     }
 
     @Test

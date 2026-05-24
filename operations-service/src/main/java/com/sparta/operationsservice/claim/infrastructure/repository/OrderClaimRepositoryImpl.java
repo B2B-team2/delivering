@@ -35,4 +35,9 @@ public class OrderClaimRepositoryImpl implements OrderClaimRepository {
     public long count() {
         return orderClaimJpaRepository.count();
     }
+
+    @Override
+    public boolean existsByOrderItemId(UUID orderItemId) {
+        return orderClaimJpaRepository.existsByOrderItemIdAndDeletedAtIsNull(orderItemId);
+    }
 }
