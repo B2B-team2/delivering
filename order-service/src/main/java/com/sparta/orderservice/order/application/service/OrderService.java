@@ -106,8 +106,8 @@ public class OrderService {
     public void cancelOrder(UUID orderId, UUID requesterId) {
         Order order = orderRepository.findOrderById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-        order.getCompanyOrders().forEach(co -> co.cancel(requesterId.toString()));
-        order.cancel(requesterId.toString());
+        order.getCompanyOrders().forEach(co -> co.cancel(requesterId));
+        order.cancel(requesterId);
     }
 
     // 서브 주문 상세 조회
@@ -118,7 +118,7 @@ public class OrderService {
     // 서브 주문 부분 취소
     @Transactional
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
-        findCompanyOrderOrThrow(companyOrderId).cancel(requesterId.toString());
+        findCompanyOrderOrThrow(companyOrderId).cancel(requesterId);
     }
 
     // 출고 준비 확인: ORDERED → PREPARING

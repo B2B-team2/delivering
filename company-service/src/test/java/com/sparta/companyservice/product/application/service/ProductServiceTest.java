@@ -264,7 +264,7 @@ class ProductServiceTest {
 
         when(productRepository.findById(productId)).thenReturn(Optional.of(product));
 
-        ProductDto result = productService.deleteProduct(productId);
+        ProductDto result = productService.deleteProduct(productId, UUID.randomUUID());
 
         assertThat(result).isNotNull();
         assertThat(product.getDeletedAt()).isNotNull();
@@ -277,7 +277,7 @@ class ProductServiceTest {
         UUID productId = UUID.randomUUID();
         when(productRepository.findById(productId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> productService.deleteProduct(productId))
+        assertThatThrownBy(() -> productService.deleteProduct(productId, UUID.fromString("00000000-0000-0000-0000-000000000000")))
                 .isInstanceOf(BusinessException.class)
                 .hasMessageContaining(CompanyErrorCode.PRODUCT_NOT_FOUND.getMessage());
     }

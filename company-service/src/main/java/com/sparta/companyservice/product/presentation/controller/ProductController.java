@@ -78,8 +78,11 @@ public class ProductController {
     }
 
     @DeleteMapping("/{productId}")
-    public ResponseEntity<ApiResponse<ProductDeleteResponse>> deleteProduct(@PathVariable UUID productId) {
-        ProductDto resultDto = productService.deleteProduct(productId);
+    public ResponseEntity<ApiResponse<ProductDeleteResponse>> deleteProduct(
+            @PathVariable UUID productId) {
+        // TODO: 추후 인증/인가 로직 도입 시 실제 사용자 ID로 교체 필요
+        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        ProductDto resultDto = productService.deleteProduct(productId, userId);
         return ResponseEntity.ok(ApiResponse.success(ProductDeleteResponse.from(resultDto.getProductId(), resultDto.getDeletedAt())));
     }
 }

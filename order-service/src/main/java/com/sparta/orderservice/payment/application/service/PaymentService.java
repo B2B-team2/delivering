@@ -53,7 +53,7 @@ public class PaymentService {
             throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
         }
 
-        payment.cancel(requesterId.toString());
+        payment.cancel(requesterId);
         return PaymentResult.from(payment);
     }
 
