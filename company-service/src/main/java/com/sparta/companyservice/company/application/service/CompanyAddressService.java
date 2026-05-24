@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyAddressUpdateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyDefaultAddressDto;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
@@ -86,5 +87,11 @@ public class CompanyAddressService {
         );
 
         return CompanyAddressDto.from(address);
+    }
+
+    public CompanyDefaultAddressDto getDefaultAddress(UUID companyId) {
+        CompanyDeliveryAddress address = companyDeliveryAddressRepository.findDefaultAddressByCompanyId(companyId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.ADDRESS_NOT_FOUND));
+        return CompanyDefaultAddressDto.from(address);
     }
 }

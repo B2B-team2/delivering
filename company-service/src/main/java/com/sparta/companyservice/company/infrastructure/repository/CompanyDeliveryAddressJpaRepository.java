@@ -19,4 +19,6 @@ public interface CompanyDeliveryAddressJpaRepository extends JpaRepository<Compa
     Page<CompanyDeliveryAddress> findAllByCompanyIdAndDeletedAtIsNull(UUID companyId, Pageable pageable);
 
     Optional<CompanyDeliveryAddress> findByAddressIdAndDeletedAtIsNull(UUID addressId);
+
+    Optional<CompanyDeliveryAddress> findByCompanyIdAndIsDefaultTrueAndDeletedAtIsNull(UUID companyId);
 }

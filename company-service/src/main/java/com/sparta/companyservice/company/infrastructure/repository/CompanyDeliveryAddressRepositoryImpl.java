@@ -27,6 +27,11 @@ public class CompanyDeliveryAddressRepositoryImpl implements CompanyDeliveryAddr
     }
 
     @Override
+    public Optional<CompanyDeliveryAddress> findDefaultAddressByCompanyId(UUID companyId) {
+        return deliveryAddressJpaRepository.findByCompanyIdAndIsDefaultTrueAndDeletedAtIsNull(companyId);
+    }
+
+    @Override
     public void delete(CompanyDeliveryAddress address) {
         deliveryAddressJpaRepository.delete(address);
     }

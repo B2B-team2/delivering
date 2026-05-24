@@ -10,6 +10,7 @@ import java.util.UUID;
 public interface CompanyDeliveryAddressRepository {
     CompanyDeliveryAddress save(CompanyDeliveryAddress address);
     Optional<CompanyDeliveryAddress> findById(UUID addressId);
+    Optional<CompanyDeliveryAddress> findDefaultAddressByCompanyId(UUID companyId);
     void delete(CompanyDeliveryAddress address);
     long count();
     void updateAllIsDefaultFalseByCompanyId(UUID companyId);
