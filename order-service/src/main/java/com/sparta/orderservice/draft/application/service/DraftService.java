@@ -7,13 +7,13 @@ import com.sparta.orderservice.draft.application.dto.DraftResult;
 import com.sparta.orderservice.draft.domain.core.Draft;
 import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
+import com.sparta.orderservice.draft.application.port.OrderCreatePort;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.ProductPort;
-import com.sparta.orderservice.order.application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 public class DraftService {
 
     private final DraftRepository draftRepository;
-    private final OrderService orderService;
+    private final OrderCreatePort orderCreatePort;
     private final ProductPort productPort;
     private final CompanyPort companyPort;
 
@@ -101,7 +101,7 @@ public class DraftService {
         DeliveryAddressInfo address = resolveDeliveryAddress(command);
 
         // 4. 주문 생성
-        OrderResult orderResult = orderService.createOrder(new CreateOrderCommand(
+        OrderResult orderResult = orderCreatePort.createOrder(new CreateOrderCommand(
                 command.receiverCompanyId(),
                 address.recipientName(),
                 address.phone(),
