@@ -72,7 +72,6 @@ public class DraftService {
     }
 
     // 임시주문으로 주문 생성
-    // TODO: Hub Service FeignClient 연동 (productOptionId → companyId, unitPrice 조회)
     @Transactional
     public OrderResult createOrderFromDraft(CreateOrderFromDraftCommand command) {
         // 1. 임시주문 항목 조회 및 소유권 검증
@@ -81,11 +80,15 @@ public class DraftService {
                 .peek(draft -> checkOwnership(draft, command.userId()))
                 .toList();
 
-        // TODO: Hub Service FeignClient로 productOptionId → (companyId, unitPrice) 조회
+        // TODO: Product Service FeignClient로 productOptionId → (companyId, unitPrice) 조회
 
         // TODO: companyId 기준으로 그룹핑 → CompanyOrderCommand 목록 생성
 
-        // TODO: requesterCompanyId 조회 (userId → companyId, 유저 서비스 연동 또는 헤더 전달)
+        // TODO: receiverCompanyId 주입 (X-Company-Id 헤더 또는 User Service 연동 확정 후 처리)
+
+        // TODO: Company Service FeignClient로 receiverCompanyId → 기본 배송지(is_default=true) 조회
+        //       → address, recipientName, phone 자동 세팅
+        //       직접 주문 생성(POST /api/v1/orders)은 바디에 직접 입력하는 방식으로 테스트
 
         throw new UnsupportedOperationException("Hub Service FeignClient 연동 후 구현 예정");
 

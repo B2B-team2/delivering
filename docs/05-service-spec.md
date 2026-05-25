@@ -36,7 +36,7 @@
 **관여 서비스**: Order Service → Hub Service → Delivery Service → Operations Service
 
 ```
-1. 임시 주문 (장바구니)
+1. 임시 주문
    - COMPANY_MANAGER가 POST /drafts 로 품목 담기
    - p_order_drafts에 저장
 
