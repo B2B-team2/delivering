@@ -11,6 +11,8 @@ import com.sparta.hubservice.hubroute.application.dto.RouteSearchResult;
 import com.sparta.hubservice.hubroute.domain.core.HubRoute;
 import com.sparta.hubservice.hubroute.domain.repository.HubRouteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class HubRouteService {
     private final HubReader hubReader;
 
     @Transactional
+    @CacheEvict(value = "hubRoutes", allEntries = true)
     public HubRouteDto createHubRoute(HubRouteCreateCommand command) {
         hubRouteRepository.findByFromHubIdAndToHubId(command.getFromHubId(), command.getToHubId())
                 .ifPresent(r -> { throw new BusinessException(ErrorCode.DUPLICATE_ROUTE); });
@@ -78,6 +81,7 @@ public class HubRouteService {
     }
 
     @Transactional
+    @CacheEvict(value = "hubRoutes", allEntries = true)
     public HubRouteDto updateHubRoute(UUID routeId, HubRouteUpdateCommand command) {
         HubRoute hubRoute = hubRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROUTE_NOT_FOUND));
@@ -87,6 +91,7 @@ public class HubRouteService {
     }
 
     @Transactional
+    @CacheEvict(value = "hubRoutes", allEntries = true)
     public void deleteHubRoute(UUID routeId, UUID deletedBy) {
         HubRoute hubRoute = hubRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROUTE_NOT_FOUND));
@@ -94,8 +99,7 @@ public class HubRouteService {
         hubRouteRepository.save(hubRoute);
     }
 
-    // TODO: Redis 연결 후 주석 해제
-    // @Cacheable(value = "hubRoutes", key = "#fromHubId + ':' + #toHubId")
+    @Cacheable(value = "hubRoutes", key = "#fromHubId + ':' + #toHubId")
     public RouteSearchResult findRoute(UUID fromHubId, UUID toHubId) {
         Map<UUID, Map<UUID, HubRoute>> routeMap = hubRouteRepository.findAll().stream()
                 .collect(Collectors.groupingBy(
