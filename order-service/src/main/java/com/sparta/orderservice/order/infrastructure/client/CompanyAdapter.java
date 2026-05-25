@@ -47,7 +47,7 @@ public class CompanyAdapter implements CompanyPort {
     }
 
     private void handleCompanyFeignException(String operation, FeignException e) {
-        log.warn("Company service error [{}]: status={}", operation, e.status());
+        log.error("Company service error [{}]: status={}", operation, e.status());
         throw new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
     }
 

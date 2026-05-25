@@ -91,7 +91,7 @@ public class HubStockAdapter implements HubStockPort {
     }
 
     private void handleHubFeignException(String operation, FeignException e) {
-        log.warn("Hub service error [{}]: status={}", operation, e.status());
+        log.error("Hub service error [{}]: status={}", operation, e.status());
         throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 
