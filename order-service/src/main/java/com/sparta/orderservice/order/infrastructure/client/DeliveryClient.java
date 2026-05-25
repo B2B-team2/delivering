@@ -12,6 +12,6 @@ import java.util.List;
 public interface DeliveryClient {
 
     // 배송 일괄 생성: CompanyOrder 목록을 한 번에 전송
-    @PostMapping("/internal/deliveries")
+    @PostMapping("/api/v1/internal/deliveries")
     List<DeliveryCreateResponse> createDeliveries(@RequestBody List<DeliveryCreateRequest> requests);
 }
