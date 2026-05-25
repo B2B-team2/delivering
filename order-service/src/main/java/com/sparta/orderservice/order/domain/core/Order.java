@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,11 +33,8 @@ public class Order extends BaseEntity {
     @Column(name = "order_id")
     private UUID orderId;
 
-    @Column(name = "requester_company_id", nullable = false)
-    private UUID requesterCompanyId;        // 요청(공급업체)
-
     @Column(name = "receiver_company_id", nullable = false)
-    private UUID receiverCompanyId;         // 수령업체
+    private UUID receiverCompanyId;         // 수령업체(주문자 COMPANY_MANAGER의 소속 업체)
 
     // 수령인 정보 스냅샷
     @Column(name = "recipient_name", nullable = false, length = 100)
@@ -71,11 +69,14 @@ public class Order extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;                            // 낙관적 락 — 동시 상태 전환 충돌 감지
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<CompanyOrder> companyOrders = new ArrayList<>();
 
     public static Order of(
-            UUID requesterCompanyId,
             UUID receiverCompanyId,
             String recipientName,
             String phone,
@@ -88,7 +89,6 @@ public class Order extends BaseEntity {
             BigDecimal finalPrice
     ) {
         Order order = new Order();
-        order.requesterCompanyId = requesterCompanyId;
         order.receiverCompanyId = receiverCompanyId;
         order.recipientName = recipientName;
         order.phone = phone;

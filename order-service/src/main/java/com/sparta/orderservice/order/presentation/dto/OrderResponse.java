@@ -10,7 +10,6 @@ import java.util.UUID;
 // GET /orders, GET /orders/{order_id} 응답
 public record OrderResponse(
         UUID orderId,
-        UUID requesterCompanyId,
         UUID receiverCompanyId,
         String recipientName,
         String phone,
@@ -47,7 +46,6 @@ public record OrderResponse(
 
         return new OrderResponse(
                 result.orderId(),
-                result.requesterCompanyId(),
                 result.receiverCompanyId(),
                 result.recipientName(),
                 result.phone(),
