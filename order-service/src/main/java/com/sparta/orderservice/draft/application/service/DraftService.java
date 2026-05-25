@@ -7,8 +7,13 @@ import com.sparta.orderservice.draft.application.dto.DraftResult;
 import com.sparta.orderservice.draft.domain.core.Draft;
 import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
+import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
+import com.sparta.orderservice.order.application.port.CompanyPort;
+import com.sparta.orderservice.order.application.port.ProductPort;
 import com.sparta.orderservice.order.application.service.OrderService;
+import com.sparta.orderservice.order.infrastructure.client.dto.DefaultDeliveryAddressResponse;
+import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +33,8 @@ public class DraftService {
 
     private final DraftRepository draftRepository;
     private final OrderService orderService;
+    private final ProductPort productPort;
+    private final CompanyPort companyPort;
 
     /**
      * 임시주문 항목 추가 (upsert)
@@ -77,28 +86,72 @@ public class DraftService {
         // 1. 임시주문 항목 조회 및 소유권 검증
         List<Draft> drafts = command.draftIds().stream()
                 .map(this::findDraftOrThrow)
-                .peek(draft -> checkOwnership(draft, command.userId()))
+                .toList();
+        drafts.forEach(draft -> checkOwnership(draft, command.userId()));
+
+        // 2. Product Service → productOptionId별 (companyId, unitPrice) 조회
+        List<UUID> productOptionIds = drafts.stream()
+                .map(Draft::getProductOptionId)
+                .toList();
+        // getProductOptionInfos()가 Map<UUID, ProductOptionInfoItem>을 직접 반환
+        Map<UUID, ProductOptionInfoItem> productInfoMap = productPort.getProductOptionInfos(productOptionIds);
+
+        // 3. companyId 기준 그룹핑 → CompanyOrderCommand 목록 생성
+        Map<UUID, List<Draft>> draftsByCompany = drafts.stream()
+                .collect(Collectors.groupingBy(
+                        draft -> productInfoMap.get(draft.getProductOptionId()).companyId()
+                ));
+
+        List<CreateOrderCommand.CompanyOrderCommand> companyOrderCommands = draftsByCompany.entrySet().stream()
+                .map(entry -> new CreateOrderCommand.CompanyOrderCommand(
+                        entry.getKey(),
+                        entry.getValue().stream()
+                                .map(draft -> new CreateOrderCommand.OrderItemCommand(
+                                        draft.getProductOptionId(),
+                                        draft.getQuantity(),
+                                        productInfoMap.get(draft.getProductOptionId()).unitPrice()
+                                ))
+                                .toList()
+                ))
                 .toList();
 
-        // TODO: Product Service FeignClient로 productOptionId → (companyId, unitPrice) 조회
+        // 4. 배송지 세팅: null이면 Company Service 기본 배송지(is_default=true) 자동 조회
+        // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
+        String address = command.address();
+        String recipientName = command.recipientName();
+        String phone = command.phone();
 
-        // TODO: companyId 기준으로 그룹핑 → CompanyOrderCommand 목록 생성
+        if (address == null || recipientName == null || phone == null) {
+            DefaultDeliveryAddressResponse defaultAddr =
+                    companyPort.getDefaultDeliveryAddress(command.receiverCompanyId());
+            if (address == null) {
+                // Company Service 응답을 order 저장 형식 JSON으로 변환
+                address = String.format(
+                        "{\"address\": \"%s\", \"address_detail\": \"%s\"}",
+                        defaultAddr.address(), defaultAddr.addressDetail()
+                );
+            }
+            if (recipientName == null) recipientName = defaultAddr.recipientName();
+            if (phone == null) phone = defaultAddr.phone();
+        }
 
-        // TODO: receiverCompanyId 주입 (X-Company-Id 헤더 또는 User Service 연동 확정 후 처리)
+        // 5. 주문 생성
+        CreateOrderCommand orderCommand = new CreateOrderCommand(
+                command.receiverCompanyId(),
+                recipientName,
+                phone,
+                command.slackId(),
+                address,
+                command.dueDate(),
+                command.requestMemo(),
+                companyOrderCommands
+        );
+        OrderResult orderResult = orderService.createOrder(orderCommand, command.userId());
 
-        // TODO: Company Service FeignClient로 receiverCompanyId → 기본 배송지(is_default=true) 조회
-        //       → address, recipientName, phone 자동 세팅
-        //       직접 주문 생성(POST /api/v1/orders)은 바디에 직접 입력하는 방식으로 테스트
+        // 6. 임시주문 항목 soft delete
+        drafts.forEach(draft -> draft.delete(command.userId()));
 
-        throw new UnsupportedOperationException("Hub Service FeignClient 연동 후 구현 예정");
-
-        // 주문 생성
-        // OrderResult orderResult = orderService.createOrder(new CreateOrderCommand(...), command.userId());
-
-        // 임시주문 항목 soft delete
-        // drafts.forEach(draft -> draft.delete(command.userId().toString()));
-
-        // return orderResult;
+        return orderResult;
     }
 
     private Draft findDraftOrThrow(UUID draftId) {
