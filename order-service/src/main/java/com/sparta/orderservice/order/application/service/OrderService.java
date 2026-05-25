@@ -64,7 +64,15 @@ public class OrderService {
 
         // 배송 일괄 생성: 공급업체 소속 허브(출발) → 수령업체 소속 허브(도착)
         // TODO) 배송 생성 실패 시 이미 완료된 reserveStock이 자동 보상되지 않음 -> hub & delivery Feign 연동 완성 후 Saga 도입 필요
-        deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+        Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+
+        // 배송 ID 할당 (OrderItem과 Delivery 간 추적을 위해 저장)
+        order.getCompanyOrders().forEach(co -> {
+            UUID deliveryId = deliveryMap.get(co.getCompanyOrderId());
+            if (deliveryId != null) {
+                co.getOrderItems().forEach(item -> item.assignDelivery(deliveryId));
+            }
+        });
 
         // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
         eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getTotalPrice()));
@@ -96,10 +104,9 @@ public class OrderService {
 
         validateOrderCancellable(order);
 
-        // 이미 CANCELLED/DELIVERED인 CompanyOrder는 건너뜀
+        // 이미 CANCELLED인 CompanyOrder는 건너뜀 (PENDING 상태면 SHIPPED/DELIVERED는 없음)
         order.getCompanyOrders().stream()
-                .filter(co -> co.getStatus() != CompanyOrderStatus.CANCELLED
-                        && co.getStatus() != CompanyOrderStatus.DELIVERED)
+                .filter(co -> co.getStatus() != CompanyOrderStatus.CANCELLED)
                 .forEach(co -> co.cancel(requesterId));
         order.cancel(requesterId);
 
@@ -129,6 +136,15 @@ public class OrderService {
 
         // 재고 예약 부분 취소 (companyOrderId 기준)
         hubStockPort.cancelCompanyStock(companyOrderId);
+
+        // 주문 상태 업데이트 (모든 서브 주문이 터미널 상태면 Order도 종료)
+        Order order = companyOrder.getOrder();
+        order.updateStatus(requesterId);
+
+        // 만약 전체 주문이 취소되었다면 (마지막 서브 주문 취소 시) -> 결제 취소 이벤트 발행
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            eventPublisher.publishEvent(new OrderCancelledEvent(order.getOrderId(), requesterId));
+        }
     }
 
     // 출고 준비 확인: ORDERED → PREPARING
@@ -172,14 +188,18 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.deliver();
-        companyOrder.getOrder().completeIfAllDelivered();
+        companyOrder.getOrder().updateStatus(null); // 배송 완료 시에는 삭제자 정보 없음
         return CompanyOrderDeliveredResult.from(companyOrder);
     }
 
     // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
     public boolean isCancellable(UUID orderId) {
-        Order order = orderRepository.findOrderById(orderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        return orderRepository.findOrderById(orderId)
+                .map(this::checkOrderCancellable)
+                .orElse(false);
+    }
+
+    private boolean checkOrderCancellable(Order order) {
         if (order.getStatus() != OrderStatus.PENDING) return false;
         return order.getCompanyOrders().stream()
                 .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
@@ -246,7 +266,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException(OrderErrorCode.ORDER_ALREADY_CANCELLED);
         }
-        if (order.getStatus() == OrderStatus.COMPLETED) {
+        if (!checkOrderCancellable(order)) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
     }

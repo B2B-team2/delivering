@@ -121,15 +121,25 @@ public class Order extends BaseEntity {
     }
 
     /**
-     * 모든 CompanyOrder가 완료(DELIVERED 또는 CANCELLED) 상태이면 Order → COMPLETED 전환
-     * anyMatch로 진행 중인 항목 발견 즉시 조기 종료
+     * 모든 CompanyOrder가 terminal(DELIVERED 또는 CANCELLED) 상태이면 Order 상태 업데이트
+     * - 하나라도 DELIVERED가 있으면 -> COMPLETED
+     * - 전체가 CANCELLED이면 -> CANCELLED & Soft Delete
      */
-    public void completeIfAllDelivered() {
-        boolean hasActiveCompanyOrder = this.companyOrders.stream()
+    public void updateStatus(UUID deletedBy) {
+        boolean hasActive = this.companyOrders.stream()
                 .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
                         && co.getStatus() != CompanyOrderStatus.CANCELLED);
-        if (!hasActiveCompanyOrder) {
+        if (hasActive) {
+            return;
+        }
+
+        boolean hasDelivered = this.companyOrders.stream()
+                .anyMatch(co -> co.getStatus() == CompanyOrderStatus.DELIVERED);
+
+        if (hasDelivered) {
             this.complete();
+        } else {
+            this.cancel(deletedBy);
         }
     }
 }
