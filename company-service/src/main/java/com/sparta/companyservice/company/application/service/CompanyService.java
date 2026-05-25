@@ -132,11 +132,11 @@ public class CompanyService {
     }
 
     @Transactional
-    public CompanyDto deleteCompany(UUID companyId, String username) {
+    public CompanyDto deleteCompany(UUID companyId, UUID userId) {
         Company company = companyRepository.findById(companyId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND));
 
-        company.softDelete(username);
+        company.softDelete(userId);
         return CompanyDto.from(company);
     }
 

@@ -1,5 +1,6 @@
 package com.sparta.deliveryservice.delivery.presentation.dto.request;
 
+import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
@@ -15,7 +16,7 @@ import lombok.NoArgsConstructor;
 public class DeliveryStatusUpdateRequest {
 
     @NotNull(message = "변경할 배송 상태값은 필수입니다.")
-    private String status;
+    private DeliveryStatus status;
 
     @NotBlank(message = "상태 변경 사유는 필수 입력값입니다.")
     private String reason;

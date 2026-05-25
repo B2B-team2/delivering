@@ -144,7 +144,7 @@ class CompanyServiceTest {
                 .companyId(UUID.randomUUID())
                 .businessNumber(command.getBusinessNumber())
                 .build());
-        deletedCompany.softDelete("user"); // soft delete
+        deletedCompany.softDelete(UUID.randomUUID()); // soft delete
 
         when(companyRepository.findByBusinessNumberAnyStatus(command.getBusinessNumber())).thenReturn(Optional.of(deletedCompany));
 
@@ -328,7 +328,7 @@ class CompanyServiceTest {
     void deleteCompanySuccessTest() {
         // given
         UUID companyId = UUID.randomUUID();
-        String username = "testUser";
+        UUID username = UUID.randomUUID();
         Company company = spy(Company.builder()
                 .companyId(companyId)
                 .companyName("Delete Target")
@@ -350,7 +350,7 @@ class CompanyServiceTest {
     void deleteCompanyNotFoundTest() {
         // given
         UUID companyId = UUID.randomUUID();
-        String username = "testUser";
+        UUID username = UUID.randomUUID();
         when(companyRepository.findById(companyId)).thenReturn(Optional.empty());
 
         // when & then

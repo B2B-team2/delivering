@@ -72,7 +72,9 @@ public class WarehouseController {
     public ResponseEntity<ApiResponse<Void>> deleteWarehouse(
             @PathVariable UUID warehouse_id,
             @RequestHeader(value = "X-User-Name", required = false, defaultValue = "system") String userName) {
-        warehouseService.deleteWarehouse(warehouse_id, userName);
+        // TODO: 추후 인증/인가 로직 도입 시 실제 사용자 ID로 교체 필요
+        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        warehouseService.deleteWarehouse(warehouse_id, userId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 }
