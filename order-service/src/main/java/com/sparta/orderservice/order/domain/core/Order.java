@@ -110,7 +110,7 @@ public class Order extends BaseEntity {
         this.status = OrderStatus.COMPLETED;
     }
 
-    public void cancel(String deletedBy) {
+    public void cancel(UUID deletedBy) {
         this.status = OrderStatus.CANCELLED;
         this.softDelete(deletedBy);
     }

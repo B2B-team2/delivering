@@ -13,14 +13,11 @@ import java.util.UUID;
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class DeliveryAddressResponse {
-
     private UUID addressId;
     private UUID companyId;
-    private String addressName;
     private String recipientName;
     private String phone;
     private String address;
     private String addressDetail;
     private String postalCode;
-    private Boolean isDefault;
 }

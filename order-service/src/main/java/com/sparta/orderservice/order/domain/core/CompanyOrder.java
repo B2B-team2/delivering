@@ -80,7 +80,7 @@ public class CompanyOrder extends BaseEntity {
         this.status = CompanyOrderStatus.DELIVERED;
     }
 
-    public void cancel(String deletedBy) {
+    public void cancel(UUID deletedBy) {
         this.status = CompanyOrderStatus.CANCELLED;
         this.softDelete(deletedBy);
     }

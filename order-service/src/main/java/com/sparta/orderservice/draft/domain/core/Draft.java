@@ -64,7 +64,7 @@ public class Draft extends BaseEntity {
         applyQuantity(quantity);
     }
 
-    public void delete(String deletedBy) {
+    public void delete(UUID deletedBy) {
         this.softDelete(deletedBy);
     }
 
