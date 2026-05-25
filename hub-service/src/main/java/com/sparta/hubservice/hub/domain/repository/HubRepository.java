@@ -22,5 +22,5 @@ public interface HubRepository {
 
     Page<Hub> search(HubType hubType, HubStatus status, String keyword, Pageable pageable);
 
-    void delete(Hub hub, String deletedBy);
+    void delete(Hub hub, UUID deletedBy);
 }

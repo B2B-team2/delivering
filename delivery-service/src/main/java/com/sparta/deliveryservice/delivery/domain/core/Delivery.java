@@ -1,7 +1,9 @@
 package com.sparta.deliveryservice.delivery.domain.core;
 
 import com.sparta.common.entity.BaseEntity;
+import com.sparta.deliveryservice.delivery.infrastructure.converter.DeliveryAddressConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -33,6 +35,9 @@ public class Delivery extends BaseEntity {
     @Column(name = "company_order_id", nullable = false)
     private UUID companyOrderId;
 
+    @Column(name = "company_receive_id", nullable = false)
+    private UUID companyReceiveId;
+
     @Column(name = "tracking_number", length = 100)
     private String trackingNumber;
 
@@ -49,11 +54,24 @@ public class Delivery extends BaseEntity {
     @Column(name = "destination_hub_id", nullable = false)
     private UUID destinationHubId;
 
+    @Convert(converter = DeliveryAddressConverter.class)
     @Column(name = "delivery_address", nullable = false, length = 255)
-    private String deliveryAddress;
+    private DeliveryAddress deliveryAddress;
 
     @Column(name = "recipient_name", nullable = false, length = 100)
     private String recipientName;
+
+    @Column(name = "manager_name", nullable = false, length = 100)
+    private String managerName;
+
+    @Column(name = "manager_phone", nullable = false, length = 20)
+    private String managerPhone;
+
+    @Column(name = "phone", nullable = false, length = 20)
+    private String phone;
+
+    @Column(name = "postal_code", nullable = false, length = 5)
+    private String postalCode;
 
     @Column(name = "recipient_slack_id", length = 100)
     private String recipientSlackId;
@@ -71,11 +89,12 @@ public class Delivery extends BaseEntity {
     private LocalDateTime completedAt;
 
     @Builder
-    public Delivery(UUID companyOrderId, String trackingNumber, DeliveryStatus status, String memo,
-                    UUID departureHubId, UUID destinationHubId, String deliveryAddress,
-                    String recipientName, String recipientSlackId, UUID deliveryManagerId,
+    public Delivery(UUID companyOrderId, UUID companyReceiveId, String trackingNumber, DeliveryStatus status, String memo,
+                    UUID departureHubId, UUID destinationHubId, DeliveryAddress  deliveryAddress,
+                    String recipientName, String managerName, String managerPhone, String phone, String postalCode, String recipientSlackId, UUID deliveryManagerId,
                     LocalDateTime finalDispatchDeadlineAt) {
         this.companyOrderId = companyOrderId;
+        this.companyReceiveId = companyReceiveId;
         this.trackingNumber = trackingNumber;
         this.status = (status != null) ? status : DeliveryStatus.PENDING;
         this.memo = memo;
@@ -83,23 +102,33 @@ public class Delivery extends BaseEntity {
         this.destinationHubId = destinationHubId;
         this.deliveryAddress = deliveryAddress;
         this.recipientName = recipientName;
+        this.phone = phone;
+        this.postalCode = postalCode;
         this.recipientSlackId = recipientSlackId;
         this.deliveryManagerId = deliveryManagerId;
+        this.managerName = managerName;
+        this.managerPhone = managerPhone;
         this.finalDispatchDeadlineAt = finalDispatchDeadlineAt;
     }
 
-    public void updateDelivery(UUID deliveryManagerId, String memo, String deliveryAddress,
-                               String recipientName, String recipientSlackId, LocalDateTime finalDispatchDeadlineAt) {
+    public void updateDelivery(UUID deliveryManagerId, String memo, DeliveryAddress deliveryAddress,
+                               String recipientName, String phone, String postalCode, String recipientSlackId, LocalDateTime finalDispatchDeadlineAt) {
         this.deliveryManagerId = deliveryManagerId;
         this.memo = memo;
         this.deliveryAddress = deliveryAddress;
         this.recipientName = recipientName;
+        this.phone = phone;
+        this.postalCode = postalCode;
         this.recipientSlackId = recipientSlackId;
         this.finalDispatchDeadlineAt = finalDispatchDeadlineAt;
     }
 
     public void updateStatus(DeliveryStatus status) {
         this.status = status;
+    }
+
+    public void updateDeliveryManager(UUID deliveryManagerId) {
+        this.deliveryManagerId = deliveryManagerId;
     }
 
     public void startDelivery(String trackingNumber) {

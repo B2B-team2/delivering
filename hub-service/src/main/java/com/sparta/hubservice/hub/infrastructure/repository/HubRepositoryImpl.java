@@ -55,7 +55,7 @@ public class HubRepositoryImpl implements HubRepository {
     }
 
     @Override
-    public void delete(Hub hub, String deletedBy) {
+    public void delete(Hub hub, UUID deletedBy) {
         hub.softDelete(deletedBy);
         hubJpaRepository.save(hub);
     }

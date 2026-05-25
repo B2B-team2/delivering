@@ -18,5 +18,7 @@ public interface PaymentRepository {
 
     Optional<Payment> findPaymentById(UUID paymentId);
 
+    Optional<Payment> findPaymentByOrderId(UUID orderId);
+
     Page<Payment> findAllPayments(Pageable pageable);
 }

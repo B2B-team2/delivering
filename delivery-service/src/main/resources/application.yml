@@ -3,14 +3,20 @@ spring:
     name: delivery-service
   config:
     import: optional:configserver:http://localhost:8888
-
   datasource:
-    url: jdbc:postgresql://localhost:5432/delivering?currentSchema=DELIVERY
+    url: jdbc:postgresql://localhost:5432/delivering?currentSchema=delivery-db
     username: postgres
     password: password
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    properties:
+    driver-class-name: org.postgresql.Driver
+
+    jpa:
       hibernate:
-        default_schema: USER
+        ddl-auto: update
+      properties:
+        hibernate:
+          dialect: org.hibernate.spatial.dialect.postgis.PostgisDialect
+          show_sql: true
+          format_sql: true
+
+    flyway:
+      enabled: true

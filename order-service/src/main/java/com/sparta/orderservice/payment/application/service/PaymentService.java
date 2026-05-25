@@ -7,6 +7,7 @@ import com.sparta.orderservice.payment.domain.core.Payment;
 import com.sparta.orderservice.payment.domain.core.PaymentMethod;
 import com.sparta.orderservice.payment.domain.core.PaymentStatus;
 import com.sparta.orderservice.payment.domain.repository.PaymentRepository;
+import com.sparta.orderservice.payment.application.port.OrderCancelPort;
 import com.sparta.orderservice.payment.application.port.OrderQueryPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderQueryPort orderQueryPort;
+    private final OrderCancelPort orderCancelPort;
 
     /**
      * 선결제: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
@@ -39,7 +41,12 @@ public class PaymentService {
     /**
      * 결제 취소/환불: COMPLETED → CANCELLED
      * 취소 가능 조건: Order.PENDING + CompanyOrder SHIPPED/DELIVERED 없을 때
-     * 상태 검증은 OrderStatusPort(Adapter)에 위임
+     * 상태 검증은 OrderQueryPort(Adapter)에 위임
+     *
+     * 흐름:
+     * 1. 결제 먼저 취소 (payment.cancel)
+     * 2. OrderCancelPort로 주문 취소 위임 → OrderCancelledEvent 발행
+     * 3. PaymentEventHandler.handleOrderCancelled → cancelPaymentByOrderId → 이미 취소됨(no-op)
      */
     @Transactional
     public PaymentResult cancelPayment(UUID paymentId, UUID requesterId) {
@@ -53,8 +60,25 @@ public class PaymentService {
             throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
         }
 
-        payment.cancel(requesterId.toString());
+        // 결제 취소 먼저 처리 (이후 OrderCancelledEvent 수신 시 이미 CANCELLED → no-op)
+        payment.cancel(requesterId);
+
+        // 주문 취소 위임 → 같은 트랜잭션에서 OrderCancelledEvent 발행 → 결제 취소 중복 방지 (idempotent)
+        orderCancelPort.cancelOrder(payment.getOrderId(), requesterId);
+
         return PaymentResult.from(payment);
+    }
+
+    /**
+     * 주문 취소 이벤트 수신 시 결제 취소 (OrderCancelledEvent 핸들러에서 호출)
+     * 이미 취소된 결제는 건너뜀 (idempotent) — Payment cancel API 경유 시 중복 처리 방지
+     */
+    @Transactional
+    public void cancelPaymentByOrderId(UUID orderId, UUID requesterId) {
+        paymentRepository.findPaymentByOrderId(orderId).ifPresent(payment -> {
+            if (payment.getStatus() == PaymentStatus.CANCELLED) return; // 이미 취소됨 → no-op
+            payment.cancel(requesterId);
+        });
     }
 
     /**

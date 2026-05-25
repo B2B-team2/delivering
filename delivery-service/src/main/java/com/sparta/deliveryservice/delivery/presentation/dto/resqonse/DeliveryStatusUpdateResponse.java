@@ -22,5 +22,5 @@ public class DeliveryStatusUpdateResponse {
     private LocalDateTime completedAt;
     private UUID logId;
     private LocalDateTime updatedAt;
-    private String updatedBy;
+    private UUID updatedBy;
 }
