@@ -172,21 +172,8 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.deliver();
-        completeOrderIfAllDelivered(companyOrder.getOrder());
+        companyOrder.getOrder().completeIfAllDelivered();
         return CompanyOrderDeliveredResult.from(companyOrder);
-    }
-
-    /**
-     * 모든 CompanyOrder가 완료(DELIVERED 또는 CANCELLED) 상태이면 Order → COMPLETED 전환
-     * anyMatch로 진행 중인 항목 발견 즉시 조기 종료
-     */
-    private void completeOrderIfAllDelivered(Order order) {
-        boolean hasActiveCompanyOrder = order.getCompanyOrders().stream()
-                .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
-                        && co.getStatus() != CompanyOrderStatus.CANCELLED);
-        if (!hasActiveCompanyOrder) {
-            order.complete();
-        }
     }
 
     // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
