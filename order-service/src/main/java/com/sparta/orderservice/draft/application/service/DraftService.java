@@ -144,6 +144,7 @@ public class DraftService {
     }
 
     // 배송지 null-fallback: 요청값이 하나라도 null이면 Company Service 기본 배송지 자동 조회
+    // address는 CompanyAdapter에서 jsonb 형식으로 변환 완료된 값 그대로 사용
     private DeliveryAddressInfo resolveDeliveryAddress(CreateOrderFromDraftCommand command) {
         String address = command.address();
         String recipientName = command.recipientName();
@@ -151,17 +152,11 @@ public class DraftService {
 
         if (address == null || recipientName == null || phone == null) {
             DeliveryAddressInfo defaultAddr = companyPort.getDefaultDeliveryAddress(command.receiverCompanyId());
-            if (address == null) {
-                // Company Service 응답을 order 저장 형식 JSON으로 변환
-                address = String.format(
-                        "{\"address\": \"%s\", \"address_detail\": \"%s\"}",
-                        defaultAddr.address(), defaultAddr.addressDetail()
-                );
-            }
+            if (address == null) address = defaultAddr.address();
             if (recipientName == null) recipientName = defaultAddr.recipientName();
             if (phone == null) phone = defaultAddr.phone();
         }
-        return new DeliveryAddressInfo(address, null, recipientName, phone);
+        return new DeliveryAddressInfo(address, recipientName, phone);
     }
 
     private Draft findDraftOrThrow(UUID draftId) {
