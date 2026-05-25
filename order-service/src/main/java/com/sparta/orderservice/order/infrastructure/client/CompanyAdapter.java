@@ -26,7 +26,7 @@ public class CompanyAdapter implements CompanyPort {
     @Override
     public Map<UUID, UUID> getHubIds(List<UUID> companyIds) {
         try {
-            HubMappingResponse response = companyClient.getHubMapping(new HubMappingRequest(companyIds)).getData();
+            HubMappingResponse response = companyClient.getHubMapping(new HubMappingRequest(companyIds));
             // response.mappings() = { "companyId 문자열" : { companyId, hubId, companyName } }
             // JSON 키는 String -> UUID로 변환하여 Map<UUID, UUID> 형태로 재구성
             // 결과: { companyId(UUID) → hubId(UUID) }
