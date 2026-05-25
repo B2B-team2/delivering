@@ -138,8 +138,8 @@ public class OrderService {
         order.getCompanyOrders().stream()
                 .filter(co -> co.getStatus() != CompanyOrderStatus.CANCELLED
                         && co.getStatus() != CompanyOrderStatus.DELIVERED)
-                .forEach(co -> co.cancel(requesterId.toString()));
-        order.cancel(requesterId.toString());
+                .forEach(co -> co.cancel(requesterId));
+        order.cancel(requesterId);
 
         // 재고 예약 전체 취소 (orderId 기준)
         hubStockPort.cancelStock(orderId);
@@ -160,7 +160,7 @@ public class OrderService {
 
         validateCompanyOrderCancellable(companyOrder);
 
-        companyOrder.cancel(requesterId.toString());
+        companyOrder.cancel(requesterId);
 
         // 재고 예약 부분 취소 (companyOrderId 기준)
         hubStockPort.cancelCompanyStock(companyOrderId);

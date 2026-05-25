@@ -61,7 +61,7 @@ public class PaymentService {
         }
 
         // 결제 취소 먼저 처리 (이후 OrderCancelledEvent 수신 시 이미 CANCELLED → no-op)
-        payment.cancel(requesterId.toString());
+        payment.cancel(requesterId);
 
         // 주문 취소 위임 → 같은 트랜잭션에서 OrderCancelledEvent 발행 → 결제 취소 중복 방지 (idempotent)
         orderCancelPort.cancelOrder(payment.getOrderId(), requesterId);
@@ -77,7 +77,7 @@ public class PaymentService {
     public void cancelPaymentByOrderId(UUID orderId, UUID requesterId) {
         paymentRepository.findPaymentByOrderId(orderId).ifPresent(payment -> {
             if (payment.getStatus() == PaymentStatus.CANCELLED) return; // 이미 취소됨 → no-op
-            payment.cancel(requesterId.toString());
+            payment.cancel(requesterId);
         });
     }
 
