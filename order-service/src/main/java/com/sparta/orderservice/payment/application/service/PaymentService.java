@@ -44,9 +44,13 @@ public class PaymentService {
      * 상태 검증은 OrderQueryPort(Adapter)에 위임
      *
      * 흐름:
-     * 1. 결제 먼저 취소 (payment.cancel)
-     * 2. OrderCancelPort로 주문 취소 위임 → OrderCancelledEvent 발행
-     * 3. PaymentEventHandler.handleOrderCancelled → cancelPaymentByOrderId → 이미 취소됨(no-op)
+     * cancelPayment() → cancelOrder() → OrderCancelledEvent 발행
+     *   → cancelPaymentByOrderId()에서 Payment CANCELLED 처리
+     *
+     * Order를 취소의 단일 진입점으로 사용:
+     * - cancelPayment() 경유: 결제 API → 주문 취소 위임 → 이벤트 → 결제 취소
+     * - cancelOrder() 직접 경유: 주문 취소 → 이벤트 → 결제 취소
+     * 두 경로 모두 cancelPaymentByOrderId()에서만 결제 상태를 변경
      */
     @Transactional
     public PaymentResult cancelPayment(UUID paymentId, UUID requesterId) {
@@ -60,10 +64,8 @@ public class PaymentService {
             throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
         }
 
-        // 결제 취소 먼저 처리 (이후 OrderCancelledEvent 수신 시 이미 CANCELLED → no-op)
-        payment.cancel(requesterId);
-
-        // 주문 취소 위임 → 같은 트랜잭션에서 OrderCancelledEvent 발행 → 결제 취소 중복 방지 (idempotent)
+        // 주문 취소 위임 → OrderCancelledEvent 발행 → cancelPaymentByOrderId()에서 결제 취소
+        // @EventListener 동기 실행(같은 TX)이므로 리턴 시점에 Payment는 이미 CANCELLED 상태
         orderCancelPort.cancelOrder(payment.getOrderId(), requesterId);
 
         return PaymentResult.from(payment);
@@ -71,12 +73,12 @@ public class PaymentService {
 
     /**
      * 주문 취소 이벤트 수신 시 결제 취소 (OrderCancelledEvent 핸들러에서 호출)
-     * 이미 취소된 결제는 건너뜀 (idempotent) — Payment cancel API 경유 시 중복 처리 방지
+     * Payment 상태 변경의 단일 책임 지점 — cancelPayment() / cancelOrder() 양쪽 경로 모두 여기서 처리
      */
     @Transactional
     public void cancelPaymentByOrderId(UUID orderId, UUID requesterId) {
         paymentRepository.findPaymentByOrderId(orderId).ifPresent(payment -> {
-            if (payment.getStatus() == PaymentStatus.CANCELLED) return; // 이미 취소됨 → no-op
+            if (payment.getStatus() == PaymentStatus.CANCELLED) return;
             payment.cancel(requesterId);
         });
     }
