@@ -32,6 +32,12 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     }
 
     @Override
+    public Optional<Payment> findPaymentByOrderId(UUID orderId) {
+        // soft delete 필터링: deletedAt IS NULL 인 결제만 조회
+        return paymentJpaRepository.findByOrderIdAndDeletedAtIsNull(orderId);
+    }
+
+    @Override
     public Page<Payment> findAllPayments(Pageable pageable) {
         // soft delete 필터링: deletedAt IS NULL 인 결제 목록 조회
         return paymentJpaRepository.findAllByDeletedAtIsNull(pageable);

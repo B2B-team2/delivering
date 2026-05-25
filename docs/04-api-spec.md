@@ -213,14 +213,14 @@ http://{SERVER_URL}/api/v1
 
 ### 3.4 Order Service (`/api/v1`)
 
-#### 장바구니 (Drafts)
+#### 임시주문 (Drafts)
 
-| Method | URL | 권한 | 설명 |
-|---|---|---|---|
-| POST | `/drafts` | COMPANY_MANAGER | 장바구니 담기 |
-| GET | `/drafts` | COMPANY_MANAGER(본인) | 장바구니 조회 |
-| PATCH | `/drafts/{draft_id}` | COMPANY_MANAGER(본인) | 장바구니 수정 |
-| DELETE | `/drafts/{draft_id}` | COMPANY_MANAGER(본인) | 장바구니 삭제 |
+| Method | URL | 권한 | 설명         |
+|---|---|---|------------|
+| POST | `/drafts` | COMPANY_MANAGER | 임시주문 항목 담기    |
+| GET | `/drafts` | COMPANY_MANAGER(본인) | 임시주문 목록 조회 |
+| PATCH | `/drafts/{draft_id}` | COMPANY_MANAGER(본인) | 임시주문 항목 수정 |
+| DELETE | `/drafts/{draft_id}` | COMPANY_MANAGER(본인) | 임시주문 항목 삭제 |
 
 #### 주문 (Orders)
 
