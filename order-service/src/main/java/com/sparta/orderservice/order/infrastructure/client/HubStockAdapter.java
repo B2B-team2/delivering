@@ -41,9 +41,9 @@ public class HubStockAdapter implements HubStockPort {
         } catch (FeignException.Conflict e) {
             throw new BusinessException(OrderErrorCode.STOCK_INSUFFICIENT); // 409: 재고 부족
         } catch (FeignException e) {
-            handleHubFeignException("reserveStock", e);
+            throw handleHubFeignException("reserveStock", e);
         } catch (Exception e) {
-            handleHubUnexpectedException("reserveStock", e);
+            throw handleHubUnexpectedException("reserveStock", e);
         }
     }
 
@@ -53,9 +53,9 @@ public class HubStockAdapter implements HubStockPort {
         try {
             hubClient.cancelStock(new StockCancelRequest(orderId));
         } catch (FeignException e) {
-            handleHubFeignException("cancelStock", e);
+            throw handleHubFeignException("cancelStock", e);
         } catch (Exception e) {
-            handleHubUnexpectedException("cancelStock", e);
+            throw handleHubUnexpectedException("cancelStock", e);
         }
     }
 
@@ -65,9 +65,9 @@ public class HubStockAdapter implements HubStockPort {
         try {
             hubClient.cancelCompanyStock(new StockPartialCancelRequest(companyOrderId));
         } catch (FeignException e) {
-            handleHubFeignException("cancelCompanyStock", e);
+            throw handleHubFeignException("cancelCompanyStock", e);
         } catch (Exception e) {
-            handleHubUnexpectedException("cancelCompanyStock", e);
+            throw handleHubUnexpectedException("cancelCompanyStock", e);
         }
     }
 
@@ -84,19 +84,19 @@ public class HubStockAdapter implements HubStockPort {
                     items
             ));
         } catch (FeignException e) {
-            handleHubFeignException("deductStock", e);
+            throw handleHubFeignException("deductStock", e);
         } catch (Exception e) {
-            handleHubUnexpectedException("deductStock", e);
+            throw handleHubUnexpectedException("deductStock", e);
         }
     }
 
-    private void handleHubFeignException(String operation, FeignException e) {
+    private RuntimeException handleHubFeignException(String operation, FeignException e) {
         log.error("Hub service error [{}]: status={}", operation, e.status());
-        throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
+        return new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 
-    private void handleHubUnexpectedException(String operation, Exception e) {
+    private RuntimeException handleHubUnexpectedException(String operation, Exception e) {
         log.error("Unexpected error [{}]", operation, e);
-        throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
+        return new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 }

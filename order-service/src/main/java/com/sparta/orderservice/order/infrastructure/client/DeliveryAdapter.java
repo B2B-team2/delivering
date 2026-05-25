@@ -38,19 +38,19 @@ public class DeliveryAdapter implements DeliveryPort {
                     .toList();
             deliveryClient.createDeliveries(requests);
         } catch (FeignException e) {
-            handleDeliveryFeignException("createDeliveries", e);
+            throw handleDeliveryFeignException("createDeliveries", e);
         } catch (Exception e) {
-            handleDeliveryUnexpectedException("createDeliveries", e);
+            throw handleDeliveryUnexpectedException("createDeliveries", e);
         }
     }
 
-    private void handleDeliveryFeignException(String operation, FeignException e) {
+    private RuntimeException handleDeliveryFeignException(String operation, FeignException e) {
         log.error("Delivery service error [{}]: status={}", operation, e.status());
-        throw new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
+        return new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
     }
 
-    private void handleDeliveryUnexpectedException(String operation, Exception e) {
+    private RuntimeException handleDeliveryUnexpectedException(String operation, Exception e) {
         log.error("Unexpected error [{}]", operation, e);
-        throw new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
+        return new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
     }
 }

@@ -44,21 +44,19 @@ public class ProductAdapter implements ProductPort {
                             )
                     ));
         } catch (FeignException e) {
-            handleProductFeignException("getProductOptionInfos", e);
-            return null; // unreachable
+            throw handleProductFeignException("getProductOptionInfos", e);
         } catch (Exception e) {
-            handleProductUnexpectedException("getProductOptionInfos", e);
-            return null; // unreachable
+            throw handleProductUnexpectedException("getProductOptionInfos", e);
         }
     }
 
-    private void handleProductFeignException(String operation, FeignException e) {
+    private RuntimeException handleProductFeignException(String operation, FeignException e) {
         log.error("Product service error [{}]: status={}", operation, e.status());
-        throw new BusinessException(OrderErrorCode.EXTERNAL_SERVICE_ERROR);
+        return new BusinessException(OrderErrorCode.EXTERNAL_SERVICE_ERROR);
     }
 
-    private void handleProductUnexpectedException(String operation, Exception e) {
+    private RuntimeException handleProductUnexpectedException(String operation, Exception e) {
         log.error("Unexpected error [{}]", operation, e);
-        throw new BusinessException(OrderErrorCode.EXTERNAL_SERVICE_ERROR);
+        return new BusinessException(OrderErrorCode.EXTERNAL_SERVICE_ERROR);
     }
 }

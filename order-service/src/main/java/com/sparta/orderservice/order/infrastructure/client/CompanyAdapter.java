@@ -43,11 +43,9 @@ public class CompanyAdapter implements CompanyPort {
         } catch (FeignException.NotFound e) {
             throw new BusinessException(OrderErrorCode.HUB_MAPPING_NOT_FOUND); // 404: 업체 없음
         } catch (FeignException e) {
-            handleCompanyFeignException("getHubIds", e);
-            return null; // unreachable — 컴파일러를 위한 명시적 반환
+            throw handleCompanyFeignException("getHubIds", e);
         } catch (Exception e) {
-            handleCompanyUnexpectedException("getHubIds", e);
-            return null; // unreachable
+            throw handleCompanyUnexpectedException("getHubIds", e);
         }
     }
 
@@ -68,21 +66,19 @@ public class CompanyAdapter implements CompanyPort {
         } catch (FeignException.NotFound e) {
             throw new BusinessException(OrderErrorCode.COMPANY_NOT_FOUND); // 404: 업체 없음
         } catch (FeignException e) {
-            handleCompanyFeignException("getDefaultDeliveryAddress", e);
-            return null; // unreachable
+            throw handleCompanyFeignException("getDefaultDeliveryAddress", e);
         } catch (Exception e) {
-            handleCompanyUnexpectedException("getDefaultDeliveryAddress", e);
-            return null; // unreachable
+            throw handleCompanyUnexpectedException("getDefaultDeliveryAddress", e);
         }
     }
 
-    private void handleCompanyFeignException(String operation, FeignException e) {
+    private RuntimeException handleCompanyFeignException(String operation, FeignException e) {
         log.error("Company service error [{}]: status={}", operation, e.status());
-        throw new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
+        return new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
     }
 
-    private void handleCompanyUnexpectedException(String operation, Exception e) {
+    private RuntimeException handleCompanyUnexpectedException(String operation, Exception e) {
         log.error("Unexpected error [{}]", operation, e);
-        throw new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
+        return new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
     }
 }
