@@ -181,7 +181,7 @@ public class OrderService {
         return CompanyOrderResult.from(companyOrder);
     }
 
-    // 출고 완료: PREPARING → SHIPPED
+    // 출고 완료: PREPARING → SHIPPED, Order → DELIVERING
     @Transactional
     public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
         CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
@@ -189,6 +189,13 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.ship();
+
+        // CompanyOrder가 출고되면 Order → DELIVERING 전환
+        // (이미 DELIVERING/COMPLETED 상태면 중복 전환 방지)
+        Order order = companyOrder.getOrder();
+        if (order.getStatus() == OrderStatus.PENDING) {
+            order.startDelivery();
+        }
 
         // 실재고 차감
         hubStockPort.deductStock(companyOrder);
