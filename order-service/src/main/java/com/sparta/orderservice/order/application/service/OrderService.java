@@ -224,7 +224,7 @@ public class OrderService {
 
         List<CreateOrderCommand.CompanyOrderCommand> coCommands = command.companyOrders();
         for (int i = 0; i < coCommands.size(); i++) {
-            order.getCompanyOrders().add(buildCompanyOrder(order, coCommands.get(i), subtotals.get(i)));
+            order.addCompanyOrder(buildCompanyOrder(order, coCommands.get(i), subtotals.get(i)));
         }
         return order;
     }
@@ -234,7 +234,7 @@ public class OrderService {
                                            BigDecimal subtotal) {
         CompanyOrder companyOrder = CompanyOrder.of(order, coCmd.companyId(), subtotal, BigDecimal.ZERO);
         coCmd.orderItems().forEach(itemCmd ->
-            companyOrder.getOrderItems().add(
+            companyOrder.addOrderItem(
                 OrderItem.of(companyOrder, itemCmd.productOptionId(), itemCmd.quantity(), itemCmd.unitPrice())
             )
         );
