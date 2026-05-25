@@ -11,7 +11,6 @@ import java.util.UUID;
 // Domain 엔티티(Order)를 직접 참조할 수 있는 계층
 public record OrderResult(
         UUID orderId,
-        UUID requesterCompanyId,
         UUID receiverCompanyId,
         String recipientName,
         String phone,
@@ -47,7 +46,6 @@ public record OrderResult(
 
         return new OrderResult(
                 order.getOrderId(),
-                order.getRequesterCompanyId(),
                 order.getReceiverCompanyId(),
                 order.getRecipientName(),
                 order.getPhone(),
