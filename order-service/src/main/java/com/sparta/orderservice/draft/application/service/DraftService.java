@@ -10,10 +10,10 @@ import com.sparta.orderservice.global.exception.DraftErrorCode;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
+import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.ProductPort;
 import com.sparta.orderservice.order.application.service.OrderService;
-import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -89,41 +89,68 @@ public class DraftService {
                 .toList();
         drafts.forEach(draft -> checkOwnership(draft, command.userId()));
 
-        // 2. Product Service → productOptionId별 (companyId, unitPrice) 조회
-        List<UUID> productOptionIds = drafts.stream()
-                .map(Draft::getProductOptionId)
-                .toList();
-        // getProductOptionInfos()가 Map<UUID, ProductOptionInfoItem>을 직접 반환
-        Map<UUID, ProductOptionInfoItem> productInfoMap = productPort.getProductOptionInfos(productOptionIds);
+        // 2. Product Service 조회 → companyId별 CompanyOrderCommand 목록 구성
+        Map<UUID, ProductOptionInfo> productInfoMap = productPort.getProductOptionInfos(
+                drafts.stream().map(Draft::getProductOptionId).toList()
+        );
+        List<CreateOrderCommand.CompanyOrderCommand> companyOrderCommands =
+                buildCompanyOrderCommands(drafts, productInfoMap);
 
-        // 3. companyId 기준 그룹핑 → CompanyOrderCommand 목록 생성
-        Map<UUID, List<Draft>> draftsByCompany = drafts.stream()
-                .collect(Collectors.groupingBy(
-                        draft -> productInfoMap.get(draft.getProductOptionId()).companyId()
-                ));
-
-        List<CreateOrderCommand.CompanyOrderCommand> companyOrderCommands = draftsByCompany.entrySet().stream()
-                .map(entry -> new CreateOrderCommand.CompanyOrderCommand(
-                        entry.getKey(),
-                        entry.getValue().stream()
-                                .map(draft -> new CreateOrderCommand.OrderItemCommand(
-                                        draft.getProductOptionId(),
-                                        draft.getQuantity(),
-                                        productInfoMap.get(draft.getProductOptionId()).unitPrice()
-                                ))
-                                .toList()
-                ))
-                .toList();
-
-        // 4. 배송지 세팅: null이면 Company Service 기본 배송지(is_default=true) 자동 조회
+        // 3. 배송지 세팅: null이면 Company Service 기본 배송지(is_default=true) 자동 조회
         // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
+        DeliveryAddressInfo address = resolveDeliveryAddress(command);
+
+        // 4. 주문 생성
+        OrderResult orderResult = orderService.createOrder(new CreateOrderCommand(
+                command.receiverCompanyId(),
+                address.recipientName(),
+                address.phone(),
+                command.slackId(),
+                address.address(),
+                command.dueDate(),
+                command.requestMemo(),
+                companyOrderCommands
+        ), command.userId());
+
+        // 5. 임시주문 항목 soft delete
+        drafts.forEach(draft -> draft.delete(command.userId()));
+
+        return orderResult;
+    }
+
+    // Draft 목록 + 상품 정보 → companyId 기준 그룹핑 후 CompanyOrderCommand 목록 생성
+    // Draft당 productInfoMap.get() 1회 호출: companyId·unitPrice를 한 번에 추출 후 그룹핑
+    private List<CreateOrderCommand.CompanyOrderCommand> buildCompanyOrderCommands(
+            List<Draft> drafts, Map<UUID, ProductOptionInfo> productInfoMap) {
+        return drafts.stream()
+                .map(draft -> {
+                    ProductOptionInfo info = productInfoMap.get(draft.getProductOptionId());
+                    return Map.entry(
+                            info.companyId(),
+                            new CreateOrderCommand.OrderItemCommand(
+                                    draft.getProductOptionId(),
+                                    draft.getQuantity(),
+                                    info.unitPrice()
+                            )
+                    );
+                })
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getKey,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+                ))
+                .entrySet().stream()
+                .map(entry -> new CreateOrderCommand.CompanyOrderCommand(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    // 배송지 null-fallback: 요청값이 하나라도 null이면 Company Service 기본 배송지 자동 조회
+    private DeliveryAddressInfo resolveDeliveryAddress(CreateOrderFromDraftCommand command) {
         String address = command.address();
         String recipientName = command.recipientName();
         String phone = command.phone();
 
         if (address == null || recipientName == null || phone == null) {
-            DeliveryAddressInfo defaultAddr =
-                    companyPort.getDefaultDeliveryAddress(command.receiverCompanyId());
+            DeliveryAddressInfo defaultAddr = companyPort.getDefaultDeliveryAddress(command.receiverCompanyId());
             if (address == null) {
                 // Company Service 응답을 order 저장 형식 JSON으로 변환
                 address = String.format(
@@ -134,24 +161,7 @@ public class DraftService {
             if (recipientName == null) recipientName = defaultAddr.recipientName();
             if (phone == null) phone = defaultAddr.phone();
         }
-
-        // 5. 주문 생성
-        CreateOrderCommand orderCommand = new CreateOrderCommand(
-                command.receiverCompanyId(),
-                recipientName,
-                phone,
-                command.slackId(),
-                address,
-                command.dueDate(),
-                command.requestMemo(),
-                companyOrderCommands
-        );
-        OrderResult orderResult = orderService.createOrder(orderCommand, command.userId());
-
-        // 6. 임시주문 항목 soft delete
-        drafts.forEach(draft -> draft.delete(command.userId()));
-
-        return orderResult;
+        return new DeliveryAddressInfo(address, null, recipientName, phone);
     }
 
     private Draft findDraftOrThrow(UUID draftId) {

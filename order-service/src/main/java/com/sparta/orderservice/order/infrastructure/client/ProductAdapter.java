@@ -2,6 +2,7 @@ package com.sparta.orderservice.order.infrastructure.client;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
+import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 import com.sparta.orderservice.order.application.port.ProductPort;
 import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoItem;
 import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoRequest;
@@ -22,12 +23,13 @@ public class ProductAdapter implements ProductPort {
 
     private final ProductClient productClient;
 
-    // 상품 옵션 ID 목록 → { productOptionId(UUID): ProductOptionInfoItem } Map 반환
+    // 상품 옵션 ID 목록 → { productOptionId(UUID): ProductOptionInfo } Map 반환
+    // infrastructure DTO(ProductOptionInfoItem)를 application DTO(ProductOptionInfo)로 변환하여 반환
     @Override
-    public Map<UUID, ProductOptionInfoItem> getProductOptionInfos(List<UUID> productOptionIds) {
+    public Map<UUID, ProductOptionInfo> getProductOptionInfos(List<UUID> productOptionIds) {
         try {
             // API 응답: { "optionsMap": { "uuid문자열": { productOptionId, companyId, unitPrice } } }
-            // String 키를 UUID로 변환하여 반환
+            // String 키를 UUID로 변환하고, 값을 application DTO로 매핑하여 반환
             Map<String, ProductOptionInfoItem> optionsMap =
                     productClient.getProductOptionInfos(new ProductOptionInfoRequest(productOptionIds))
                             .optionsMap();
@@ -35,7 +37,11 @@ public class ProductAdapter implements ProductPort {
             return optionsMap.entrySet().stream()
                     .collect(Collectors.toMap(
                             e -> UUID.fromString(e.getKey()),
-                            Map.Entry::getValue
+                            e -> new ProductOptionInfo(
+                                    e.getValue().productOptionId(),
+                                    e.getValue().companyId(),
+                                    e.getValue().unitPrice()
+                            )
                     ));
         } catch (FeignException e) {
             handleProductFeignException("getProductOptionInfos", e);

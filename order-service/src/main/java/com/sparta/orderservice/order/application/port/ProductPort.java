@@ -1,6 +1,6 @@
 package com.sparta.orderservice.order.application.port;
 
-import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoItem;
+import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -11,5 +11,5 @@ import java.util.UUID;
 public interface ProductPort {
 
     // 상품 옵션 ID 목록 → { productOptionId: (companyId, unitPrice) } 일괄 조회
-    Map<UUID, ProductOptionInfoItem> getProductOptionInfos(List<UUID> productOptionIds);
+    Map<UUID, ProductOptionInfo> getProductOptionInfos(List<UUID> productOptionIds);
 }
