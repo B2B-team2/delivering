@@ -102,6 +102,7 @@ public class OrderService {
 
         // 배송 일괄 생성: 공급업체 소속 허브(출발) → 수령업체 소속 허브(도착), 단 1회 호출
         // hubIdMap에서 각 공급업체의 departureHubId를 조회하여 사용
+        // TODO) 배송 생성 실패 시 이미 완료된 reserveStock이 자동 보상되지 않음 -> hub & delivery Feign 연동 완성 후 Saga 도입 필요
         deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
 
         // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
@@ -142,9 +143,12 @@ public class OrderService {
         order.cancel(requesterId);
 
         // 재고 예약 전체 취소 (orderId 기준)
+        // hub-service 장애 시 예외가 전파되어 TX 전체 롤백됨 (order·payment 취소 모두 되돌아감)
+        // TODO) hub Feign 연동 완성 후 Saga 도입 시 보상 처리로 전환 필요
         hubStockPort.cancelStock(orderId);
 
         // 주문 취소 이벤트 발행 → PaymentEventHandler에서 결제 취소 처리 (같은 트랜잭션)
+        // Order·Payment가 같은 DB이므로 단일 트랜잭션으로 원자적 처리
         eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
     }
 
