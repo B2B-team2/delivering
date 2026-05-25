@@ -19,9 +19,9 @@ public class HubRouteDto {
     private final String duration;
     private final BigDecimal distance;
     private final LocalDateTime createdAt;
-    private final String createdBy;
+    private final UUID createdBy;
     private final LocalDateTime updatedAt;
-    private final String updatedBy;
+    private final UUID updatedBy;
 
     public static HubRouteDto from(HubRoute route) {
         return from(route, null, null);

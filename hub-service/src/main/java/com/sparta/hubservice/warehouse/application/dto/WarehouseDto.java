@@ -20,7 +20,7 @@ public class WarehouseDto {
     private final String status;
     private final LocalDateTime createdAt;
     private final LocalDateTime updatedAt;
-    private final String updatedBy;
+    private final UUID updatedBy;
 
     public static WarehouseDto from(Warehouse warehouse) {
         return WarehouseDto.builder()
