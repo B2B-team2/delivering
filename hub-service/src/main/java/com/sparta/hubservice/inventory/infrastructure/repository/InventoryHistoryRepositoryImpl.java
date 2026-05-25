@@ -31,12 +31,12 @@ public class InventoryHistoryRepositoryImpl implements InventoryHistoryRepositor
 
     @Override
     public List<InventoryHistory> findByOrderIdAndChangeType(UUID orderId, InventoryChangeType changeType) {
-        return inventoryHistoryJpaRepository.findByOrderIdAndChangeTypeAndDeletedAtIsNull(orderId, changeType);
+        return inventoryHistoryJpaRepository.findByOrderIdAndChangeType(orderId, changeType);
     }
 
     @Override
     public List<InventoryHistory> findByCompanyOrderIdAndChangeType(UUID companyOrderId, InventoryChangeType changeType) {
-        return inventoryHistoryJpaRepository.findByCompanyOrderIdAndChangeTypeAndDeletedAtIsNull(companyOrderId, changeType);
+        return inventoryHistoryJpaRepository.findByCompanyOrderIdAndChangeType(companyOrderId, changeType);
     }
 
     @Override
@@ -44,8 +44,7 @@ public class InventoryHistoryRepositoryImpl implements InventoryHistoryRepositor
                                                 LocalDateTime startDateTime, LocalDateTime endDateTime,
                                                 Pageable pageable) {
         Specification<InventoryHistory> spec = Specification
-                .<InventoryHistory>where((root, query, cb) -> cb.equal(root.get("inventoryId"), inventoryId))
-                .and((root, query, cb) -> cb.isNull(root.get("deletedAt")));
+                .<InventoryHistory>where((root, query, cb) -> cb.equal(root.get("inventoryId"), inventoryId));
 
         if (changeType != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("changeType"), changeType));
