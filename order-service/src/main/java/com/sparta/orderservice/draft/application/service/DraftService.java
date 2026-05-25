@@ -9,10 +9,10 @@ import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
+import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.ProductPort;
 import com.sparta.orderservice.order.application.service.OrderService;
-import com.sparta.orderservice.order.infrastructure.client.dto.DefaultDeliveryAddressResponse;
 import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoItem;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -122,7 +122,7 @@ public class DraftService {
         String phone = command.phone();
 
         if (address == null || recipientName == null || phone == null) {
-            DefaultDeliveryAddressResponse defaultAddr =
+            DeliveryAddressInfo defaultAddr =
                     companyPort.getDefaultDeliveryAddress(command.receiverCompanyId());
             if (address == null) {
                 // Company Service 응답을 order 저장 형식 JSON으로 변환

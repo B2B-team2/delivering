@@ -2,6 +2,7 @@ package com.sparta.orderservice.order.infrastructure.client;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
+import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.infrastructure.client.dto.DefaultDeliveryAddressResponse;
 import com.sparta.orderservice.order.infrastructure.client.dto.HubMappingRequest;
@@ -48,10 +49,17 @@ public class CompanyAdapter implements CompanyPort {
     }
 
     // 수령업체의 기본 배송지(is_default=true) 조회
+    // infrastructure DTO(DefaultDeliveryAddressResponse)를 application DTO(DeliveryAddressInfo)로 변환하여 반환
     @Override
-    public DefaultDeliveryAddressResponse getDefaultDeliveryAddress(UUID receiverCompanyId) {
+    public DeliveryAddressInfo getDefaultDeliveryAddress(UUID receiverCompanyId) {
         try {
-            return companyClient.getDefaultDeliveryAddress(receiverCompanyId);
+            DefaultDeliveryAddressResponse response = companyClient.getDefaultDeliveryAddress(receiverCompanyId);
+            return new DeliveryAddressInfo(
+                    response.address(),
+                    response.addressDetail(),
+                    response.recipientName(),
+                    response.phone()
+            );
         } catch (FeignException.NotFound e) {
             throw new BusinessException(OrderErrorCode.COMPANY_NOT_FOUND); // 404: 업체 없음
         } catch (FeignException e) {

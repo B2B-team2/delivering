@@ -1,6 +1,6 @@
 package com.sparta.orderservice.order.application.port;
 
-import com.sparta.orderservice.order.infrastructure.client.dto.DefaultDeliveryAddressResponse;
+import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
 
 import java.util.List;
 import java.util.Map;
@@ -14,5 +14,5 @@ public interface CompanyPort {
     Map<UUID, UUID> getHubIds(List<UUID> companyIds);
 
     // 수령업체의 기본 배송지(is_default=true) 조회 (draft → order 전환 시 배송지 자동 세팅)
-    DefaultDeliveryAddressResponse getDefaultDeliveryAddress(UUID receiverCompanyId);
+    DeliveryAddressInfo getDefaultDeliveryAddress(UUID receiverCompanyId);
 }
