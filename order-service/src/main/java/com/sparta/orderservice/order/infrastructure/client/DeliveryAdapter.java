@@ -5,6 +5,7 @@ import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCreateRequest;
+import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCreateResponse;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -23,7 +25,7 @@ public class DeliveryAdapter implements DeliveryPort {
 
     // 모든 CompanyOrder의 배송 요청을 리스트로 만들어 단 1회 호출
     @Override
-    public void createDeliveries(Order order, Map<UUID, UUID> hubIdMap, UUID destinationHubId) {
+    public Map<UUID, UUID> createDeliveries(Order order, Map<UUID, UUID> hubIdMap, UUID destinationHubId) {
         try {
             List<DeliveryCreateRequest> requests = order.getCompanyOrders().stream()
                     .map(companyOrder -> new DeliveryCreateRequest(
@@ -36,7 +38,12 @@ public class DeliveryAdapter implements DeliveryPort {
                             order.getRequestMemo()
                     ))
                     .toList();
-            deliveryClient.createDeliveries(requests);
+
+            return deliveryClient.createDeliveries(requests).stream()
+                    .collect(Collectors.toMap(
+                            DeliveryCreateResponse::companyOrderId,
+                            DeliveryCreateResponse::deliveryId
+                    ));
         } catch (FeignException e) {
             throw handleDeliveryFeignException("createDeliveries", e);
         } catch (Exception e) {
