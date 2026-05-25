@@ -69,7 +69,7 @@ public class HubService {
 
     @Transactional
     @CacheEvict(value = "hubs", allEntries = true)
-    public void deleteHub(UUID hubId, String deletedBy) {
+    public void deleteHub(UUID hubId, UUID deletedBy) {
         Hub hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HUB_NOT_FOUND));
 

@@ -20,5 +20,5 @@ public interface WarehouseRepository {
 
     Page<Warehouse> findAll(Pageable pageable);
 
-    void delete(Warehouse warehouse, String deletedBy);
+    void delete(Warehouse warehouse, UUID deletedBy);
 }

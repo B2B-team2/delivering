@@ -23,9 +23,9 @@ public class HubResponse {
     private String contactPhone;
     private String status;
     private LocalDateTime createdAt;
-    private String createdBy;
+    private UUID createdBy;
     private LocalDateTime updatedAt;
-    private String updatedBy;
+    private UUID updatedBy;
 
     public static HubResponse from(HubDto dto) {
         return HubResponse.builder()

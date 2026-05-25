@@ -22,5 +22,5 @@ public interface HubRouteRepository {
 
     List<HubRoute> findByFromHubId(UUID fromHubId);
 
-    void delete(HubRoute hubRoute, String deletedBy);
+    void delete(HubRoute hubRoute, UUID deletedBy);
 }

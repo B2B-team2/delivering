@@ -43,7 +43,7 @@ public class WarehouseRepositoryImpl implements WarehouseRepository {
     }
 
     @Override
-    public void delete(Warehouse warehouse, String deletedBy) {
+    public void delete(Warehouse warehouse, UUID deletedBy) {
         warehouse.softDelete(deletedBy);
         warehouseJpaRepository.save(warehouse);
     }
