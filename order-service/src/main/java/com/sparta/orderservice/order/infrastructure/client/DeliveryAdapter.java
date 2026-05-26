@@ -4,9 +4,9 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.domain.core.Order;
+import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCancelRequest;
 import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCreateRequest;
 import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCreateResponse;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -44,20 +44,27 @@ public class DeliveryAdapter implements DeliveryPort {
                             DeliveryCreateResponse::companyOrderId,
                             DeliveryCreateResponse::deliveryId
                     ));
-        } catch (FeignException e) {
-            throw handleDeliveryFeignException("createDeliveries", e);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw handleDeliveryUnexpectedException("createDeliveries", e);
+            throw handleUnexpectedException("createDeliveries", e);
         }
     }
 
-    private RuntimeException handleDeliveryFeignException(String operation, FeignException e) {
-        log.error("Delivery service error [{}]: status={}", operation, e.status());
-        return new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
+    // 배송 일괄 취소 (Saga 보상 전용): createOrder 실패 시 생성된 배송 전체 취소
+    @Override
+    public void cancelDeliveries(List<UUID> companyOrderIds) {
+        try {
+            deliveryClient.cancelDeliveries(new DeliveryCancelRequest(companyOrderIds));
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw handleUnexpectedException("cancelDeliveries", e);
+        }
     }
 
-    private RuntimeException handleDeliveryUnexpectedException(String operation, Exception e) {
-        log.error("Unexpected error [{}]", operation, e);
+    private RuntimeException handleUnexpectedException(String operation, Exception e) {
+        log.error("[Delivery] Unexpected error [{}]", operation, e);
         return new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
     }
 }

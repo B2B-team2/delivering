@@ -39,7 +39,7 @@ public class DeliveryLog extends BaseEntity {
     private UUID routeId;
 
     @Column(name = "event_type", nullable = false, length = 30)
-    private String eventType;
+    private DeliveryLogStatus eventType;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "previous_value", columnDefinition = "json")
@@ -53,7 +53,7 @@ public class DeliveryLog extends BaseEntity {
     private String reason;
 
     @Builder
-    public DeliveryLog(UUID deliveryId, UUID routeId, String eventType, 
+    public DeliveryLog(UUID deliveryId, UUID routeId, DeliveryLogStatus eventType,
                        String previousValue, String currentValue, String reason) {
         this.deliveryId = deliveryId;
         this.routeId = routeId;

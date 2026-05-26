@@ -9,6 +9,9 @@ import java.util.UUID;
 
 public interface CompanyOrderJpaRepository extends JpaRepository<CompanyOrder, UUID> {
 
-    @EntityGraph(attributePaths = {"orderItems", "order", "order.companyOrders"})
-    Optional<CompanyOrder> findByCompanyOrderIdAndDeletedAtIsNull(UUID companyOrderId);
+    @EntityGraph(attributePaths = {"orderItems", "order"})
+    Optional<CompanyOrder> findWithItemsAndOrderByCompanyOrderIdAndDeletedAtIsNull(UUID companyOrderId);
+
+    @EntityGraph(attributePaths = {"order", "order.companyOrders"})
+    Optional<CompanyOrder> findWithOrderAndSiblingsByCompanyOrderIdAndDeletedAtIsNull(UUID companyOrderId);
 }

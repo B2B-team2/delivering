@@ -1,0 +1,154 @@
+package com.sparta.userservice.auth.application.service;
+
+import com.sparta.common.dto.BusinessException;
+import com.sparta.userservice.auth.infrastructure.keycloak.KeycloakAuthClient;
+import com.sparta.userservice.user.infrastructure.repository.CompanyManagerRepository;
+import com.sparta.userservice.delivery.infrastructure.repository.DeliveryManagerRepository;
+import com.sparta.userservice.user.infrastructure.repository.HubManagerRepository;
+import com.sparta.userservice.auth.presentation.dto.request.LoginRequest;
+import com.sparta.userservice.auth.presentation.dto.request.SignupRequest;
+import com.sparta.userservice.auth.presentation.dto.response.LoginResponse;
+import com.sparta.userservice.global.exception.AuthErrorCode;
+import com.sparta.userservice.global.exception.UserErrorCode;
+import com.sparta.userservice.user.domain.entity.CompanyManager;
+import com.sparta.userservice.user.domain.entity.DeliveryManager;
+import com.sparta.userservice.user.domain.entity.HubManager;
+import com.sparta.userservice.user.domain.entity.User;
+import com.sparta.userservice.user.domain.enums.ApprovalStatus;
+import com.sparta.userservice.user.domain.enums.ManagerType;
+import com.sparta.userservice.user.domain.enums.Role;
+import com.sparta.userservice.user.infrastructure.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class AuthService {
+
+    private final UserRepository userRepository;
+    private final HubManagerRepository hubManagerRepository;
+    private final DeliveryManagerRepository deliveryManagerRepository;
+    private final CompanyManagerRepository companyManagerRepository;
+    private final KeycloakAuthClient keycloakAuthClient;
+    private final TokenService tokenService;
+
+    @Transactional
+    public void signup(SignupRequest request) {
+
+        Role role = request.getRole() != null ? request.getRole() : Role.COMPANY_MANAGER;
+
+        if (role == Role.MASTER) {
+            throw new BusinessException(UserErrorCode.CANNOT_REGISTER_AS_MASTER);
+        }
+
+        if (userRepository.existsByEmailAndDeletedAtIsNull(request.getEmail())) {
+            throw new BusinessException(UserErrorCode.EMAIL_ALREADY_EXISTS);
+        }
+
+        // Keycloak 잔존하는 유저 정리
+        if (keycloakAuthClient.existsUser(request.getEmail())) {
+            try {
+                keycloakAuthClient.deleteUser(request.getEmail());
+                log.warn("[AUTH] Keycloak 잔존 유저 삭제 후 재가입 진행 - email={}", request.getEmail());
+            } catch (IllegalStateException e) {
+                throw new BusinessException(AuthErrorCode.KEYCLOAK_USER_DELETE_FAILED);
+            }
+        }
+
+        User user = User.create(
+                request.getEmail(),
+                "KEYCLOAK_MANAGED",
+                request.getName(),
+                request.getPhone(),
+                request.getSlackId(),
+                role
+        );
+        userRepository.save(user);
+
+        switch (role) {
+            case HUB_MANAGER -> hubManagerRepository.save(HubManager.create(user));
+            case HUB_DELIVERY_MANAGER -> {
+                int nextOrder = deliveryManagerRepository.countByDeletedAtIsNull();
+                deliveryManagerRepository.save(
+                        DeliveryManager.create(user, ManagerType.HUB_DELIVERY, nextOrder)
+                );
+            }
+            case COMPANY_DELIVERY_MANAGER -> {
+                int nextOrder = deliveryManagerRepository.countByDeletedAtIsNull();
+                deliveryManagerRepository.save(
+                        DeliveryManager.create(user, ManagerType.COMPANY_DELIVERY, nextOrder)
+                );
+            }
+            case COMPANY_MANAGER -> companyManagerRepository.save(
+                    CompanyManager.create(user)
+            );
+            default -> throw new BusinessException(UserErrorCode.INVALID_ROLE);
+        }
+
+        // Keycloak 실패 시 DB 트랜잭션 롤백
+        try {
+            keycloakAuthClient.createUser(request.getEmail(), request.getPassword(), role.name());
+        } catch (IllegalStateException e) {
+            throw new BusinessException(AuthErrorCode.KEYCLOAK_USER_CREATE_FAILED);
+        }
+    }
+
+    public LoginResponse login(LoginRequest request) {
+
+        User user = userRepository.findByEmailAndDeletedAtIsNull(request.getEmail())
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+        if (user.getApprovalStatus() != ApprovalStatus.APPROVED) {
+            throw new BusinessException(UserErrorCode.USER_NOT_APPROVED);
+        }
+
+        LoginResponse loginResponse = keycloakAuthClient.login(
+                request.getEmail(),
+                request.getPassword()
+        );
+
+        tokenService.saveRefreshToken(user.getId(), loginResponse.getRefreshToken());
+
+        return loginResponse;
+    }
+
+    public LoginResponse refresh(String refreshToken) {
+
+        String email = keycloakAuthClient.extractEmail(refreshToken);
+
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+        String storedRefreshToken = tokenService.getRefreshToken(user.getId());
+
+        if (storedRefreshToken == null || !storedRefreshToken.equals(refreshToken)) {
+            throw new BusinessException(UserErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        LoginResponse loginResponse = keycloakAuthClient.refresh(refreshToken);
+
+        tokenService.saveRefreshToken(user.getId(), loginResponse.getRefreshToken());
+
+        return loginResponse;
+    }
+
+    public void logout(String accessToken, String refreshToken) {
+
+        // 이미 로그아웃된 토큰 체크
+        if (tokenService.isBlacklisted(accessToken)) {
+            throw new BusinessException(UserErrorCode.INVALID_REFRESH_TOKEN);
+        }
+
+        String email = keycloakAuthClient.extractEmail(refreshToken);
+
+        User user = userRepository.findByEmailAndDeletedAtIsNull(email)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
+
+        tokenService.blacklistAccessToken(accessToken);
+        tokenService.deleteRefreshToken(user.getId());
+        keycloakAuthClient.logout(refreshToken);
+    }
+}

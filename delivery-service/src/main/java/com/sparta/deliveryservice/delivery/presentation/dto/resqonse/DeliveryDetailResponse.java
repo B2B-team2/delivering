@@ -42,6 +42,7 @@ public class DeliveryDetailResponse {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class DeliveryManagerDto {
         private UUID deliveryManagerId;
+        private String deliveryManagerSlackId;
         private String name;
         private String phone;
     }
