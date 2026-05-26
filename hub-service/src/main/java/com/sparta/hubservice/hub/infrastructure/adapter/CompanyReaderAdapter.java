@@ -15,6 +15,6 @@ public class CompanyReaderAdapter implements CompanyReader {
 
     @Override
     public boolean existsCompaniesByHubId(UUID hubId) {
-        return Boolean.TRUE.equals(companyClient.existsCompaniesByHubId(hubId).getData());
+        return Boolean.TRUE.equals(companyClient.existsCompaniesByHubId(hubId));
     }
 }

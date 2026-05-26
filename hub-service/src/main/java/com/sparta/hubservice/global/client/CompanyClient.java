@@ -1,6 +1,5 @@
 package com.sparta.hubservice.global.client;
 
-import com.sparta.common.dto.ApiResponse;
 import com.sparta.hubservice.global.config.FeignConfig;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,5 +11,5 @@ import java.util.UUID;
 public interface CompanyClient {
 
     @GetMapping("/api/v1/internal/companies/exists")
-    ApiResponse<Boolean> existsCompaniesByHubId(@RequestParam("hubId") UUID hubId);
+    Boolean existsCompaniesByHubId(@RequestParam("hubId") UUID hubId);
 }
