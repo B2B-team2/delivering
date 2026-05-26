@@ -18,4 +18,5 @@ public interface CompanyJpaRepository extends JpaRepository<Company, UUID> {
     Optional<Company> findByBusinessNumber(String businessNumber);
     List<Company> findAllByCompanyIdInAndDeletedAtIsNull(List<UUID> companyIds);
     boolean existsByHubIdAndDeletedAtIsNull(UUID hubId);
+    boolean existsByCompanyIdAndDeletedAtIsNull(UUID companyId);
 }

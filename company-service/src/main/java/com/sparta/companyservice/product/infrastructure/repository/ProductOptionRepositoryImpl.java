@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -34,5 +35,21 @@ public class ProductOptionRepositoryImpl implements ProductOptionRepository {
     @Override
     public boolean existsById(UUID productOptionId) {
         return productOptionJpaRepository.existsByProductOptionIdAndDeletedAtIsNull(productOptionId);
+    }
+
+    @Override
+    public List<ProductOption> findAllByIdsAndDeletedAtIsNull(List<UUID> productOptionIds) {
+        return productOptionJpaRepository.findAllByProductOptionIdInAndDeletedAtIsNull(productOptionIds);
+    }
+
+    @Override
+    public void delete(ProductOption option) {
+        option.softDelete(option.getCreatedBy());
+        productOptionJpaRepository.save(option);
+    }
+
+    @Override
+    public long count() {
+        return productOptionJpaRepository.count();
     }
 }
