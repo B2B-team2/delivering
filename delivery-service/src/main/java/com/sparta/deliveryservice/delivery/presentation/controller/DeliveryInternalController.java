@@ -24,14 +24,14 @@ public class DeliveryInternalController {
     private final DeliveryService deliveryService;
 
     @PostMapping("/deliveries")
-    public ApiResponse<List<DeliveryCreateResponse>> createInternalDeliveries(@Valid @RequestBody DeliveryCreateClientRequest request, @RequestHeader(value = "X-User-Id", required = false, defaultValue = "c7e2b1a0-5678-4def-9012-3456789abcde") String userId) {
+    public List<DeliveryCreateResponse> createInternalDeliveries(@Valid @RequestBody DeliveryCreateClientRequest request, @RequestHeader(value = "X-User-Id", required = false, defaultValue = "c7e2b1a0-5678-4def-9012-3456789abcde") String userId) {
         List<DeliveryCreateResponse> responses = deliveryService.createSingleDeliveryTransaction(request, userId);
-        return ApiResponse.created(responses);
+        return responses;
     }
 
     @PostMapping("/deliveries/cancel")
-    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(@RequestBody DeliveryOrderCancelRequest request) {
-        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request.getOrderId());
+    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(@RequestBody List<DeliveryOrderCancelRequest> request) {
+        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request);
         return response;
     }
 }
