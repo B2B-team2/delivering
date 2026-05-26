@@ -26,6 +26,7 @@ import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliverySta
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryStatusUpdateResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryTrackingResponse;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
+import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
@@ -518,7 +519,7 @@ class DeliveryServiceTests {
         DeliveryLog mockLog = DeliveryLog.builder()
                 .deliveryId(deliveryId)
                 .routeId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-                .eventType("STATUS_CHANGED")
+                .eventType(DeliveryLogStatus.STATUS_CHANGED)
                 .previousValue("{\"status\":\"PENDING\"}")
                 .currentValue("{\"status\":\"CANCELLED\"}")
                 .reason(requestDto.getReason())
@@ -617,7 +618,7 @@ class DeliveryServiceTests {
         DeliveryLog mockLog = DeliveryLog.builder()
                 .deliveryId(deliveryId)
                 .routeId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-                .eventType("STATUS_CHANGED")
+                .eventType(DeliveryLogStatus.STATUS_CHANGED)
                 .previousValue("{\"status\":\"SHIPPED\"}")
                 .currentValue("{\"status\":\"DELIVERED\"}")
                 .reason(requestDto.getReason())
@@ -699,7 +700,7 @@ class DeliveryServiceTests {
         DeliveryLog mockLog = DeliveryLog.builder()
                 .deliveryId(deliveryId)
                 .routeId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-                .eventType("MANAGER_CHANGED")
+                .eventType(DeliveryLogStatus.MANAGER_CHANGED)
                 .previousValue("{\"name\":\"전임매니저\"}")
                 .currentValue("{\"name\":\"신임매니저\"}")
                 .reason(requestDto.getReason())

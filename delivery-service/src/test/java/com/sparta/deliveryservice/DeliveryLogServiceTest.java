@@ -3,6 +3,7 @@ package com.sparta.deliveryservice;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.deliveryservice.deliveryLog.application.service.DeliveryLogService;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
+import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
 import com.sparta.deliveryservice.deliveryLog.presentation.dto.resqonse.DeliveryLogSearchResponse;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,7 +53,7 @@ class DeliveryLogServiceTest {
         DeliveryLog deliveryLog = DeliveryLog.builder()
                 .deliveryId(deliveryId)
                 .routeId(routeId)
-                .eventType("STATUS_CHANGED")
+                .eventType(DeliveryLogStatus.STATUS_CHANGED)
                 .previousValue("{\"status\":\"PENDING\"}")
                 .currentValue("{\"status\":\"SHIPPED\"}")
                 .reason("배송 출고")
@@ -78,7 +79,7 @@ class DeliveryLogServiceTest {
         DeliveryLogSearchResponse.DeliveryLogResponseDto dto = result.getContent().get(0);
         assertThat(dto.getLogId()).isEqualTo(logId);
         assertThat(dto.getRouteId()).isEqualTo(routeId);
-        assertThat(dto.getEventType()).isEqualTo("STATUS_CHANGED");
+        assertThat(dto.getEventType()).isEqualTo(DeliveryLogStatus.STATUS_CHANGED);
         assertThat(dto.getReason()).isEqualTo("배송 출고");
 
         assertThat(dto.getPreviousValue()).isInstanceOf(com.fasterxml.jackson.databind.JsonNode.class);
@@ -97,7 +98,7 @@ class DeliveryLogServiceTest {
         DeliveryLog invalidJsonLog = DeliveryLog.builder()
                 .deliveryId(deliveryId)
                 .routeId(UUID.randomUUID())
-                .eventType("STATUS_CHANGED")
+                .eventType(DeliveryLogStatus.STATUS_CHANGED)
                 .previousValue("잘못된 JSON 형식")
                 .currentValue("또 다른 잘못된 형식")
                 .reason("테스트")
