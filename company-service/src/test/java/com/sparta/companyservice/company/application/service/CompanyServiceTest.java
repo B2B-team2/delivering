@@ -2,10 +2,14 @@ package com.sparta.companyservice.company.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
-import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyDeliveryAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
+import com.sparta.companyservice.company.application.dto.CompanyHubMappingResult;
+import com.sparta.companyservice.company.application.dto.CompanyUpdateCommand;
 import com.sparta.companyservice.company.domain.core.Company;
+import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.core.CompanyTypeEnum;
+import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
 import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
@@ -16,11 +20,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
-import org.springframework.http.HttpStatus;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +46,9 @@ class CompanyServiceTest {
 
     @Mock
     private CompanyRepository companyRepository;
+
+    @Mock
+    private CompanyDeliveryAddressRepository companyDeliveryAddressRepository;
 
     @InjectMocks
     private CompanyService companyService;
@@ -371,5 +378,134 @@ class CompanyServiceTest {
         // then
         assertThat(exists).isTrue();
         assertThat(notExists).isFalse();
+    }
+
+    @Test
+    @DisplayName("업체-허브 매핑 조회 성공: 유효한 ID 목록 전달 시 정확한 결과가 반환되는가?")
+    void getHubMappingsSuccessTest() {
+        // given
+        UUID companyId1 = UUID.randomUUID();
+        UUID companyId2 = UUID.randomUUID();
+        UUID hubId1 = UUID.randomUUID();
+        UUID hubId2 = UUID.randomUUID();
+
+        Company company1 = Company.builder()
+                .companyId(companyId1)
+                .companyName("Company 1")
+                .hubId(hubId1)
+                .build();
+        Company company2 = Company.builder()
+                .companyId(companyId2)
+                .companyName("Company 2")
+                .hubId(hubId2)
+                .build();
+
+        when(companyRepository.findAllByCompanyIdIn(List.of(companyId1, companyId2)))
+                .thenReturn(List.of(company1, company2));
+
+        // when
+        CompanyHubMappingResult result = companyService.getHubMappings(List.of(companyId1, companyId2));
+
+        // then
+        assertThat(result.getMappings()).hasSize(2);
+        assertThat(result.getMappings()).extracting("companyId")
+                .containsExactlyInAnyOrder(companyId1, companyId2);
+        assertThat(result.getMappings()).extracting("companyName")
+                .containsExactlyInAnyOrder("Company 1", "Company 2");
+    }
+
+    @Test
+    @DisplayName("업체-허브 매핑 조회 실패: 전달된 모든 ID가 유효하지 않을 경우 COMPANY_NOT_FOUND 예외가 발생하는가?")
+    void getHubMappingsNotFoundTest() {
+        // given
+        List<UUID> ids = List.of(UUID.randomUUID(), UUID.randomUUID());
+        when(companyRepository.findAllByCompanyIdIn(ids)).thenReturn(List.of());
+
+        // when & then
+        assertThatThrownBy(() -> companyService.getHubMappings(ids))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", CompanyErrorCode.COMPANY_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("업체-허브 매핑 조회 일부 성공: 존재하는 업체에 대해서만 매핑 정보가 반환되는가?")
+    void getHubMappingsPartialSuccessTest() {
+        // given
+        UUID validId = UUID.randomUUID();
+        UUID invalidId = UUID.randomUUID();
+        List<UUID> ids = List.of(validId, invalidId);
+
+        Company company = Company.builder()
+                .companyId(validId)
+                .companyName("Valid Company")
+                .hubId(UUID.randomUUID())
+                .build();
+
+        when(companyRepository.findAllByCompanyIdIn(ids)).thenReturn(List.of(company));
+
+        // when
+        CompanyHubMappingResult result = companyService.getHubMappings(ids);
+
+        // then
+        assertThat(result.getMappings()).hasSize(1);
+        assertThat(result.getMappings().get(0).getCompanyId()).isEqualTo(validId);
+    }
+
+    @Test
+    @DisplayName("허브 소속 업체 존재 확인: 업체가 존재할 경우 true를 반환하는가?")
+    void existsCompanyInHubTrueTest() {
+        // given
+        UUID hubId = UUID.randomUUID();
+        when(companyRepository.existsByHubId(hubId)).thenReturn(true);
+
+        // when
+        boolean exists = companyService.existsCompanyInHub(hubId);
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    @DisplayName("허브 소속 업체 존재 확인: 업체가 존재하지 않을 경우 false를 반환하는가?")
+    void existsCompanyInHubFalseTest() {
+        // given
+        UUID hubId = UUID.randomUUID();
+        when(companyRepository.existsByHubId(hubId)).thenReturn(false);
+
+        // when
+        boolean exists = companyService.existsCompanyInHub(hubId);
+
+        // then
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    @DisplayName("배송지 등록 성공: 기본 배송지 설정 시 기존 설정 해제 로직이 호출되는가?")
+    void createAddressWithDefaultTest() {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyDeliveryAddressCreateCommand command = CompanyDeliveryAddressCreateCommand.builder()
+                .companyId(companyId)
+                .addressName("New Default Address")
+                .isDefault(true)
+                .build();
+
+        Company company = Company.builder().companyId(companyId).build();
+        when(companyRepository.findById(companyId)).thenReturn(Optional.of(company));
+
+        CompanyDeliveryAddress savedAddress = CompanyDeliveryAddress.builder()
+                .addressId(UUID.randomUUID())
+                .companyId(companyId)
+                .addressName(command.getAddressName())
+                .isDefault(true)
+                .build();
+        when(companyDeliveryAddressRepository.save(any(CompanyDeliveryAddress.class))).thenReturn(savedAddress);
+
+        // when
+        companyService.createAddress(command);
+
+        // then
+        // 현재 CompanyService.createAddress 에는 이 호출 로직이 없으므로 verify 에서 실패할 것입니다.
+        verify(companyDeliveryAddressRepository, times(1)).updateAllIsDefaultFalseByCompanyId(companyId);
     }
 }

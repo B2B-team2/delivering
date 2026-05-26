@@ -3,11 +3,15 @@ package com.sparta.companyservice.company.presentation.controller;
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.common.dto.PageResponse;
 import com.sparta.common.util.PageableUtil;
+import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
+import com.sparta.companyservice.company.application.service.CompanyAddressService;
 import com.sparta.companyservice.company.application.service.CompanyService;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
-import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
+import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,7 +25,6 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -33,12 +36,22 @@ import java.util.UUID;
 public class CompanyController {
 
     private final CompanyService companyService;
+    private final CompanyAddressService companyAddressService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<CompanyResponse>> createCompany(@RequestBody @Valid CompanyCreateRequest request) {
         CompanyDto resultDto = companyService.createCompany(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(CompanyResponse.from(resultDto)));
+    }
+
+    @PostMapping("/{companyId}/addresses")
+    public ResponseEntity<ApiResponse<CompanyAddressResponse>> createAddress(
+            @PathVariable UUID companyId,
+            @RequestBody @Valid CompanyAddressCreateRequest request) {
+        CompanyAddressDto resultDto = companyAddressService.registerAddress(companyId, request.toCommand());
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(CompanyAddressResponse.from(resultDto)));
     }
 
     @PatchMapping("/{companyId}")
