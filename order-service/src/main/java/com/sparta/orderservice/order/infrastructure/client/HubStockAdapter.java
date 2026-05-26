@@ -90,6 +90,25 @@ public class HubStockAdapter implements HubStockPort {
         }
     }
 
+    // cancelCompanyOrder Saga 보상 전용: 특정 CompanyOrder의 재고 재예약
+    @Override
+    public void reserveCompanyStock(CompanyOrder companyOrder) {
+        try {
+            List<InventoryItem> items = companyOrder.getOrderItems().stream()
+                    .map(item -> new InventoryItem(item.getProductOptionId(), item.getQuantity()))
+                    .toList();
+            hubClient.reserveStock(new InventoryBulkRequest(
+                    companyOrder.getOrder().getOrderId(),
+                    companyOrder.getCompanyOrderId(),
+                    items
+            ));
+        } catch (FeignException e) {
+            throw handleHubFeignException("reserveCompanyStock", e);
+        } catch (Exception e) {
+            throw handleHubUnexpectedException("reserveCompanyStock", e);
+        }
+    }
+
     private RuntimeException handleHubFeignException(String operation, FeignException e) {
         log.error("Hub service error [{}]: status={}", operation, e.status());
         return new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);

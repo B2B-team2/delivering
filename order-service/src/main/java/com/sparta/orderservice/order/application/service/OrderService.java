@@ -158,16 +158,26 @@ public class OrderService {
 
         companyOrder.cancel(requesterId);
 
-        // 재고 예약 부분 취소 (companyOrderId 기준)
-        hubStockPort.cancelCompanyStock(companyOrderId);
+        // Saga 보상 스택
+        Deque<Runnable> compensations = new ArrayDeque<>();
+        try {
+            // [T1] 재고 예약 부분 취소 (단일 호출, 원자적)
+            // 실패 시: TX 롤백으로 DB 복원, hub-service 미변경 → 보상 불필요 → push는 성공 후 등록
+            hubStockPort.cancelCompanyStock(companyOrderId);
+            compensations.push(() -> hubStockPort.reserveCompanyStock(companyOrder));
 
-        // 주문 상태 업데이트 (모든 서브 주문이 터미널 상태면 Order도 종료)
-        Order order = companyOrder.getOrder();
-        order.updateStatus(requesterId);
+            // 주문 상태 업데이트 (모든 서브 주문이 터미널 상태면 Order도 종료)
+            Order order = companyOrder.getOrder();
+            order.updateStatus(requesterId);
 
-        // 만약 전체 주문이 취소되었다면 (마지막 서브 주문 취소 시) -> 결제 취소 이벤트 발행
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            eventPublisher.publishEvent(new OrderCancelledEvent(order.getOrderId(), requesterId));
+            // [T2] 마지막 서브 주문 취소 시 Order → CANCELLED → 결제 취소 이벤트 발행
+            // 실패 시: T1 보상 (재고 재예약) 후 예외 re-throw → TX 롤백
+            if (order.getStatus() == OrderStatus.CANCELLED) {
+                eventPublisher.publishEvent(new OrderCancelledEvent(order.getOrderId(), requesterId));
+            }
+        } catch (Exception e) {
+            executeCompensations(compensations);
+            throw e;
         }
     }
 
@@ -198,7 +208,7 @@ public class OrderService {
             order.startDelivery();
         }
 
-        // 실재고 차감
+        // 실재고 차감 (마지막 외부 호출 → 실패 시 TX 롤백으로 DB 복원, 별도 보상 불필요)
         hubStockPort.deductStock(companyOrder);
 
         return CompanyOrderResult.from(companyOrder);
