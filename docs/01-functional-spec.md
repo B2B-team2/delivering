@@ -71,20 +71,20 @@
 
 ### 2.4 Order Service — 주문 및 결제
 
-| 기능 | 접근 권한 | 설명 |
-|---|---|---|
-| 장바구니 담기/수정/삭제 | COMPANY_MANAGER | order_drafts 관리 |
-| 장바구니 조회 | 본인 | 임시 저장 목록 조회 |
-| 주문 생성 | 모든 인증 사용자 (MASTER, HUB_MANAGER, 배송담당자, 업체담당자) | 재고 예약 + 배송 자동 생성 |
-| 전체 주문 조회 | MASTER, HUB_MANAGER | 주문 목록 검색 |
-| 주문 상세 조회 | 관련 업체 담당자, MASTER | 단건 주문 상세 |
-| 서브 주문 상세 조회 | 관련 업체 담당자, MASTER | company_order 단건 |
-| 주문 전체 취소 | COMPANY_MANAGER(요청자), MASTER | 전체 주문 취소 + 재고 복원 |
-| 서브 주문 부분 취소 | COMPANY_MANAGER(요청자), MASTER | 업체별 주문 부분 취소 |
-| 결제 요청 | COMPANY_MANAGER | 결제 준비 (PG 연동) |
-| 결제 승인 및 검증 | COMPANY_MANAGER | PG 결제 승인 처리 |
-| 결제 취소/환불 | MASTER, COMPANY_MANAGER | 결제 취소 |
-| 결제 내역 조회 | 관련 사용자, MASTER | 결제 이력 조회 |
+| 기능              | 접근 권한 | 설명 |
+|-----------------|---|---|
+| 임시주문 항목추가/수정/삭제 | COMPANY_MANAGER | order_drafts 관리 |
+| 임시주문 조회         | 본인 | 임시 저장 목록 조회 |
+| 주문 생성           | 모든 인증 사용자 (MASTER, HUB_MANAGER, 배송담당자, 업체담당자) | 재고 예약 + 배송 자동 생성 |
+| 전체 주문 조회        | MASTER, HUB_MANAGER | 주문 목록 검색 |
+| 주문 상세 조회        | 관련 업체 담당자, MASTER | 단건 주문 상세 |
+| 서브 주문 상세 조회     | 관련 업체 담당자, MASTER | company_order 단건 |
+| 주문 전체 취소        | COMPANY_MANAGER(요청자), MASTER | 전체 주문 취소 + 재고 복원 |
+| 서브 주문 부분 취소     | COMPANY_MANAGER(요청자), MASTER | 업체별 주문 부분 취소 |
+| 결제 요청           | COMPANY_MANAGER | 결제 준비 (PG 연동) |
+| 결제 승인 및 검증      | COMPANY_MANAGER | PG 결제 승인 처리 |
+| 결제 취소/환불        | MASTER, COMPANY_MANAGER | 결제 취소 |
+| 결제 내역 조회        | 관련 사용자, MASTER | 결제 이력 조회 |
 
 ### 2.5 Delivery Service — 배송
 

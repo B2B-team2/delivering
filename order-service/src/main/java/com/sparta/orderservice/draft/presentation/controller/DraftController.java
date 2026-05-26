@@ -78,13 +78,14 @@ public class DraftController {
     }
 
     // 임시주문으로 주문 생성
-    // TODO: Hub Service FeignClient로 productOptionId → companyId, unitPrice 조회 연동
+    // TODO: Product Service FeignClient로 productOptionId → (companyId, unitPrice) 조회 연동 후 구현 완료
     @PostMapping("/orders")
     public ResponseEntity<ApiResponse<OrderResponse>> createOrderFromDraft(
             @RequestBody @Valid DraftOrderCreateRequest request,
-            @RequestHeader("X-User-Id") UUID userId
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader(value = "X-Company-Id", required = false) UUID receiverCompanyId  // TODO: 인증 확정 후 required = true
     ) {
-        OrderResponse response = OrderResponse.from(draftService.createOrderFromDraft(request.toCommand(userId)));
+        OrderResponse response = OrderResponse.from(draftService.createOrderFromDraft(request.toCommand(userId, receiverCompanyId)));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(response));
     }
