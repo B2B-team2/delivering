@@ -1,19 +1,17 @@
 package com.sparta.deliveryservice.delivery.infrastructure.client;
 
-import com.sparta.common.dto.ApiResponse; // 공통 ApiResponse 패키지 경로에 맞게 지정
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryManagerRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryManagerResponse;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 import java.util.UUID;
 
 @FeignClient(name = "user-service")
 public interface DeliveryUserServiceClient {
 
-    @GetMapping("/api/v1/internal/users/{delivery_id}/manager-info")
-    DeliveryManagerResponse getManagerInfo(@PathVariable("delivery_id") UUID deliveryId);
+    @PostMapping("/api/v1/internal/users/manager-info")
+    DeliveryManagerResponse getManagerInfo(@RequestBody UUID fromHubId);
 }
