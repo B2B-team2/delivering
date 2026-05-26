@@ -2,6 +2,7 @@ package com.sparta.hubservice.hubroute.application.dto;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.jackson.Jacksonized;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -9,6 +10,7 @@ import java.util.UUID;
 
 @Getter
 @Builder
+@Jacksonized
 public class RouteSearchResult {
 
     private final UUID fromHubId;
@@ -19,6 +21,7 @@ public class RouteSearchResult {
 
     @Getter
     @Builder
+    @Jacksonized
     public static class Segment {
         private final int sequence;
         private final UUID routeId;

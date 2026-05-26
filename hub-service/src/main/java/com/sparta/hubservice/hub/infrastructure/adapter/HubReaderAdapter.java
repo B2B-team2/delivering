@@ -2,6 +2,7 @@ package com.sparta.hubservice.hub.infrastructure.adapter;
 
 import com.sparta.hubservice.hub.domain.core.HubType;
 import com.sparta.hubservice.hub.domain.repository.HubRepository;
+import com.sparta.hubservice.hubroute.domain.port.HubInfo;
 import com.sparta.hubservice.hubroute.domain.port.HubReader;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,15 @@ public class HubReaderAdapter implements HubReader {
     public Map<UUID, String> findAllHubNames() {
         return hubRepository.findAll().stream()
                 .collect(Collectors.toMap(hub -> hub.getHubId(), hub -> hub.getName()));
+    }
+
+    @Override
+    public Map<UUID, HubInfo> findAllHubInfos() {
+        return hubRepository.findAll().stream()
+                .collect(Collectors.toMap(
+                        hub -> hub.getHubId(),
+                        hub -> new HubInfo(hub.getHubId(), hub.getName(), hub.getAddress())
+                ));
     }
 
     @Override

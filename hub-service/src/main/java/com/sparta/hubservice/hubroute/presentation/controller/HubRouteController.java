@@ -1,6 +1,7 @@
 package com.sparta.hubservice.hubroute.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.common.dto.PageResponse;
 import com.sparta.hubservice.hubroute.application.dto.HubRouteDto;
 import com.sparta.hubservice.hubroute.application.service.HubRouteService;
 import com.sparta.hubservice.hubroute.presentation.dto.HubRouteCreateRequest;
@@ -10,7 +11,8 @@ import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchRequest;
 import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,14 +23,18 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/hub-routes")
 @RequiredArgsConstructor
 public class HubRouteController {
+
+    private static final Set<Integer> ALLOWED_SIZES = Set.of(10, 30, 50);
 
     private final HubRouteService hubRouteService;
 
@@ -49,11 +55,19 @@ public class HubRouteController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<HubRouteResponse>>> getAllHubRoutes() {
-        List<HubRouteResponse> responses = hubRouteService.getAllHubRoutes().stream()
-                .map(HubRouteResponse::from)
-                .toList();
-        return ResponseEntity.ok(ApiResponse.success(responses));
+    public ResponseEntity<ApiResponse<PageResponse<HubRouteResponse>>> getAllHubRoutes(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt,DESC") String sort) {
+        int validSize = ALLOWED_SIZES.contains(size) ? size : 10;
+        String[] sortParts = sort.split(",");
+        Sort sortObj = sortParts.length > 1
+                ? Sort.by(Sort.Direction.fromString(sortParts[1].trim()), sortParts[0].trim())
+                : Sort.by(sortParts[0].trim());
+        PageResponse<HubRouteResponse> result = new PageResponse<>(
+                hubRouteService.getAllHubRoutes(PageRequest.of(page, validSize, sortObj))
+                        .map(HubRouteResponse::from));
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 
     @GetMapping("/{route_id}")
@@ -74,9 +88,7 @@ public class HubRouteController {
     @DeleteMapping("/{route_id}")
     public ResponseEntity<ApiResponse<Void>> deleteHubRoute(
             @PathVariable UUID route_id,
-            @RequestHeader(value = "X-User-Name", required = false, defaultValue = "system") String userName) {
-        // TODO: 추후 인증/인가 로직 도입 시 실제 사용자 ID로 교체 필요
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+            @RequestHeader("X-User-Id") UUID userId) {
         hubRouteService.deleteHubRoute(route_id, userId);
         return ResponseEntity.ok(ApiResponse.success());
     }

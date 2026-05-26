@@ -1,6 +1,5 @@
 package com.sparta.hubservice.inventory.presentation.controller;
 
-import com.sparta.common.dto.ApiResponse;
 import com.sparta.hubservice.inventory.application.dto.InventoryItemCommand;
 import com.sparta.hubservice.inventory.application.service.InventoryService;
 import com.sparta.hubservice.inventory.presentation.dto.CancelCompanyRequest;
@@ -24,33 +23,33 @@ public class InternalInventoryController {
     private final InventoryService inventoryService;
 
     @PostMapping("/reserve")
-    public ResponseEntity<ApiResponse<Void>> reserve(@Valid @RequestBody InventoryBulkRequest request) {
+    public ResponseEntity<Void> reserve(@Valid @RequestBody InventoryBulkRequest request) {
         inventoryService.reserveStock(request.getOrderId(), request.getCompanyOrderId(), toCommands(request));
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/cancel")
-    public ResponseEntity<ApiResponse<Void>> cancel(@Valid @RequestBody CancelReservationRequest request) {
+    public ResponseEntity<Void> cancel(@Valid @RequestBody CancelReservationRequest request) {
         inventoryService.cancelReservation(request.getOrderId());
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/cancel/company")
-    public ResponseEntity<ApiResponse<Void>> cancelCompany(@Valid @RequestBody CancelCompanyRequest request) {
+    public ResponseEntity<Void> cancelCompany(@Valid @RequestBody CancelCompanyRequest request) {
         inventoryService.cancelCompanyReservation(request.getCompanyOrderId());
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/deduct")
-    public ResponseEntity<ApiResponse<Void>> deduct(@Valid @RequestBody InventoryBulkRequest request) {
+    public ResponseEntity<Void> deduct(@Valid @RequestBody InventoryBulkRequest request) {
         inventoryService.deductStock(request.getOrderId(), toCommands(request));
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/return")
-    public ResponseEntity<ApiResponse<Void>> returnStock(@Valid @RequestBody InventoryBulkRequest request) {
+    public ResponseEntity<Void> returnStock(@Valid @RequestBody InventoryBulkRequest request) {
         inventoryService.returnStock(request.getOrderId(), toCommands(request));
-        return ResponseEntity.ok(ApiResponse.success());
+        return ResponseEntity.noContent().build();
     }
 
     private List<InventoryItemCommand> toCommands(InventoryBulkRequest request) {
