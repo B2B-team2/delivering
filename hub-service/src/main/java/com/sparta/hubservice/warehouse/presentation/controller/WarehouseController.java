@@ -41,8 +41,12 @@ public class WarehouseController {
     @PostMapping
     public ResponseEntity<ApiResponse<WarehouseResponse>> createWarehouse(
             @RequestHeader("X-User-Role") String role,
+            @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @Valid @RequestBody WarehouseCreateRequest request) {
         requireMasterOrHubManager(role);
+        if ("HUB_MANAGER".equals(role) && hubId != null && !hubId.equals(request.getHubId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         WarehouseDto dto = warehouseService.createWarehouse(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(WarehouseResponse.from(dto)));
@@ -81,20 +85,24 @@ public class WarehouseController {
     @PatchMapping("/{warehouse_id}")
     public ResponseEntity<ApiResponse<WarehouseResponse>> updateWarehouse(
             @RequestHeader("X-User-Role") String role,
+            @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @PathVariable UUID warehouse_id,
             @RequestBody WarehouseUpdateRequest request) {
         requireMasterOrHubManager(role);
-        WarehouseDto dto = warehouseService.updateWarehouse(warehouse_id, request.toCommand());
+        UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
+        WarehouseDto dto = warehouseService.updateWarehouse(warehouse_id, request.toCommand(), requesterHubId);
         return ResponseEntity.ok(ApiResponse.success(WarehouseResponse.from(dto)));
     }
 
     @DeleteMapping("/{warehouse_id}")
     public ResponseEntity<ApiResponse<Void>> deleteWarehouse(
             @RequestHeader("X-User-Role") String role,
+            @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @PathVariable UUID warehouse_id,
             @RequestHeader("X-User-Id") UUID userId) {
         requireMasterOrHubManager(role);
-        warehouseService.deleteWarehouse(warehouse_id, userId);
+        UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
+        warehouseService.deleteWarehouse(warehouse_id, userId, requesterHubId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
