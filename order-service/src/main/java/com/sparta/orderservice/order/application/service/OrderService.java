@@ -126,14 +126,22 @@ public class OrderService {
                 .forEach(co -> co.cancel(requesterId));
         order.cancel(requesterId);
 
-        // 재고 예약 전체 취소 (orderId 기준)
-        // hub-service 장애 시 예외가 전파되어 TX 전체 롤백됨 (order·payment 취소 모두 되돌아감)
-        // TODO) hub Feign 연동 완성 후 Saga 도입 시 보상 처리로 전환 필요
-        hubStockPort.cancelStock(orderId);
+        // Saga 보상 스택
+        Deque<Runnable> compensations = new ArrayDeque<>();
+        try {
+            // (1) 재고 예약 전체 취소 (orderId 기준, 단일 호출)
+            // 실패 시: TX 롤백으로 DB 복원, hub-service 미변경 → 보상 불필요 → push는 성공 후 등록
+            hubStockPort.cancelStock(orderId);
+            compensations.push(() -> hubStockPort.reserveStock(order));
 
-        // 주문 취소 이벤트 발행 → PaymentEventHandler에서 결제 취소 처리 (같은 트랜잭션)
-        // Order·Payment가 같은 DB이므로 단일 트랜잭션으로 원자적 처리
-        eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
+            // (2) 결제 취소 이벤트 (PaymentEventHandler, 같은 트랜잭션)
+            // 실패 시: T1 보상 (재고 재예약) 후 예외 re-throw → TX 롤백
+            eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
+
+        } catch (Exception e) {
+            executeCompensations(compensations);
+            throw e;
+        }
     }
 
     // 서브 주문 상세 조회
