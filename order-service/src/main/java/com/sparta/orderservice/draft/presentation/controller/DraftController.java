@@ -34,7 +34,9 @@ public class DraftController {
 
     private final DraftService draftService;
 
-    // 임시주문 항목 추가 (upsert: 동일 상품 옵션이면 복원 후 수량 갱신, 없으면 신규 추가)
+    /**
+     * 임시주문 항목 추가 (upsert: 동일 상품 옵션이면 복원 후 수량 갱신, 없으면 신규 추가)
+     */
     @PostMapping
     public ResponseEntity<ApiResponse<DraftResponse>> addDraft(
             @RequestBody @Valid DraftAddRequest request,
@@ -44,8 +46,9 @@ public class DraftController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    // 임시주문 목록 조회
-    // TODO: 권한별 필터링 (마스터 → 전체, 업체담당자 → 본인 것만)
+    /**
+     * 임시주문 목록 조회
+     */
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<DraftResponse>>> getDrafts(
             @RequestHeader("X-User-Id") UUID userId,
@@ -56,7 +59,9 @@ public class DraftController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    // 임시주문 항목 수량 수정
+    /**
+     * 임시주문 항목 수량 수정
+     */
     @PatchMapping("/{draftId}")
     public ResponseEntity<ApiResponse<DraftResponse>> updateDraft(
             @PathVariable UUID draftId,
@@ -67,7 +72,9 @@ public class DraftController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    // 임시주문 항목 삭제
+    /**
+     * 임시주문 항목 삭제
+     */
     @DeleteMapping("/{draftId}")
     public ResponseEntity<ApiResponse<Void>> deleteDraft(
             @PathVariable UUID draftId,
@@ -77,15 +84,19 @@ public class DraftController {
         return ResponseEntity.ok(ApiResponse.success());
     }
 
-    // 임시주문으로 주문 생성
+    /**
+     * 임시주문으로 주문 생성
+     * MASTER → 전체 / COMPANY_MANAGER → X-Company-Id 헤더에서 receiverCompanyId 자동 주입
+     * 그 외 → 403
+     */
     @PostMapping("/orders")
     public ResponseEntity<ApiResponse<DraftOrderCreateResponse>> createOrderFromDraft(
             @RequestBody @Valid DraftOrderCreateRequest request,
             @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader(value = "X-Company-Id", required = false) UUID receiverCompanyId  // TODO: 인증 확정 후 required = true
+            @RequestHeader(value = "X-Company-Id", required = false) UUID companyIdFromHeader
     ) {
+        UUID receiverCompanyId = companyIdFromHeader != null ? companyIdFromHeader : request.receiverCompanyId();
         DraftOrderCreateResponse response = DraftOrderCreateResponse.from(draftService.createOrderFromDraft(request.toCommand(userId, receiverCompanyId)));
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(response));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
 }

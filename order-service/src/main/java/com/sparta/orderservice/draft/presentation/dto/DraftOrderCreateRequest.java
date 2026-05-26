@@ -22,9 +22,10 @@ public record DraftOrderCreateRequest(
     String slackId,                         // nullable
 
     @NotNull @Future LocalDateTime dueDate,
-    String requestMemo                      // nullable
+    String requestMemo,                     // nullable
+
+    UUID receiverCompanyId                  // MASTER만 body로 전달, COMPANY_MANAGER는 X-Company-Id 헤더에서 주입
 ) {
-    // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
     public CreateOrderFromDraftCommand toCommand(UUID userId, UUID receiverCompanyId) {
         return new CreateOrderFromDraftCommand(
                 userId,
