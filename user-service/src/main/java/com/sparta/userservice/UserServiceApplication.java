@@ -3,7 +3,7 @@ package com.sparta.userservice;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.sparta")
 public class UserServiceApplication {
 
 	public static void main(String[] args) {
