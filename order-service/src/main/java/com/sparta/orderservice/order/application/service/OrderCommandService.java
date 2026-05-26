@@ -39,7 +39,7 @@ import java.util.stream.Stream;
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class OrderService {
+public class OrderCommandService {
 
     private final OrderRepository orderRepository;
     private final CompanyOrderRepository companyOrderRepository;
@@ -96,22 +96,6 @@ public class OrderService {
         return OrderResult.from(order);
     }
 
-    /**
-     * 전체 주문 조회 (페이징)
-     * TODO: 권한별 필터링
-     * - 마스터 → 전체, 허브관리자 → 담당 허브 소속 업체 전체, 업체 담당자 → 자기 회사 주문만)
-     */
-    public Page<OrderResult> getOrders(UUID requesterId, Pageable pageable) {
-        return orderRepository.findAllOrders(pageable).map(OrderResult::from);
-    }
-
-    // 주문 단건 상세 조회
-    public OrderResult getOrder(UUID orderId) {
-        Order order = orderRepository.findOrderById(orderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-        return OrderResult.from(order);
-    }
-
     // 주문 전체 취소
     @Transactional
     public void cancelOrder(UUID orderId, UUID requesterId) {
@@ -142,11 +126,6 @@ public class OrderService {
             executeCompensations(compensations);
             throw e;
         }
-    }
-
-    // 서브 주문 상세 조회
-    public CompanyOrderResult getCompanyOrder(UUID companyOrderId) {
-        return CompanyOrderResult.from(findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId));
     }
 
     // 서브 주문 부분 취소
@@ -226,20 +205,6 @@ public class OrderService {
         return CompanyOrderDeliveredResult.from(companyOrder);
     }
 
-    // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
-    public boolean isCancellable(UUID orderId) {
-        return orderRepository.findOrderById(orderId)
-                .map(this::checkOrderCancellable)
-                .orElse(false);
-    }
-
-    private boolean checkOrderCancellable(Order order) {
-        if (order.getStatus() != OrderStatus.PENDING) return false;
-        return order.getCompanyOrders().stream()
-                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
-                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
-    }
-
     // Order + CompanyOrder + OrderItem 도메인 객체 구성
     private Order buildOrder(CreateOrderCommand command) {
         // CompanyOrder별 소계를 먼저 계산한 뒤 합산 → 아이템당 calculateItemPrice 호출 1회
@@ -311,12 +276,20 @@ public class OrderService {
     }
 
     private void validateOrderCancellable(Order order) {
+        // (필요하다면 isCancellable 로직을 여기로 이동하거나 OrderQueryService에 유지)
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException(OrderErrorCode.ORDER_ALREADY_CANCELLED);
         }
         if (!checkOrderCancellable(order)) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
+    }
+
+    private boolean checkOrderCancellable(Order order) {
+        if (order.getStatus() != OrderStatus.PENDING) return false;
+        return order.getCompanyOrders().stream()
+                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
+                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
     }
 
     private void validateCompanyOrderCancellable(CompanyOrder companyOrder) {

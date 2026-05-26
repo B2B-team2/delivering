@@ -1,7 +1,7 @@
 package com.sparta.orderservice.order.presentation.controller;
 
 import com.sparta.orderservice.order.application.dto.CompanyOrderDeliveredResult;
-import com.sparta.orderservice.order.application.service.OrderService;
+import com.sparta.orderservice.order.application.service.OrderCommandService;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderDeliveredResponse;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class InternalOrderController {
 
-    private final OrderService orderService;
+    private final OrderCommandService orderCommandService;
 
     /**
      * 업체 주문 수령 완료 처리 (SHIPPED → DELIVERED)
@@ -29,7 +29,7 @@ public class InternalOrderController {
     public ResponseEntity<CompanyOrderDeliveredResponse> deliverCompanyOrder(
             @PathVariable UUID companyOrderId
     ) {
-        CompanyOrderDeliveredResult result = orderService.confirmDelivery(companyOrderId);
+        CompanyOrderDeliveredResult result = orderCommandService.confirmDelivery(companyOrderId);
         return ResponseEntity.ok(CompanyOrderDeliveredResponse.from(result));
     }
 
@@ -40,7 +40,7 @@ public class InternalOrderController {
     public ResponseEntity<CompanyOrderResponse> prepareCompanyOrder(
             @PathVariable UUID companyOrderId
     ) {
-        return ResponseEntity.ok(CompanyOrderResponse.from(orderService.prepareCompanyOrder(companyOrderId)));
+        return ResponseEntity.ok(CompanyOrderResponse.from(orderCommandService.prepareCompanyOrder(companyOrderId)));
     }
 
     /**
@@ -50,6 +50,6 @@ public class InternalOrderController {
     public ResponseEntity<CompanyOrderResponse> shipCompanyOrder(
             @PathVariable UUID companyOrderId
     ) {
-        return ResponseEntity.ok(CompanyOrderResponse.from(orderService.shipCompanyOrder(companyOrderId)));
+        return ResponseEntity.ok(CompanyOrderResponse.from(orderCommandService.shipCompanyOrder(companyOrderId)));
     }
 }

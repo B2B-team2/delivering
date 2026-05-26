@@ -13,7 +13,7 @@ import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.ProductPort;
-import com.sparta.orderservice.order.application.service.OrderService;
+import com.sparta.orderservice.order.application.service.OrderCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,7 +36,7 @@ public class DraftService {
 
     private final DraftRepository draftRepository;
     private final DraftWriter draftWriter;
-    private final OrderService orderService;
+    private final OrderCommandService orderCommandService;
     private final ProductPort productPort;
     private final CompanyPort companyPort;
 
@@ -108,7 +108,7 @@ public class DraftService {
         DeliveryAddressInfo address = resolveDeliveryAddress(command);
 
         // 4. 주문 생성 (독립 TX + 내부 hub/delivery Saga)
-        OrderResult orderResult = orderService.createOrder(new CreateOrderCommand(
+        OrderResult orderResult = orderCommandService.createOrder(new CreateOrderCommand(
                 command.receiverCompanyId(),
                 address.recipientName(),
                 address.phone(),
@@ -126,7 +126,7 @@ public class DraftService {
         } catch (Exception e) {
             log.error("[Saga] draft 삭제 실패, 주문 취소 보상 실행: orderId={}", orderResult.orderId(), e);
             try {
-                orderService.cancelOrder(orderResult.orderId(), command.userId());
+                orderCommandService.cancelOrder(orderResult.orderId(), command.userId());
             } catch (Exception compensationEx) {
                 log.error("[Saga] 주문 취소 보상 실패 - 수동 복구 필요: orderId={}", orderResult.orderId(), compensationEx);
             }

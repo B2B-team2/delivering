@@ -2,12 +2,13 @@ package com.sparta.orderservice.payment.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.PaymentErrorCode;
+import com.sparta.orderservice.order.application.service.OrderCommandService;
+import com.sparta.orderservice.order.application.service.OrderQueryService;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
 import com.sparta.orderservice.payment.domain.core.Payment;
 import com.sparta.orderservice.payment.domain.core.PaymentMethod;
 import com.sparta.orderservice.payment.domain.core.PaymentStatus;
 import com.sparta.orderservice.payment.domain.repository.PaymentRepository;
-import com.sparta.orderservice.order.application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -23,11 +24,12 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final OrderService orderService;
+    private final OrderQueryService orderQueryService;
+    private final OrderCommandService orderCommandService;
 
     /**
      * 선결제: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
-     * OrderService.createOrder() 내에서 같은 트랜잭션으로 호출됨
+     * OrderCommandService.createOrder() 내에서 같은 트랜잭션으로 호출됨
      */
     @Transactional
     public PaymentResult createCompletedPayment(UUID orderId, BigDecimal amount) {
@@ -39,7 +41,7 @@ public class PaymentService {
     /**
      * 결제 취소/환불: COMPLETED → CANCELLED
      * 취소 가능 조건: Order.PENDING + CompanyOrder SHIPPED/DELIVERED 없을 때
-     * 상태 검증은 OrderService에 위임
+     * 상태 검증은 OrderQueryService에 위임
      *
      * 흐름:
      * cancelPayment() → cancelOrder() → OrderCancelledEvent 발행
@@ -58,13 +60,13 @@ public class PaymentService {
             throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
         }
 
-        if (!orderService.isCancellable(payment.getOrderId())) {
+        if (!orderQueryService.isCancellable(payment.getOrderId())) {
             throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
         }
 
         // 주문 취소 위임 → OrderCancelledEvent 발행 → cancelPaymentByOrderId()에서 결제 취소
         // @EventListener 동기 실행(같은 TX)이므로 리턴 시점에 Payment는 이미 CANCELLED 상태
-        orderService.cancelOrder(payment.getOrderId(), requesterId);
+        orderCommandService.cancelOrder(payment.getOrderId(), requesterId);
 
         return PaymentResult.from(payment);
     }
