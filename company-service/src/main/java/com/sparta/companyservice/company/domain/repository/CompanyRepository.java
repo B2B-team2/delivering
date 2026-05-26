@@ -20,4 +20,5 @@ public interface CompanyRepository {
     Optional<Company> findByBusinessNumberAnyStatus(String businessNumber);
     List<Company> findAllByCompanyIdIn(List<UUID> companyIds);
     boolean existsByHubId(UUID hubId);
+    boolean existsById(UUID id);
 }

@@ -55,4 +55,9 @@ public class CompanyRepositoryImpl implements CompanyRepository {
     public boolean existsByHubId(UUID hubId) {
         return jpaRepository.existsByHubIdAndDeletedAtIsNull(hubId);
     }
+
+    @Override
+    public boolean existsById(UUID id) {
+        return jpaRepository.existsByCompanyIdAndDeletedAtIsNull(id);
+    }
 }
