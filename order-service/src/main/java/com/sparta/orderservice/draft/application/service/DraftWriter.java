@@ -20,14 +20,15 @@ public class DraftWriter {
 
     private final DraftRepository draftRepository;
 
-    // 임시주문 조회 + 소유권 검증 (독립 readOnly TX)
-    // createOrderFromDraft의 NOT_SUPPORTED 컨텍스트에서 새 readOnly TX를 열기 위해 DraftWriter에 위임
+    // 임시주문 일괄 조회 + 소유권 검증 (독립 readOnly TX)
+    // - N+1 방지: ID 개수만큼 단건 조회하던 것을 IN 쿼리 1회로 교체
+    // - createOrderFromDraft의 NOT_SUPPORTED 컨텍스트에서 새 readOnly TX를 열기 위해 DraftWriter에 위임
     @Transactional(readOnly = true)
     public List<Draft> readAndValidateDrafts(List<UUID> draftIds, UUID userId) {
-        List<Draft> drafts = draftIds.stream()
-                .map(id -> draftRepository.findDraftById(id)
-                        .orElseThrow(() -> new BusinessException(DraftErrorCode.DRAFT_NOT_FOUND)))
-                .toList();
+        List<Draft> drafts = draftRepository.findAllDraftsByIds(draftIds);
+        if (drafts.size() != draftIds.size()) {
+            throw new BusinessException(DraftErrorCode.DRAFT_NOT_FOUND);
+        }
         drafts.forEach(draft -> {
             if (!draft.getUserId().equals(userId)) {
                 throw new BusinessException(DraftErrorCode.DRAFT_ACCESS_DENIED);
@@ -37,13 +38,14 @@ public class DraftWriter {
     }
 
     // 임시주문 일괄 soft delete (독립 TX)
-    // 전달받은 ID로 재조회하여 JPA dirty checking이 동작하는 관리 상태로 처리
+    // - N+1 방지: IN 쿼리 1회로 관리 상태 엔티티 일괄 로드 → dirty checking으로 UPDATE
     @Transactional
     public void deleteAll(List<UUID> draftIds, UUID userId) {
-        draftIds.stream()
-                .map(id -> draftRepository.findDraftById(id)
-                        .orElseThrow(() -> new BusinessException(DraftErrorCode.DRAFT_NOT_FOUND)))
-                .forEach(draft -> draft.delete(userId));
+        List<Draft> drafts = draftRepository.findAllDraftsByIds(draftIds);
+        if (drafts.size() != draftIds.size()) {
+            throw new BusinessException(DraftErrorCode.DRAFT_NOT_FOUND);
+        }
+        drafts.forEach(draft -> draft.delete(userId));
     }
 
     // 실제 upsert 처리 (독립 TX)

@@ -146,13 +146,13 @@ public class OrderService {
 
     // 서브 주문 상세 조회
     public CompanyOrderResult getCompanyOrder(UUID companyOrderId) {
-        return CompanyOrderResult.from(findCompanyOrderOrThrow(companyOrderId));
+        return CompanyOrderResult.from(findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId));
     }
 
     // 서브 주문 부분 취소
     @Transactional
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithOrderAndSiblingsOrThrow(companyOrderId);
 
         validateCompanyOrderCancellable(companyOrder);
 
@@ -184,7 +184,7 @@ public class OrderService {
     // 출고 준비 확인: ORDERED → PREPARING
     @Transactional
     public CompanyOrderResult prepareCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.ORDERED) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
@@ -195,7 +195,7 @@ public class OrderService {
     // 출고 완료: PREPARING → SHIPPED, Order → DELIVERING
     @Transactional
     public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.PREPARING) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
@@ -217,7 +217,7 @@ public class OrderService {
     // 업체 주문 수령 완료: SHIPPED → DELIVERED (배송 서비스 내부 호출용)
     @Transactional
     public CompanyOrderDeliveredResult confirmDelivery(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithOrderAndSiblingsOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.SHIPPED) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
@@ -329,8 +329,15 @@ public class OrderService {
         }
     }
 
-    private CompanyOrder findCompanyOrderOrThrow(UUID companyOrderId) {
-        return companyOrderRepository.findCompanyOrderById(companyOrderId)
+    // getCompanyOrder + prepareCompanyOrder + shipCompanyOrder: orderItems + order
+    private CompanyOrder findCompanyOrderWithItemsAndOrderOrThrow(UUID companyOrderId) {
+        return companyOrderRepository.findCompanyOrderWithItemsAndOrder(companyOrderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
+    }
+
+    // cancelCompanyOrder + confirmDelivery: order + order.companyOrders
+    private CompanyOrder findCompanyOrderWithOrderAndSiblingsOrThrow(UUID companyOrderId) {
+        return companyOrderRepository.findCompanyOrderWithOrderAndSiblings(companyOrderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
     }
 }
