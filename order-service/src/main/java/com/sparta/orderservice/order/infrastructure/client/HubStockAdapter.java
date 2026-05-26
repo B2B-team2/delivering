@@ -9,7 +9,6 @@ import com.sparta.orderservice.order.infrastructure.client.dto.InventoryBulkRequ
 import com.sparta.orderservice.order.infrastructure.client.dto.InventoryItem;
 import com.sparta.orderservice.order.infrastructure.client.dto.StockCancelRequest;
 import com.sparta.orderservice.order.infrastructure.client.dto.StockPartialCancelRequest;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -38,12 +37,10 @@ public class HubStockAdapter implements HubStockPort {
                         items
                 ));
             });
-        } catch (FeignException.Conflict e) {
-            throw new BusinessException(OrderErrorCode.STOCK_INSUFFICIENT); // 409: 재고 부족
-        } catch (FeignException e) {
-            throw handleHubFeignException("reserveStock", e);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw handleHubUnexpectedException("reserveStock", e);
+            throw handleUnexpectedException("reserveStock", e);
         }
     }
 
@@ -52,10 +49,10 @@ public class HubStockAdapter implements HubStockPort {
     public void cancelStock(UUID orderId) {
         try {
             hubClient.cancelStock(new StockCancelRequest(orderId));
-        } catch (FeignException e) {
-            throw handleHubFeignException("cancelStock", e);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw handleHubUnexpectedException("cancelStock", e);
+            throw handleUnexpectedException("cancelStock", e);
         }
     }
 
@@ -64,10 +61,10 @@ public class HubStockAdapter implements HubStockPort {
     public void cancelCompanyStock(UUID companyOrderId) {
         try {
             hubClient.cancelCompanyStock(new StockPartialCancelRequest(companyOrderId));
-        } catch (FeignException e) {
-            throw handleHubFeignException("cancelCompanyStock", e);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw handleHubUnexpectedException("cancelCompanyStock", e);
+            throw handleUnexpectedException("cancelCompanyStock", e);
         }
     }
 
@@ -83,20 +80,34 @@ public class HubStockAdapter implements HubStockPort {
                     null,   // deduct는 companyOrderId 불필요
                     items
             ));
-        } catch (FeignException e) {
-            throw handleHubFeignException("deductStock", e);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw handleHubUnexpectedException("deductStock", e);
+            throw handleUnexpectedException("deductStock", e);
         }
     }
 
-    private RuntimeException handleHubFeignException(String operation, FeignException e) {
-        log.error("Hub service error [{}]: status={}", operation, e.status());
-        return new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
+    // cancelCompanyOrder Saga 보상 전용: 특정 CompanyOrder의 재고 재예약
+    @Override
+    public void reserveCompanyStock(CompanyOrder companyOrder) {
+        try {
+            List<InventoryItem> items = companyOrder.getOrderItems().stream()
+                    .map(item -> new InventoryItem(item.getProductOptionId(), item.getQuantity()))
+                    .toList();
+            hubClient.reserveStock(new InventoryBulkRequest(
+                    companyOrder.getOrder().getOrderId(),
+                    companyOrder.getCompanyOrderId(),
+                    items
+            ));
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw handleUnexpectedException("reserveCompanyStock", e);
+        }
     }
 
-    private RuntimeException handleHubUnexpectedException(String operation, Exception e) {
-        log.error("Unexpected error [{}]", operation, e);
+    private RuntimeException handleUnexpectedException(String operation, Exception e) {
+        log.error("[Hub] Unexpected error [{}]", operation, e);
         return new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 }

@@ -2,7 +2,8 @@ package com.sparta.orderservice.order.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.common.dto.PageResponse;
-import com.sparta.orderservice.order.application.service.OrderService;
+import com.sparta.orderservice.order.application.service.OrderCommandService;
+import com.sparta.orderservice.order.application.service.OrderQueryService;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import com.sparta.orderservice.order.presentation.dto.OrderCreateRequest;
 import com.sparta.orderservice.order.presentation.dto.OrderResponse;
@@ -28,7 +29,8 @@ import java.util.UUID;
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 public class OrderController {
-    private final OrderService orderService;
+    private final OrderCommandService orderCommandService;
+    private final OrderQueryService orderQueryService;
 
     // 주문 생성
     @PostMapping
@@ -37,7 +39,7 @@ public class OrderController {
         @RequestHeader("X-User-Id") UUID requesterId
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(OrderResponse.from(orderService.createOrder(request.toCommand(), requesterId))));
+                .body(ApiResponse.created(OrderResponse.from(orderCommandService.createOrder(request.toCommand(), requesterId))));
     }
 
     // 전체 주문 조회 (페이징)
@@ -48,14 +50,14 @@ public class OrderController {
         @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         PageResponse<OrderResponse> response = new PageResponse<>(
-                orderService.getOrders(requesterId, pageable).map(OrderResponse::from));
+                orderQueryService.getOrders(requesterId, pageable).map(OrderResponse::from));
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     // 주문 단건 상세 조회
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@PathVariable UUID orderId) {
-        return ResponseEntity.ok(ApiResponse.success(OrderResponse.from(orderService.getOrder(orderId))));
+        return ResponseEntity.ok(ApiResponse.success(OrderResponse.from(orderQueryService.getOrder(orderId))));
     }
 
     // 주문 취소
@@ -64,7 +66,7 @@ public class OrderController {
         @PathVariable UUID orderId,
         @RequestHeader("X-User-Id") UUID requesterId
     ) {
-        orderService.cancelOrder(orderId, requesterId);
+        orderCommandService.cancelOrder(orderId, requesterId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
@@ -73,7 +75,7 @@ public class OrderController {
     public ResponseEntity<ApiResponse<CompanyOrderResponse>> getCompanyOrder(
         @PathVariable UUID companyOrderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(CompanyOrderResponse.from(orderService.getCompanyOrder(companyOrderId))));
+        return ResponseEntity.ok(ApiResponse.success(CompanyOrderResponse.from(orderQueryService.getCompanyOrder(companyOrderId))));
     }
 
     // 서브 주문 부분 취소
@@ -82,25 +84,7 @@ public class OrderController {
         @PathVariable UUID companyOrderId,
         @RequestHeader("X-User-Id") UUID requesterId
     ) {
-        orderService.cancelCompanyOrder(companyOrderId, requesterId);
+        orderCommandService.cancelCompanyOrder(companyOrderId, requesterId);
         return ResponseEntity.ok(ApiResponse.success());
-    }
-
-    // 출고 준비 확인: ORDERED → PREPARING
-    @PatchMapping("/company/{companyOrderId}/preparing")
-    public ResponseEntity<ApiResponse<CompanyOrderResponse>> prepareCompanyOrder(
-            @PathVariable UUID companyOrderId
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                CompanyOrderResponse.from(orderService.prepareCompanyOrder(companyOrderId))));
-    }
-
-    // 출고 완료: PREPARING → SHIPPED
-    @PatchMapping("/company/{companyOrderId}/shipped")
-    public ResponseEntity<ApiResponse<CompanyOrderResponse>> shipCompanyOrder(
-            @PathVariable UUID companyOrderId
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                CompanyOrderResponse.from(orderService.shipCompanyOrder(companyOrderId))));
     }
 }

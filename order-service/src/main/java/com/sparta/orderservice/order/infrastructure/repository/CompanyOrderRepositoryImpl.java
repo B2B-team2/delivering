@@ -15,7 +15,12 @@ public class CompanyOrderRepositoryImpl implements CompanyOrderRepository {
     private final CompanyOrderJpaRepository companyOrderJpaRepository;
 
     @Override
-    public Optional<CompanyOrder> findCompanyOrderById(UUID companyOrderId) {
-        return companyOrderJpaRepository.findByCompanyOrderIdAndDeletedAtIsNull(companyOrderId);
+    public Optional<CompanyOrder> findCompanyOrderWithItemsAndOrder(UUID companyOrderId) {
+        return companyOrderJpaRepository.findWithItemsAndOrderByCompanyOrderIdAndDeletedAtIsNull(companyOrderId);
+    }
+
+    @Override
+    public Optional<CompanyOrder> findCompanyOrderWithOrderAndSiblings(UUID companyOrderId) {
+        return companyOrderJpaRepository.findWithOrderAndSiblingsByCompanyOrderIdAndDeletedAtIsNull(companyOrderId);
     }
 }

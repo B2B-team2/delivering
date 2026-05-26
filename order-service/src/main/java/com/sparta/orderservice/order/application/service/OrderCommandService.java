@@ -12,30 +12,31 @@ import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
-import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
-public class OrderService {
+public class OrderCommandService {
 
     private final OrderRepository orderRepository;
     private final CompanyOrderRepository companyOrderRepository;
@@ -43,57 +44,68 @@ public class OrderService {
     private final HubStockPort hubStockPort;
     private final CompanyPort companyPort;
     private final DeliveryPort deliveryPort;
+    private final OrderWriter orderWriter;
 
-    // 주문 생성
-    @Transactional
+    /**
+     * 주문 생성 — DB TX 없이 각 단계를 독립 TX로 분리 (Long Transaction 방지)
+     *
+     * 기존 @Transactional 구조에서는 외부 호출(hub/delivery) 중 DB 커넥션을 점유해
+     * 트래픽 증가 시 커넥션 풀 고갈 위험이 있었음. NOT_SUPPORTED로 전환하여 개선.
+     *
+     * 흐름:
+     * (1) 도메인 객체 구성 (orderId는 Order.of() 내부에서 미리 생성)
+     * (2) company-service 허브 매핑 조회 (외부 호출, TX 없음)
+     * (3) hub-service 재고 예약 (외부 호출, TX 없음)
+     * (4) delivery-service 배송 생성 (외부 호출, TX 없음)
+     * (5) DB 저장 + 결제 이벤트 발행 (OrderWriter의 독립 TX)
+     *     → 실패 시 (4)→(3) 순으로 Saga 보상 실행
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderResult createOrder(CreateOrderCommand command, UUID requesterId) {
+        // (1) 도메인 객체 구성 (TX 없음 — orderId는 Order.of() 내부에서 미리 생성됨)
         Order order = buildOrder(command);
-        orderRepository.save(order);
 
-        // 수령업체 + 공급업체 ID 전체 → companyId : hubId 매핑 일괄 조회 (단 1회 호출)
+        // (2) 수령업체 + 공급업체 ID 전체 → companyId : hubId 매핑 일괄 조회 (TX 없음)
         List<UUID> allCompanyIds = Stream.concat(
                 Stream.of(order.getReceiverCompanyId()),
                 order.getCompanyOrders().stream().map(CompanyOrder::getCompanyId)
         ).toList();
         Map<UUID, UUID> hubIdMap = companyPort.getHubIds(allCompanyIds);
         validateHubMapping(hubIdMap, allCompanyIds);
-        UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId()); // 수령업체 소속 허브
+        UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId());
 
-        // 재고 예약: 실패 시 예외 전파 → 주문 생성 전체 롤백
-        hubStockPort.reserveStock(order);
+        // Saga 보상 스택: 외부 호출 성공 시 역순 보상 등록, 예외 발생 시 LIFO 순으로 실행
+        Deque<Runnable> compensations = new ArrayDeque<>();
+        try {
+            // (3) 재고 예약 (TX 없음)
+            // reserveStock: CompanyOrder 수만큼 루프 호출 → 중간 실패 시 부분 예약 잔존
+            // → cancelStock으로 정리 (보상을 먼저 등록 후 호출)
+            compensations.push(() -> hubStockPort.cancelStock(order.getOrderId()));
+            hubStockPort.reserveStock(order);
 
-        // 배송 일괄 생성: 공급업체 소속 허브(출발) → 수령업체 소속 허브(도착)
-        // TODO) 배송 생성 실패 시 이미 완료된 reserveStock이 자동 보상되지 않음 -> hub & delivery Feign 연동 완성 후 Saga 도입 필요
-        Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+            // (4) 배송 일괄 생성 (TX 없음) → 실패 시 (3) 보상
+            Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+            List<UUID> companyOrderIds = order.getCompanyOrders().stream()
+                    .map(CompanyOrder::getCompanyOrderId)
+                    .toList();
+            compensations.push(() -> deliveryPort.cancelDeliveries(companyOrderIds));
 
-        // 배송 ID 할당 (OrderItem과 Delivery 간 추적을 위해 저장)
-        order.getCompanyOrders().forEach(co -> {
-            UUID deliveryId = deliveryMap.get(co.getCompanyOrderId());
-            if (deliveryId != null) {
-                co.getOrderItems().forEach(item -> item.assignDelivery(deliveryId));
-            }
-        });
+            // 배송 ID 할당 (OrderItem ↔ Delivery 추적용)
+            order.getCompanyOrders().forEach(co -> {
+                UUID deliveryId = deliveryMap.get(co.getCompanyOrderId());
+                if (deliveryId != null) {
+                    co.getOrderItems().forEach(item -> item.assignDelivery(deliveryId));
+                }
+            });
 
-        // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
-        eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getTotalPrice()));
+            // (5) DB 저장 + 선결제 (독립 TX) → 실패 시 (4)→(3) 순으로 보상
+            // OrderCreatedEvent → PaymentEventHandler → createCompletedPayment (같은 TX)
+            return orderWriter.saveOrderWithEvent(order);
 
-        return OrderResult.from(order);
-    }
-
-    /**
-     * 전체 주문 조회 (페이징)
-     * TODO: 권한별 필터링
-     * - 마스터 → 전체, 허브관리자 → 담당 허브 소속 업체 전체, 업체 담당자 → 자기 회사 주문만)
-     */
-    public Page<OrderResult> getOrders(UUID requesterId, Pageable pageable) {
-        return orderRepository.findAllOrders(pageable).map(OrderResult::from);
-    }
-
-    // 주문 단건 상세 조회
-    public OrderResult getOrder(UUID orderId) {
-        Order order = orderRepository.findOrderById(orderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
-        return OrderResult.from(order);
+        } catch (Exception e) {
+            executeCompensations(compensations);
+            throw e;
+        }
     }
 
     // 주문 전체 취소
@@ -110,47 +122,60 @@ public class OrderService {
                 .forEach(co -> co.cancel(requesterId));
         order.cancel(requesterId);
 
-        // 재고 예약 전체 취소 (orderId 기준)
-        // hub-service 장애 시 예외가 전파되어 TX 전체 롤백됨 (order·payment 취소 모두 되돌아감)
-        // TODO) hub Feign 연동 완성 후 Saga 도입 시 보상 처리로 전환 필요
-        hubStockPort.cancelStock(orderId);
+        // Saga 보상 스택
+        Deque<Runnable> compensations = new ArrayDeque<>();
+        try {
+            // (1) 재고 예약 전체 취소 (orderId 기준, 단일 호출)
+            // 실패 시: TX 롤백으로 DB 복원, hub-service 미변경 → 보상 불필요 → push는 성공 후 등록
+            hubStockPort.cancelStock(orderId);
+            compensations.push(() -> hubStockPort.reserveStock(order));
 
-        // 주문 취소 이벤트 발행 → PaymentEventHandler에서 결제 취소 처리 (같은 트랜잭션)
-        // Order·Payment가 같은 DB이므로 단일 트랜잭션으로 원자적 처리
-        eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
-    }
+            // (2) 결제 취소 이벤트 (PaymentEventHandler, 같은 트랜잭션)
+            // 실패 시: T1 보상 (재고 재예약) 후 예외 re-throw → TX 롤백
+            eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
 
-    // 서브 주문 상세 조회
-    public CompanyOrderResult getCompanyOrder(UUID companyOrderId) {
-        return CompanyOrderResult.from(findCompanyOrderOrThrow(companyOrderId));
+        } catch (Exception e) {
+            executeCompensations(compensations);
+            throw e;
+        }
     }
 
     // 서브 주문 부분 취소
     @Transactional
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithOrderAndSiblingsOrThrow(companyOrderId);
 
         validateCompanyOrderCancellable(companyOrder);
 
         companyOrder.cancel(requesterId);
 
-        // 재고 예약 부분 취소 (companyOrderId 기준)
-        hubStockPort.cancelCompanyStock(companyOrderId);
+        // Saga 보상 스택
+        Deque<Runnable> compensations = new ArrayDeque<>();
+        try {
+            // [T1] 재고 예약 부분 취소 (단일 호출, 원자적)
+            // 실패 시: TX 롤백으로 DB 복원, hub-service 미변경 → 보상 불필요 → push는 성공 후 등록
+            hubStockPort.cancelCompanyStock(companyOrderId);
+            compensations.push(() -> hubStockPort.reserveCompanyStock(companyOrder));
 
-        // 주문 상태 업데이트 (모든 서브 주문이 터미널 상태면 Order도 종료)
-        Order order = companyOrder.getOrder();
-        order.updateStatus(requesterId);
+            // 주문 상태 업데이트 (모든 서브 주문이 터미널 상태면 Order도 종료)
+            Order order = companyOrder.getOrder();
+            order.updateStatus(requesterId);
 
-        // 만약 전체 주문이 취소되었다면 (마지막 서브 주문 취소 시) -> 결제 취소 이벤트 발행
-        if (order.getStatus() == OrderStatus.CANCELLED) {
-            eventPublisher.publishEvent(new OrderCancelledEvent(order.getOrderId(), requesterId));
+            // [T2] 마지막 서브 주문 취소 시 Order → CANCELLED → 결제 취소 이벤트 발행
+            // 실패 시: T1 보상 (재고 재예약) 후 예외 re-throw → TX 롤백
+            if (order.getStatus() == OrderStatus.CANCELLED) {
+                eventPublisher.publishEvent(new OrderCancelledEvent(order.getOrderId(), requesterId));
+            }
+        } catch (Exception e) {
+            executeCompensations(compensations);
+            throw e;
         }
     }
 
     // 출고 준비 확인: ORDERED → PREPARING
     @Transactional
     public CompanyOrderResult prepareCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.ORDERED) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
@@ -161,7 +186,7 @@ public class OrderService {
     // 출고 완료: PREPARING → SHIPPED, Order → DELIVERING
     @Transactional
     public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.PREPARING) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
@@ -174,7 +199,7 @@ public class OrderService {
             order.startDelivery();
         }
 
-        // 실재고 차감
+        // 실재고 차감 (마지막 외부 호출 → 실패 시 TX 롤백으로 DB 복원, 별도 보상 불필요)
         hubStockPort.deductStock(companyOrder);
 
         return CompanyOrderResult.from(companyOrder);
@@ -183,27 +208,13 @@ public class OrderService {
     // 업체 주문 수령 완료: SHIPPED → DELIVERED (배송 서비스 내부 호출용)
     @Transactional
     public CompanyOrderDeliveredResult confirmDelivery(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
+        CompanyOrder companyOrder = findCompanyOrderWithOrderAndSiblingsOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.SHIPPED) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.deliver();
         companyOrder.getOrder().updateStatus(null); // 배송 완료 시에는 삭제자 정보 없음
         return CompanyOrderDeliveredResult.from(companyOrder);
-    }
-
-    // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
-    public boolean isCancellable(UUID orderId) {
-        return orderRepository.findOrderById(orderId)
-                .map(this::checkOrderCancellable)
-                .orElse(false);
-    }
-
-    private boolean checkOrderCancellable(Order order) {
-        if (order.getStatus() != OrderStatus.PENDING) return false;
-        return order.getCompanyOrders().stream()
-                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
-                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
     }
 
     // Order + CompanyOrder + OrderItem 도메인 객체 구성
@@ -253,6 +264,20 @@ public class OrderService {
         return item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()));
     }
 
+    /**
+     * 보상 스택 실행 (LIFO)
+     * 보상 자체가 실패해도 나머지 보상은 계속 실행하고 에러를 로깅만 함
+     */
+    private void executeCompensations(Deque<Runnable> compensations) {
+        while (!compensations.isEmpty()) {
+            try {
+                compensations.pop().run();
+            } catch (Exception e) {
+                log.error("[Saga] 보상 트랜잭션 실패 - 수동 복구 필요: {}", e.getMessage(), e);
+            }
+        }
+    }
+
     // 요청한 모든 companyId에 대해 hubId 매핑이 존재하는지 검증
     private void validateHubMapping(Map<UUID, UUID> hubIdMap, List<UUID> companyIds) {
         companyIds.forEach(companyId -> {
@@ -266,7 +291,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException(OrderErrorCode.ORDER_ALREADY_CANCELLED);
         }
-        if (!checkOrderCancellable(order)) {
+        if (!order.isCancellable()) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
     }
@@ -281,8 +306,15 @@ public class OrderService {
         }
     }
 
-    private CompanyOrder findCompanyOrderOrThrow(UUID companyOrderId) {
-        return companyOrderRepository.findCompanyOrderById(companyOrderId)
+    // getCompanyOrder + prepareCompanyOrder + shipCompanyOrder: orderItems + order
+    private CompanyOrder findCompanyOrderWithItemsAndOrderOrThrow(UUID companyOrderId) {
+        return companyOrderRepository.findCompanyOrderWithItemsAndOrder(companyOrderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
+    }
+
+    // cancelCompanyOrder + confirmDelivery: order + order.companyOrders
+    private CompanyOrder findCompanyOrderWithOrderAndSiblingsOrThrow(UUID companyOrderId) {
+        return companyOrderRepository.findCompanyOrderWithOrderAndSiblings(companyOrderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
     }
 }

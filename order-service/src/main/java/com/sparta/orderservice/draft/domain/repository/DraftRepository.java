@@ -4,6 +4,7 @@ import com.sparta.orderservice.draft.domain.core.Draft;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -12,6 +13,9 @@ public interface DraftRepository {
     Draft save(Draft draft);
 
     Optional<Draft> findDraftById(UUID draftId);
+
+    // N+1 방지용 일괄 조회 (soft-deleted 제외)
+    List<Draft> findAllDraftsByIds(List<UUID> draftIds);
 
     Page<Draft> findDraftsByUserId(UUID userId, Pageable pageable);
 

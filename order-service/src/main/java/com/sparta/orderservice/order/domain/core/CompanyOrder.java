@@ -7,14 +7,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.springframework.data.domain.Persistable;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,12 +27,11 @@ import java.util.UUID;
 @Table(name = "p_company_orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CompanyOrder extends BaseEntity {
+public class CompanyOrder extends BaseEntity implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "company_order_id")
-    private UUID companyOrderId;
+    private UUID companyOrderId = UUID.randomUUID(); // 미리 생성 — save() 이전에도 사용 가능
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
@@ -58,6 +56,12 @@ public class CompanyOrder extends BaseEntity {
 
     @OneToMany(mappedBy = "companyOrder", cascade = CascadeType.ALL)
     private List<OrderItem> orderItems = new ArrayList<>();
+
+    @Override
+    public UUID getId() { return companyOrderId; }
+
+    @Override
+    public boolean isNew() { return version == null; }
 
     public static CompanyOrder of(Order order, UUID companyId, BigDecimal subtotalPrice, BigDecimal subtotalDeliveryFee) {
         CompanyOrder companyOrder = new CompanyOrder();

@@ -9,5 +9,7 @@ import java.util.UUID;
 // soft delete 필터링은 Infrastructure(CompanyOrderRepositoryImpl)에서 처리
 public interface CompanyOrderRepository {
 
-    Optional<CompanyOrder> findCompanyOrderById(UUID companyOrderId);
+    Optional<CompanyOrder> findCompanyOrderWithItemsAndOrder(UUID companyOrderId);
+
+    Optional<CompanyOrder> findCompanyOrderWithOrderAndSiblings(UUID companyOrderId);
 }
