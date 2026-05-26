@@ -14,6 +14,8 @@ import com.sparta.hubservice.inventory.domain.core.InventoryHistory;
 import com.sparta.hubservice.inventory.domain.core.WarehouseInventory;
 import com.sparta.hubservice.inventory.domain.repository.InventoryHistoryRepository;
 import com.sparta.hubservice.inventory.domain.repository.WarehouseInventoryRepository;
+import com.sparta.hubservice.warehouse.domain.core.Warehouse;
+import com.sparta.hubservice.warehouse.domain.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -32,9 +34,11 @@ public class InventoryService {
 
     private final WarehouseInventoryRepository inventoryRepository;
     private final InventoryHistoryRepository historyRepository;
+    private final WarehouseRepository warehouseRepository;
 
     @Transactional
-    public WarehouseInventoryDto createInventory(WarehouseInventoryCreateCommand command) {
+    public WarehouseInventoryDto createInventory(WarehouseInventoryCreateCommand command, UUID requesterHubId) {
+        validateHubAccess(command.getWarehouseId(), requesterHubId);
         inventoryRepository.findByWarehouseIdAndProductOptionId(command.getWarehouseId(), command.getProductOptionId())
                 .ifPresent(i -> { throw new BusinessException(ErrorCode.DUPLICATE_INVENTORY); });
 
@@ -72,13 +76,14 @@ public class InventoryService {
 
     @Transactional
     public WarehouseInventoryAdjustDto adjustInventory(UUID inventoryId, WarehouseInventoryAdjustCommand command,
-                                                       UUID requesterCompanyId) {
+                                                       UUID requesterCompanyId, UUID requesterHubId) {
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
 
         if (requesterCompanyId != null && !requesterCompanyId.equals(inventory.getCompanyId())) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+        validateHubAccess(inventory.getWarehouseId(), requesterHubId);
 
         int previousQuantity = inventory.getQuantity();
 
@@ -206,14 +211,24 @@ public class InventoryService {
     }
 
     @Transactional
-    public void deleteInventory(UUID inventoryId, UUID deletedBy) {
+    public void deleteInventory(UUID inventoryId, UUID deletedBy, UUID requesterHubId) {
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+        validateHubAccess(inventory.getWarehouseId(), requesterHubId);
         if (inventory.getQuantity() > 0 || inventory.getReservedQuantity() > 0) {
             throw new BusinessException(ErrorCode.INVENTORY_HAS_STOCK);
         }
         inventory.softDelete(deletedBy);
         inventoryRepository.save(inventory);
+    }
+
+    private void validateHubAccess(UUID warehouseId, UUID requesterHubId) {
+        if (requesterHubId == null) return;
+        Warehouse warehouse = warehouseRepository.findById(warehouseId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.WAREHOUSE_NOT_FOUND));
+        if (!requesterHubId.equals(warehouse.getHubId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 
     private InventoryChangeType parseChangeType(String reason) {

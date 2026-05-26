@@ -46,10 +46,12 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<WarehouseInventoryResponse>> createInventory(
             @RequestHeader("X-User-Role") String role,
             @RequestHeader(value = "X-Company-Id", required = false) UUID companyId,
+            @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @Valid @RequestBody WarehouseInventoryCreateRequest request) {
         requireInventoryWriteAccess(role);
         UUID resolvedCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : request.getCompanyId();
-        WarehouseInventoryDto dto = inventoryService.createInventory(request.toCommand(resolvedCompanyId));
+        UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
+        WarehouseInventoryDto dto = inventoryService.createInventory(request.toCommand(resolvedCompanyId), requesterHubId);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(WarehouseInventoryResponse.from(dto)));
     }
@@ -87,10 +89,12 @@ public class InventoryController {
             @PathVariable UUID inventory_id,
             @RequestHeader("X-User-Role") String role,
             @RequestHeader(value = "X-Company-Id", required = false) UUID companyId,
+            @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @Valid @RequestBody WarehouseInventoryAdjustRequest request) {
         requireInventoryWriteAccess(role);
         UUID requesterCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : null;
-        WarehouseInventoryAdjustDto dto = inventoryService.adjustInventory(inventory_id, request.toCommand(), requesterCompanyId);
+        UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
+        WarehouseInventoryAdjustDto dto = inventoryService.adjustInventory(inventory_id, request.toCommand(), requesterCompanyId, requesterHubId);
         return ResponseEntity.ok(ApiResponse.success(WarehouseInventoryAdjustResponse.from(dto)));
     }
 
@@ -98,9 +102,11 @@ public class InventoryController {
     public ResponseEntity<ApiResponse<Void>> deleteInventory(
             @PathVariable UUID inventory_id,
             @RequestHeader("X-User-Id") UUID userId,
-            @RequestHeader("X-User-Role") String role) {
+            @RequestHeader("X-User-Role") String role,
+            @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId) {
         requireMasterOrHubManager(role);
-        inventoryService.deleteInventory(inventory_id, userId);
+        UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
+        inventoryService.deleteInventory(inventory_id, userId, requesterHubId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 
