@@ -1,4 +1,4 @@
-package com.sparta.orderservice.order.application.dto;
+package com.sparta.orderservice.global.dto;
 
 /**
  * Company Service에서 조회한 기본 배송지 정보 — application layer DTO

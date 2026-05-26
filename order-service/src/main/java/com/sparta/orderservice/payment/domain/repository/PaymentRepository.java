@@ -4,6 +4,7 @@ import com.sparta.orderservice.payment.domain.core.Payment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +22,7 @@ public interface PaymentRepository {
     Optional<Payment> findPaymentByOrderId(UUID orderId);
 
     Page<Payment> findAllPayments(Pageable pageable);
+
+    // COMPANY_MANAGER용 — 수령업체 기준 orderId 목록으로 결제 필터링
+    Page<Payment> findPaymentsByOrderIds(List<UUID> orderIds, Pageable pageable);
 }

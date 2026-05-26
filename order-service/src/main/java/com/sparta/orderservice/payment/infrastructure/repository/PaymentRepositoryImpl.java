@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -39,7 +40,11 @@ public class PaymentRepositoryImpl implements PaymentRepository {
 
     @Override
     public Page<Payment> findAllPayments(Pageable pageable) {
-        // soft delete 필터링: deletedAt IS NULL 인 결제 목록 조회
         return paymentJpaRepository.findAllByDeletedAtIsNull(pageable);
+    }
+
+    @Override
+    public Page<Payment> findPaymentsByOrderIds(List<UUID> orderIds, Pageable pageable) {
+        return paymentJpaRepository.findByOrderIdInAndDeletedAtIsNull(orderIds, pageable);
     }
 }

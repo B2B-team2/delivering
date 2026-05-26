@@ -1,6 +1,6 @@
-package com.sparta.orderservice.order.application.port;
+package com.sparta.orderservice.global.port;
 
-import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
+import com.sparta.orderservice.global.dto.ProductOptionInfo;
 
 import java.util.List;
 import java.util.Map;

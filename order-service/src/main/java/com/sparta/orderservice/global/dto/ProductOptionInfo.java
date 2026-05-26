@@ -1,4 +1,4 @@
-package com.sparta.orderservice.order.application.dto;
+package com.sparta.orderservice.global.dto;
 
 import java.math.BigDecimal;
 import java.util.UUID;

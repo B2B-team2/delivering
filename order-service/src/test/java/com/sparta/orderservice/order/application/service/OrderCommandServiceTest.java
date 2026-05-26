@@ -1,14 +1,13 @@
 package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
-import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
+import com.sparta.orderservice.global.port.CompanyPort;
+import com.sparta.orderservice.global.security.SecurityUtils;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
-import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
-import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
 import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
@@ -40,6 +39,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,6 +62,8 @@ class OrderCommandServiceTest {
     private DeliveryPort deliveryPort;
     @Mock
     private OrderWriter orderWriter;
+    @Mock
+    private SecurityUtils securityUtils;
 
     @InjectMocks
     private OrderCommandService orderCommandService;
@@ -74,6 +76,8 @@ class OrderCommandServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityUtils.isMaster()).thenReturn(true);
+
         receiverCompanyId = UUID.randomUUID();
         supplierCompanyId = UUID.randomUUID();
         requesterId = UUID.randomUUID();
@@ -391,78 +395,6 @@ class OrderCommandServiceTest {
                     .isInstanceOf(RuntimeException.class);
 
             verify(hubStockPort).reserveCompanyStock(co);
-        }
-    }
-
-    // --- prepareCompanyOrder ---
-
-    @Nested
-    @DisplayName("prepareCompanyOrder()")
-    class PrepareCompanyOrder {
-
-        @Test
-        @DisplayName("ORDERED → PREPARING 상태 전환 성공")
-        void ordered_to_preparing_success() {
-            Order order = buildPendingOrder();
-            CompanyOrder co = CompanyOrder.of(order, supplierCompanyId, BigDecimal.valueOf(20000), BigDecimal.ZERO);
-            when(companyOrderRepository.findCompanyOrderWithItemsAndOrder(co.getCompanyOrderId()))
-                    .thenReturn(Optional.of(co));
-
-            CompanyOrderResult result = orderCommandService.prepareCompanyOrder(co.getCompanyOrderId());
-
-            assertThat(result.status()).isEqualTo(CompanyOrderStatus.PREPARING.name());
-        }
-
-        @Test
-        @DisplayName("ORDERED 아닌 상태(PREPARING)에서 호출 → 예외 발생")
-        void non_ordered_status_throws() {
-            Order order = buildPendingOrder();
-            CompanyOrder co = CompanyOrder.of(order, supplierCompanyId, BigDecimal.valueOf(20000), BigDecimal.ZERO);
-            co.prepare();
-            when(companyOrderRepository.findCompanyOrderWithItemsAndOrder(co.getCompanyOrderId()))
-                    .thenReturn(Optional.of(co));
-
-            assertThatThrownBy(() -> orderCommandService.prepareCompanyOrder(co.getCompanyOrderId()))
-                    .isInstanceOf(BusinessException.class);
-        }
-    }
-
-    // --- shipCompanyOrder ---
-
-    @Nested
-    @DisplayName("shipCompanyOrder()")
-    class ShipCompanyOrder {
-
-        @Test
-        @DisplayName("PREPARING → SHIPPED, 재고 차감 호출, 첫 출고 시 Order → DELIVERING")
-        void preparing_to_shipped_and_order_starts_delivery() {
-            Order order = buildPendingOrder();
-            CompanyOrder co = CompanyOrder.of(order, supplierCompanyId, BigDecimal.valueOf(20000), BigDecimal.ZERO);
-            order.addCompanyOrder(co);
-            co.prepare();
-            when(companyOrderRepository.findCompanyOrderWithItemsAndOrder(co.getCompanyOrderId()))
-                    .thenReturn(Optional.of(co));
-
-            CompanyOrderResult result = orderCommandService.shipCompanyOrder(co.getCompanyOrderId());
-
-            assertThat(result.status()).isEqualTo(CompanyOrderStatus.SHIPPED.name());
-            assertThat(order.getStatus()).isEqualTo(OrderStatus.DELIVERING);
-            verify(hubStockPort).deductStock(co);
-        }
-
-        @Test
-        @DisplayName("PREPARING 아닌 상태(ORDERED)에서 출고 → 예외 발생")
-        void non_preparing_status_throws() {
-            Order order = buildPendingOrder();
-            CompanyOrder co = CompanyOrder.of(order, supplierCompanyId, BigDecimal.valueOf(20000), BigDecimal.ZERO);
-            // ORDERED 상태 그대로
-            when(companyOrderRepository.findCompanyOrderWithItemsAndOrder(co.getCompanyOrderId()))
-                    .thenReturn(Optional.of(co));
-
-            assertThatThrownBy(() -> orderCommandService.shipCompanyOrder(co.getCompanyOrderId()))
-                    .isInstanceOf(BusinessException.class);
-
-            verify(hubStockPort, never()).deductStock(any());
         }
     }
 

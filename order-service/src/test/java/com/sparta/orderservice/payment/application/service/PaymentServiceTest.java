@@ -1,6 +1,7 @@
 package com.sparta.orderservice.payment.application.service;
 
 import com.sparta.common.dto.BusinessException;
+import com.sparta.orderservice.global.security.SecurityUtils;
 import com.sparta.orderservice.order.application.service.OrderCommandService;
 import com.sparta.orderservice.order.application.service.OrderQueryService;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -40,6 +42,8 @@ class PaymentServiceTest {
     private OrderQueryService orderQueryService;
     @Mock
     private OrderCommandService orderCommandService;
+    @Mock
+    private SecurityUtils securityUtils;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -51,6 +55,8 @@ class PaymentServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(securityUtils.isMaster()).thenReturn(true);
+
         orderId = UUID.randomUUID();
         paymentId = UUID.randomUUID();
         requesterId = UUID.randomUUID();

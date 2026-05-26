@@ -2,9 +2,8 @@ package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
-import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
+import com.sparta.orderservice.global.security.SecurityUtils;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
-import com.sparta.orderservice.order.application.dto.CompanyOrderDeliveredResult;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
 import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
@@ -12,7 +11,7 @@ import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
-import com.sparta.orderservice.order.application.port.CompanyPort;
+import com.sparta.orderservice.global.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
@@ -45,12 +44,10 @@ public class OrderCommandService {
     private final CompanyPort companyPort;
     private final DeliveryPort deliveryPort;
     private final OrderWriter orderWriter;
+    private final SecurityUtils securityUtils;
 
     /**
-     * 주문 생성 — DB TX 없이 각 단계를 독립 TX로 분리 (Long Transaction 방지)
-     *
-     * 기존 @Transactional 구조에서는 외부 호출(hub/delivery) 중 DB 커넥션을 점유해
-     * 트래픽 증가 시 커넥션 풀 고갈 위험이 있었음. NOT_SUPPORTED로 전환하여 개선.
+     * 주문 생성 — DB TX 없이 각 단계를 독립 TX로 분리
      *
      * 흐름:
      * (1) 도메인 객체 구성 (orderId는 Order.of() 내부에서 미리 생성)
@@ -62,6 +59,14 @@ public class OrderCommandService {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderResult createOrder(CreateOrderCommand command, UUID requesterId) {
+        // MASTER, COMPANY_MANAGER만 주문 생성 가능
+        if (!securityUtils.isMaster() && !securityUtils.isCompanyManager()) {
+            throw new BusinessException(OrderErrorCode.FORBIDDEN);
+        }
+        if (command.receiverCompanyId() == null) {
+            throw new BusinessException(OrderErrorCode.RECEIVER_COMPANY_REQUIRED);
+        }
+
         // (1) 도메인 객체 구성 (TX 없음 — orderId는 Order.of() 내부에서 미리 생성됨)
         Order order = buildOrder(command);
 
@@ -114,6 +119,15 @@ public class OrderCommandService {
         Order order = orderRepository.findOrderById(orderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
+        // COMPANY_MANAGER는 자기 회사가 수령업체(주문 생성자)인 주문만 취소 가능
+        if (securityUtils.isCompanyManager()) {
+            if (!order.getReceiverCompanyId().equals(securityUtils.getCompanyId())) {
+                throw new BusinessException(OrderErrorCode.FORBIDDEN);
+            }
+        } else if (!securityUtils.isMaster()) {
+            throw new BusinessException(OrderErrorCode.FORBIDDEN);
+        }
+
         validateOrderCancellable(order);
 
         // 이미 CANCELLED인 CompanyOrder는 건너뜀 (PENDING 상태면 SHIPPED/DELIVERED는 없음)
@@ -145,6 +159,15 @@ public class OrderCommandService {
     public void cancelCompanyOrder(UUID companyOrderId, UUID requesterId) {
         CompanyOrder companyOrder = findCompanyOrderWithOrderAndSiblingsOrThrow(companyOrderId);
 
+        // COMPANY_MANAGER는 자기 회사가 공급업체인 CompanyOrder만 취소 가능
+        if (securityUtils.isCompanyManager()) {
+            if (!companyOrder.getCompanyId().equals(securityUtils.getCompanyId())) {
+                throw new BusinessException(OrderErrorCode.FORBIDDEN);
+            }
+        } else if (!securityUtils.isMaster()) {
+            throw new BusinessException(OrderErrorCode.FORBIDDEN);
+        }
+
         validateCompanyOrderCancellable(companyOrder);
 
         companyOrder.cancel(requesterId);
@@ -170,51 +193,6 @@ public class OrderCommandService {
             executeCompensations(compensations);
             throw e;
         }
-    }
-
-    // 출고 준비 확인: ORDERED → PREPARING
-    @Transactional
-    public CompanyOrderResult prepareCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId);
-        if (companyOrder.getStatus() != CompanyOrderStatus.ORDERED) {
-            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
-        }
-        companyOrder.prepare();
-        return CompanyOrderResult.from(companyOrder);
-    }
-
-    // 출고 완료: PREPARING → SHIPPED, Order → DELIVERING
-    @Transactional
-    public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderWithItemsAndOrderOrThrow(companyOrderId);
-        if (companyOrder.getStatus() != CompanyOrderStatus.PREPARING) {
-            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
-        }
-        companyOrder.ship();
-
-        // CompanyOrder가 출고되면 Order → DELIVERING 전환
-        // (이미 DELIVERING/COMPLETED 상태면 중복 전환 방지)
-        Order order = companyOrder.getOrder();
-        if (order.getStatus() == OrderStatus.PENDING) {
-            order.startDelivery();
-        }
-
-        // 실재고 차감 (마지막 외부 호출 → 실패 시 TX 롤백으로 DB 복원, 별도 보상 불필요)
-        hubStockPort.deductStock(companyOrder);
-
-        return CompanyOrderResult.from(companyOrder);
-    }
-
-    // 업체 주문 수령 완료: SHIPPED → DELIVERED (배송 서비스 내부 호출용)
-    @Transactional
-    public CompanyOrderDeliveredResult confirmDelivery(UUID companyOrderId) {
-        CompanyOrder companyOrder = findCompanyOrderWithOrderAndSiblingsOrThrow(companyOrderId);
-        if (companyOrder.getStatus() != CompanyOrderStatus.SHIPPED) {
-            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
-        }
-        companyOrder.deliver();
-        companyOrder.getOrder().updateStatus(null); // 배송 완료 시에는 삭제자 정보 없음
-        return CompanyOrderDeliveredResult.from(companyOrder);
     }
 
     // Order + CompanyOrder + OrderItem 도메인 객체 구성
@@ -306,13 +284,7 @@ public class OrderCommandService {
         }
     }
 
-    // getCompanyOrder + prepareCompanyOrder + shipCompanyOrder: orderItems + order
-    private CompanyOrder findCompanyOrderWithItemsAndOrderOrThrow(UUID companyOrderId) {
-        return companyOrderRepository.findCompanyOrderWithItemsAndOrder(companyOrderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
-    }
-
-    // cancelCompanyOrder + confirmDelivery: order + order.companyOrders
+    // cancelCompanyOrder: order + order.companyOrders (형제 CompanyOrder 포함)
     private CompanyOrder findCompanyOrderWithOrderAndSiblingsOrThrow(UUID companyOrderId) {
         return companyOrderRepository.findCompanyOrderWithOrderAndSiblings(companyOrderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
