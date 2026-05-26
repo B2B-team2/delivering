@@ -61,7 +61,7 @@ public class ProductCategoryService {
     }
 
     @Transactional
-    public ProductCategoryDto deleteCategory(UUID categoryId, String deletedBy) {
+    public ProductCategoryDto deleteCategory(UUID categoryId, UUID deletedBy) {
         ProductCategory category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.CATEGORY_NOT_FOUND));
 

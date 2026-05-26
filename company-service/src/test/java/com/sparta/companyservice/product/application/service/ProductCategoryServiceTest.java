@@ -210,7 +210,7 @@ class ProductCategoryServiceTest {
         when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
 
         // when
-        ProductCategoryDto result = categoryService.deleteCategory(categoryId, "test-user");
+        ProductCategoryDto result = categoryService.deleteCategory(categoryId, UUID.randomUUID());
 
         // then
         assertThat(result.getCategoryId()).isEqualTo(categoryId);
