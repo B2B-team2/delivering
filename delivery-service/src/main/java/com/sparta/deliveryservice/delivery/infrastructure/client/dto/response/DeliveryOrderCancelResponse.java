@@ -12,7 +12,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DeliveryOrderCancelResponse {
-    private UUID orderId;
     private int cancelledCount;
     private int skippedCount;
     private List<CancelledDeliveryDto> cancelledDeliveries;
