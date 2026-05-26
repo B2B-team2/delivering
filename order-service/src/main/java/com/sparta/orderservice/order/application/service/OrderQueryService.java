@@ -5,9 +5,7 @@ import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
-import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
 import com.sparta.orderservice.order.domain.core.Order;
-import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -56,14 +54,7 @@ public class OrderQueryService {
      */
     public boolean isCancellable(UUID orderId) {
         return orderRepository.findOrderById(orderId)
-                .map(this::checkOrderCancellable)
+                .map(Order::isCancellable)
                 .orElse(false);
-    }
-
-    private boolean checkOrderCancellable(Order order) {
-        if (order.getStatus() != OrderStatus.PENDING) return false;
-        return order.getCompanyOrders().stream()
-                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
-                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
     }
 }

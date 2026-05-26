@@ -107,6 +107,16 @@ public class Order extends BaseEntity {
         this.companyOrders.add(companyOrder);
     }
 
+    /**
+     * 주문 취소 가능 여부 — PENDING 상태이고 출고(SHIPPED)/수령(DELIVERED)된 서브주문이 없어야 함
+     */
+    public boolean isCancellable() {
+        if (this.status != OrderStatus.PENDING) return false;
+        return this.companyOrders.stream()
+                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
+                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
+    }
+
     public void startDelivery() {
         this.status = OrderStatus.DELIVERING;
     }

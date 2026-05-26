@@ -24,9 +24,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
-
 import java.math.BigDecimal;
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -276,20 +273,12 @@ public class OrderCommandService {
     }
 
     private void validateOrderCancellable(Order order) {
-        // (필요하다면 isCancellable 로직을 여기로 이동하거나 OrderQueryService에 유지)
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException(OrderErrorCode.ORDER_ALREADY_CANCELLED);
         }
-        if (!checkOrderCancellable(order)) {
+        if (!order.isCancellable()) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
-    }
-
-    private boolean checkOrderCancellable(Order order) {
-        if (order.getStatus() != OrderStatus.PENDING) return false;
-        return order.getCompanyOrders().stream()
-                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
-                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
     }
 
     private void validateCompanyOrderCancellable(CompanyOrder companyOrder) {
