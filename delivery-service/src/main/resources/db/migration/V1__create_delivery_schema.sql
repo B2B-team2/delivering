@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS "p_deliveries" (
     delivery_manager_id          UUID          NOT NULL,
     manager_name                 VARCHAR(100)  NOT NULL,
     manager_phone                VARCHAR(20)   NOT NULL,
+    delivery_slack_id            VARCHAR(100),
 
     -- 배송 시간 관련 정보
     final_dispatch_deadline_at  TIMESTAMP,
@@ -36,10 +37,11 @@ CREATE TABLE IF NOT EXISTS "p_deliveries" (
 
     -- 프로젝트 공통 메타데이터 컬럼
     created_at                   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by                   VARCHAR(100)  NOT NULL DEFAULT 'SYSTEM',
+    created_by                   UUID,
     updated_at                   TIMESTAMP,
-    updated_by                   VARCHAR(100),
+    updated_by                   UUID ,
     deleted_at                   TIMESTAMP,
+    deleted_by                   UUID ,
     is_deleted                   BOOLEAN       NOT NULL DEFAULT FALSE,
 
     -- 제약 조건 설정 (PK)

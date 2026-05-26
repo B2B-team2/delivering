@@ -4,10 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.common.dto.PageResponse;
 import com.sparta.deliveryservice.delivery.application.service.DeliveryService;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryCancelRequest;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryStatusUpdateRequest;
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryAddressResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryCancelResponse;
+import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryCreateResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryDetailResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliverySearchResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryStatusResponse;
@@ -22,11 +24,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,11 +42,10 @@ public class DeliveryController {
 
     private final DeliveryService deliveryService;
 
-    @GetMapping("/deliveries")
-    public ResponseEntity<ApiResponse<PageResponse<DeliverySearchResponse.DeliveryResponseDto>>> searchDeliveries(
-            @PageableDefault(size = 10, sort = "createdAt") Pageable pageable) {
-        Page<DeliverySearchResponse.DeliveryResponseDto> deliveryPage = deliveryService.searchDeliveries(pageable);
-        PageResponse<DeliverySearchResponse.DeliveryResponseDto> response = DeliverySearchResponse.of(deliveryPage);
+    @PostMapping("/deliveries")
+    public ResponseEntity<ApiResponse<List<DeliveryCreateResponse>>> createDelivery(
+            @RequestBody DeliveryCreateClientRequest request) {
+        List<DeliveryCreateResponse> response = deliveryService.createSingleDeliveryTransaction(request, "TEST_USER");
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
@@ -74,9 +79,9 @@ public class DeliveryController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PutMapping("/deliveries/{deliveryId}/cancel")
+    @PutMapping("/deliveries/{delivery_id}/cancel")
     public ResponseEntity<ApiResponse<DeliveryCancelResponse>> cancelDelivery(
-            @PathVariable("deliveryId") UUID deliveryId,
+            @PathVariable("delivery_id") UUID deliveryId,
             @Valid @RequestBody DeliveryCancelRequest request) {
         DeliveryCancelResponse response = deliveryService.cancelDelivery(deliveryId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
