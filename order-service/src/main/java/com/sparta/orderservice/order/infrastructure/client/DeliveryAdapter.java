@@ -52,11 +52,10 @@ public class DeliveryAdapter implements DeliveryPort {
     }
 
     // 배송 일괄 취소 (Saga 보상 전용): createOrder 실패 시 생성된 배송 전체 취소
-    // TODO: 배송팀 내부 API 구현 완료 후 TODO 주석 제거
     @Override
-    public void cancelDeliveries(UUID orderId) {
+    public void cancelDeliveries(List<UUID> companyOrderIds) {
         try {
-            deliveryClient.cancelDeliveries(new DeliveryCancelRequest(orderId));
+            deliveryClient.cancelDeliveries(new DeliveryCancelRequest(companyOrderIds));
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {

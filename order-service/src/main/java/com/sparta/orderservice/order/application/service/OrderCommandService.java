@@ -85,7 +85,10 @@ public class OrderCommandService {
 
             // (4) 배송 일괄 생성 (TX 없음) → 실패 시 (3) 보상
             Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
-            compensations.push(() -> deliveryPort.cancelDeliveries(order.getOrderId()));
+            List<UUID> companyOrderIds = order.getCompanyOrders().stream()
+                    .map(CompanyOrder::getCompanyOrderId)
+                    .toList();
+            compensations.push(() -> deliveryPort.cancelDeliveries(companyOrderIds));
 
             // 배송 ID 할당 (OrderItem ↔ Delivery 추적용)
             order.getCompanyOrders().forEach(co -> {
