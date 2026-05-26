@@ -2,7 +2,6 @@ package com.sparta.orderservice.draft.presentation.dto;
 
 import com.sparta.orderservice.draft.application.dto.CreateOrderFromDraftCommand;
 import jakarta.validation.constraints.Future;
-import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
@@ -11,20 +10,26 @@ import java.util.List;
 import java.util.UUID;
 
 public record DraftOrderCreateRequest(
-        @NotEmpty List<UUID> draftIds,          // 주문으로 전환할 장바구니 항목 ID 목록
-        @NotNull UUID deliveryAddressId,        // 배송지 ID
-        @NotBlank String address,               // JSON: {"address": "기본주소", "address_detail": "상세주소"}
-        @NotBlank String recipientName,
-        @NotBlank String phone,
-        String slackId,                         // nullable
-        @NotNull @Future LocalDateTime dueDate,
-        String requestMemo                      // nullable
+    @NotEmpty List<UUID> draftIds,          // 주문으로 전환할 임시주문 항목 ID 목록
+
+    // 수령인 정보 — nullable 허용
+    // 값이 있으면 그대로 사용, null이면 Company Service 기본 배송지(is_default=true) 자동 조회
+    // 프론트엔드가 있다면 기본 배송지를 pre-fill 후 사용자가 수정하는 흐름
+    String address,
+    String recipientName,
+    String phone,
+
+    String slackId,                         // nullable
+
+    @NotNull @Future LocalDateTime dueDate,
+    String requestMemo                      // nullable
 ) {
-    public CreateOrderFromDraftCommand toCommand(UUID userId) {
+    // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
+    public CreateOrderFromDraftCommand toCommand(UUID userId, UUID receiverCompanyId) {
         return new CreateOrderFromDraftCommand(
                 userId,
+                receiverCompanyId,
                 draftIds,
-                deliveryAddressId,
                 address,
                 recipientName,
                 phone,

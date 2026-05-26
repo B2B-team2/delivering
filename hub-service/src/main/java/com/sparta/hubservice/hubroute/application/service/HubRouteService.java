@@ -69,7 +69,7 @@ public class HubRouteService {
     }
 
     @Transactional
-    public void deleteHubRoute(UUID routeId, String deletedBy) {
+    public void deleteHubRoute(UUID routeId, UUID deletedBy) {
         HubRoute hubRoute = hubRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.ROUTE_NOT_FOUND));
         hubRoute.softDelete(deletedBy);

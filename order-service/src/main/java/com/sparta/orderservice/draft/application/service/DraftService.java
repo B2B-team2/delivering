@@ -7,8 +7,13 @@ import com.sparta.orderservice.draft.application.dto.DraftResult;
 import com.sparta.orderservice.draft.domain.core.Draft;
 import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
+import com.sparta.orderservice.draft.application.port.OrderCreatePort;
+import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
-import com.sparta.orderservice.order.application.service.OrderService;
+import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
+import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
+import com.sparta.orderservice.order.application.port.CompanyPort;
+import com.sparta.orderservice.order.application.port.ProductPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -16,8 +21,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -25,7 +32,9 @@ import java.util.UUID;
 public class DraftService {
 
     private final DraftRepository draftRepository;
-    private final OrderService orderService;
+    private final OrderCreatePort orderCreatePort;
+    private final ProductPort productPort;
+    private final CompanyPort companyPort;
 
     /**
      * 임시주문 항목 추가 (upsert)
@@ -68,34 +77,86 @@ public class DraftService {
     public void deleteDraft(UUID draftId, UUID userId) {
         Draft draft = findDraftOrThrow(draftId);
         checkOwnership(draft, userId);
-        draft.delete(userId.toString());
+        draft.delete(userId);
     }
 
     // 임시주문으로 주문 생성
-    // TODO: Hub Service FeignClient 연동 (productOptionId → companyId, unitPrice 조회)
     @Transactional
     public OrderResult createOrderFromDraft(CreateOrderFromDraftCommand command) {
         // 1. 임시주문 항목 조회 및 소유권 검증
         List<Draft> drafts = command.draftIds().stream()
                 .map(this::findDraftOrThrow)
-                .peek(draft -> checkOwnership(draft, command.userId()))
                 .toList();
+        drafts.forEach(draft -> checkOwnership(draft, command.userId()));
 
-        // TODO: Hub Service FeignClient로 productOptionId → (companyId, unitPrice) 조회
+        // 2. Product Service 조회 → companyId별 CompanyOrderCommand 목록 구성
+        Map<UUID, ProductOptionInfo> productInfoMap = productPort.getProductOptionInfos(
+                drafts.stream().map(Draft::getProductOptionId).toList()
+        );
+        List<CreateOrderCommand.CompanyOrderCommand> companyOrderCommands =
+                buildCompanyOrderCommands(drafts, productInfoMap);
 
-        // TODO: companyId 기준으로 그룹핑 → CompanyOrderCommand 목록 생성
+        // 3. 배송지 세팅: null이면 Company Service 기본 배송지(is_default=true) 자동 조회
+        // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
+        DeliveryAddressInfo address = resolveDeliveryAddress(command);
 
-        // TODO: requesterCompanyId 조회 (userId → companyId, 유저 서비스 연동 또는 헤더 전달)
+        // 4. 주문 생성
+        OrderResult orderResult = orderCreatePort.createOrder(new CreateOrderCommand(
+                command.receiverCompanyId(),
+                address.recipientName(),
+                address.phone(),
+                command.slackId(),
+                address.address(),
+                command.dueDate(),
+                command.requestMemo(),
+                companyOrderCommands
+        ), command.userId());
 
-        throw new UnsupportedOperationException("Hub Service FeignClient 연동 후 구현 예정");
+        // 5. 임시주문 항목 soft delete
+        drafts.forEach(draft -> draft.delete(command.userId()));
 
-        // 주문 생성
-        // OrderResult orderResult = orderService.createOrder(new CreateOrderCommand(...), command.userId());
+        return orderResult;
+    }
 
-        // 임시주문 항목 soft delete
-        // drafts.forEach(draft -> draft.delete(command.userId().toString()));
+    // Draft 목록 + 상품 정보 → companyId 기준 그룹핑 후 CompanyOrderCommand 목록 생성
+    // Draft당 productInfoMap.get() 1회 호출: companyId·unitPrice를 한 번에 추출 후 그룹핑
+    private List<CreateOrderCommand.CompanyOrderCommand> buildCompanyOrderCommands(
+            List<Draft> drafts, Map<UUID, ProductOptionInfo> productInfoMap) {
+        return drafts.stream()
+                .map(draft -> {
+                    ProductOptionInfo info = productInfoMap.get(draft.getProductOptionId());
+                    return Map.entry(
+                            info.companyId(),
+                            new CreateOrderCommand.OrderItemCommand(
+                                    draft.getProductOptionId(),
+                                    draft.getQuantity(),
+                                    info.unitPrice()
+                            )
+                    );
+                })
+                .collect(Collectors.groupingBy(
+                        Map.Entry::getKey,
+                        Collectors.mapping(Map.Entry::getValue, Collectors.toList())
+                ))
+                .entrySet().stream()
+                .map(entry -> new CreateOrderCommand.CompanyOrderCommand(entry.getKey(), entry.getValue()))
+                .toList();
+    }
 
-        // return orderResult;
+    // 배송지 null-fallback: 요청값이 하나라도 null이면 Company Service 기본 배송지 자동 조회
+    // address는 CompanyAdapter에서 jsonb 형식으로 변환 완료된 값 그대로 사용
+    private DeliveryAddressInfo resolveDeliveryAddress(CreateOrderFromDraftCommand command) {
+        String address = command.address();
+        String recipientName = command.recipientName();
+        String phone = command.phone();
+
+        if (address == null || recipientName == null || phone == null) {
+            DeliveryAddressInfo defaultAddr = companyPort.getDefaultDeliveryAddress(command.receiverCompanyId());
+            if (address == null) address = defaultAddr.address();
+            if (recipientName == null) recipientName = defaultAddr.recipientName();
+            if (phone == null) phone = defaultAddr.phone();
+        }
+        return new DeliveryAddressInfo(address, recipientName, phone);
     }
 
     private Draft findDraftOrThrow(UUID draftId) {

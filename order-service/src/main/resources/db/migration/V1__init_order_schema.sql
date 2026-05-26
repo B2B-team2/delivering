@@ -6,13 +6,37 @@
 CREATE SCHEMA IF NOT EXISTS "order-db";
 
 -- ============================================================
--- 1. p_orders (주문)
+-- 1. p_order_drafts (임시주문)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS "order-db".p_order_drafts
+(
+    draft_id          UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id           UUID        NOT NULL,                   -- 임시주문 소유자
+    product_id        UUID        NOT NULL,                   -- 상품 ID
+    product_option_id UUID        NOT NULL,                   -- 상품 옵션(SKU)
+    quantity          INTEGER     NOT NULL DEFAULT 1,         -- 수량
+    version           BIGINT      NOT NULL DEFAULT 0,         -- 낙관적 락 버전
+    created_at        TIMESTAMP   NOT NULL,
+    created_by        VARCHAR(255),
+    updated_at        TIMESTAMP,
+    updated_by        VARCHAR(255),
+    deleted_at        TIMESTAMP,
+    deleted_by        VARCHAR(255)
+);
+
+-- 활성(soft-delete 제외) 임시주문 중 동일 사용자+상품옵션 중복 방지 (partial unique index)
+-- 동시 upsert 요청 시 두 번째 INSERT를 DB 레벨에서 차단 → DataIntegrityViolationException → 409
+CREATE UNIQUE INDEX IF NOT EXISTS uq_draft_user_product_option_active
+    ON "order-db".p_order_drafts (user_id, product_option_id)
+    WHERE deleted_at IS NULL;
+
+-- ============================================================
+-- 2. p_orders (주문)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS "order-db".p_orders
 (
     order_id             UUID         NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    requester_company_id UUID         NOT NULL,                 -- 요청(공급)업체
-    receiver_company_id  UUID         NOT NULL,                 -- 수령업체
+    receiver_company_id  UUID         NOT NULL,                 -- 수령업체 (주문자 소속 업체)
     recipient_name       VARCHAR(100) NOT NULL,                 -- 수령인 실명
     phone                VARCHAR(20)  NOT NULL,                 -- 수령인 연락처
     slack_id             VARCHAR(36),                           -- 수령인 Slack ID (nullable)
@@ -23,6 +47,7 @@ CREATE TABLE IF NOT EXISTS "order-db".p_orders
     delivery_fee         NUMERIC(8, 2)  NOT NULL DEFAULT 0,     -- 총 배송비
     final_price          NUMERIC(12, 2) NOT NULL,               -- 최종 결제 금액
     status               VARCHAR(30)  NOT NULL DEFAULT 'PENDING', -- 주문 상태
+    version              BIGINT       NOT NULL DEFAULT 0,          -- 낙관적 락 버전
     created_at           TIMESTAMP    NOT NULL,
     created_by           VARCHAR(255),
     updated_at           TIMESTAMP,
@@ -42,6 +67,7 @@ CREATE TABLE IF NOT EXISTS "order-db".p_company_orders
     subtotal_price        NUMERIC(12, 2) NOT NULL,              -- 업체별 상품 합계
     subtotal_delivery_fee NUMERIC(8, 2)  NOT NULL DEFAULT 0,    -- 업체별 배송비
     status                VARCHAR(30)   NOT NULL DEFAULT 'ORDERED', -- 서브 주문 상태
+    version               BIGINT        NOT NULL DEFAULT 0,          -- 낙관적 락 버전
     created_at            TIMESTAMP     NOT NULL,
     created_by            VARCHAR(255),
     updated_at            TIMESTAMP,

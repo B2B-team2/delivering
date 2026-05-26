@@ -14,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -51,6 +52,10 @@ public class CompanyOrder extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private CompanyOrderStatus status = CompanyOrderStatus.ORDERED;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;                            // 낙관적 락 — 동시 상태 전환 충돌 감지
+
     @OneToMany(mappedBy = "companyOrder", cascade = CascadeType.ALL)
     private List<OrderItem> orderItems = new ArrayList<>();
 
@@ -61,6 +66,11 @@ public class CompanyOrder extends BaseEntity {
         companyOrder.subtotalPrice = subtotalPrice;
         companyOrder.subtotalDeliveryFee = subtotalDeliveryFee != null ? subtotalDeliveryFee : BigDecimal.ZERO;
         return companyOrder;
+    }
+
+    // OrderItem 추가 -> 도메인 메서드를 통해 캡슐화
+    public void addOrderItem(OrderItem orderItem) {
+        this.orderItems.add(orderItem);
     }
 
     public void prepare() {
@@ -75,7 +85,7 @@ public class CompanyOrder extends BaseEntity {
         this.status = CompanyOrderStatus.DELIVERED;
     }
 
-    public void cancel(String deletedBy) {
+    public void cancel(UUID deletedBy) {
         this.status = CompanyOrderStatus.CANCELLED;
         this.softDelete(deletedBy);
     }

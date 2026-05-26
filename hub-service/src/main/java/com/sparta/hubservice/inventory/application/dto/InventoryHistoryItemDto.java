@@ -16,7 +16,7 @@ public class InventoryHistoryItemDto {
     private final String changeType;
     private final String reason;
     private final LocalDateTime createdAt;
-    private final String createdBy;
+    private final UUID createdBy;
 
     public static InventoryHistoryItemDto from(InventoryHistory history) {
         return InventoryHistoryItemDto.builder()

@@ -1,0 +1,232 @@
+package com.sparta.companyservice.product.application.service;
+
+import com.sparta.common.dto.BusinessException;
+import com.sparta.companyservice.global.exception.CompanyErrorCode;
+import com.sparta.companyservice.product.application.dto.ProductCategoryCreateCommand;
+import com.sparta.companyservice.product.application.dto.ProductCategoryDto;
+import com.sparta.companyservice.product.application.dto.ProductCategoryUpdateCommand;
+import com.sparta.companyservice.product.domain.core.ProductCategory;
+import com.sparta.companyservice.product.domain.repository.ProductCategoryRepository;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class ProductCategoryServiceTest {
+
+    @Mock
+    private ProductCategoryRepository categoryRepository;
+
+    @InjectMocks
+    private ProductCategoryService categoryService;
+
+    @Test
+    @DisplayName("카테고리 등록 성공")
+    void createCategorySuccessTest() {
+        // given
+        ProductCategoryCreateCommand command = ProductCategoryCreateCommand.builder()
+                .name("가전제품")
+                .depth(1)
+                .build();
+
+        ProductCategory savedCategory = ProductCategory.builder()
+                .categoryId(UUID.randomUUID())
+                .name(command.getName())
+                .depth(command.getDepth())
+                .build();
+
+        when(categoryRepository.save(any(ProductCategory.class))).thenReturn(savedCategory);
+
+        // when
+        ProductCategoryDto result = categoryService.createCategory(command);
+
+        // then
+        assertThat(result.getName()).isEqualTo(command.getName());
+        verify(categoryRepository, times(1)).existsByName(command.getName());
+        verify(categoryRepository, times(1)).save(any(ProductCategory.class));
+    }
+
+    @Test
+    @DisplayName("카테고리 등록 실패: 중복된 이름")
+    void createCategoryFail_DuplicateName() {
+        // given
+        ProductCategoryCreateCommand command = ProductCategoryCreateCommand.builder()
+                .name("중복이름")
+                .build();
+
+        when(categoryRepository.existsByName(command.getName())).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> categoryService.createCategory(command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.DUPLICATE_CATEGORY_NAME.getMessage());
+    }
+
+    @Test
+    @DisplayName("카테고리 목록 조회 성공")
+    void getCategoriesSuccessTest() {
+        // given
+        Pageable pageable = PageRequest.of(0, 10);
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(UUID.randomUUID())
+                .name("의류")
+                .build();
+
+        when(categoryRepository.findAll(pageable)).thenReturn(new PageImpl<>(List.of(category)));
+
+        // when
+        Page<ProductCategoryDto> result = categoryService.getCategories(pageable);
+
+        // then
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).getName()).isEqualTo("의류");
+    }
+
+    @Test
+    @DisplayName("카테고리 상세 조회 성공")
+    void getCategorySuccessTest() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(categoryId)
+                .name("식품")
+                .build();
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+
+        // when
+        ProductCategoryDto result = categoryService.getCategory(categoryId);
+
+        // then
+        assertThat(result.getCategoryId()).isEqualTo(categoryId);
+        assertThat(result.getName()).isEqualTo("식품");
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 성공: 이름 변경 시 중복 체크 수행")
+    void updateCategorySuccessWithNewNameTest() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(categoryId)
+                .name("기존 이름")
+                .depth(1)
+                .build();
+
+        ProductCategoryUpdateCommand command = ProductCategoryUpdateCommand.builder()
+                .name("새로운 이름")
+                .depth(1)
+                .build();
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(categoryRepository.existsByName("새로운 이름")).thenReturn(false);
+
+        // when
+        ProductCategoryDto result = categoryService.updateCategory(categoryId, command);
+
+        // then
+        assertThat(result.getName()).isEqualTo("새로운 이름");
+        verify(categoryRepository, times(1)).existsByName("새로운 이름");
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 성공: 이름 변경 없을 시 중복 체크 건너뜀")
+    void updateCategorySuccessWithoutNameChangeTest() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(categoryId)
+                .name("기존 이름")
+                .depth(1)
+                .build();
+
+        ProductCategoryUpdateCommand command = ProductCategoryUpdateCommand.builder()
+                .name("기존 이름")
+                .depth(2)
+                .build();
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+
+        // when
+        ProductCategoryDto result = categoryService.updateCategory(categoryId, command);
+
+        // then
+        assertThat(result.getDepth()).isEqualTo(2);
+        verify(categoryRepository, never()).existsByName(any());
+    }
+
+    @Test
+    @DisplayName("카테고리 수정 실패: 변경하려는 이름이 중복됨")
+    void updateCategoryFail_DuplicateName() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(categoryId)
+                .name("기존 이름")
+                .build();
+
+        ProductCategoryUpdateCommand command = ProductCategoryUpdateCommand.builder()
+                .name("중복된 이름")
+                .build();
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+        when(categoryRepository.existsByName("중복된 이름")).thenReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> categoryService.updateCategory(categoryId, command))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.DUPLICATE_CATEGORY_NAME.getMessage());
+    }
+
+    @Test
+    @DisplayName("카테고리 삭제 성공")
+    void deleteCategorySuccessTest() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        ProductCategory category = ProductCategory.builder()
+                .categoryId(categoryId)
+                .name("삭제할 카테고리")
+                .build();
+
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.of(category));
+
+        // when
+        ProductCategoryDto result = categoryService.deleteCategory(categoryId, UUID.randomUUID());
+
+        // then
+        assertThat(result.getCategoryId()).isEqualTo(categoryId);
+        verify(categoryRepository, times(1)).findById(categoryId);
+    }
+
+    @Test
+    @DisplayName("카테고리 조회 실패: 존재하지 않는 ID")
+    void getCategoryFail_NotFound() {
+        // given
+        UUID categoryId = UUID.randomUUID();
+        when(categoryRepository.findById(categoryId)).thenReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> categoryService.getCategory(categoryId))
+                .isInstanceOf(BusinessException.class)
+                .hasMessageContaining(CompanyErrorCode.CATEGORY_NOT_FOUND.getMessage());
+    }
+}

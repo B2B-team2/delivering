@@ -1,5 +1,6 @@
 package com.sparta.orderservice.payment.application.handler;
 
+import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
 import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
 import com.sparta.orderservice.payment.application.service.PaymentService;
 import lombok.RequiredArgsConstructor;
@@ -20,5 +21,15 @@ public class PaymentEventHandler {
     @EventListener
     public void handleOrderCreated(OrderCreatedEvent event) {
         paymentService.createCompletedPayment(event.orderId(), event.totalPrice());
+    }
+
+    /**
+     * 주문 취소 이벤트 수신 → 결제 취소 위임
+     * 발행자(OrderService)와 같은 트랜잭션에서 실행 → DB 상태 원자적 보장
+     * 이미 취소된 결제는 PaymentService 내부에서 idempotent 처리 (cancelPayment API 경유 시 중복 방지)
+     */
+    @EventListener
+    public void handleOrderCancelled(OrderCancelledEvent event) {
+        paymentService.cancelPaymentByOrderId(event.orderId(), event.requesterId());
     }
 }

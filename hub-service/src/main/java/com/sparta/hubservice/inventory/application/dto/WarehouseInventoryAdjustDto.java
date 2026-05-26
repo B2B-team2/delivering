@@ -23,7 +23,7 @@ public class WarehouseInventoryAdjustDto {
     private final Long version;
     private final UUID historyId;
     private final LocalDateTime updatedAt;
-    private final String updatedBy;
+    private final UUID updatedBy;
 
     public static WarehouseInventoryAdjustDto from(int previousQuantity, int changeQuantity,
                                                     WarehouseInventory inventory,

@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,11 +33,8 @@ public class Order extends BaseEntity {
     @Column(name = "order_id")
     private UUID orderId;
 
-    @Column(name = "requester_company_id", nullable = false)
-    private UUID requesterCompanyId;        // 요청(공급업체)
-
     @Column(name = "receiver_company_id", nullable = false)
-    private UUID receiverCompanyId;         // 수령업체
+    private UUID receiverCompanyId;         // 수령업체(주문자 COMPANY_MANAGER의 소속 업체)
 
     // 수령인 정보 스냅샷
     @Column(name = "recipient_name", nullable = false, length = 100)
@@ -71,11 +69,14 @@ public class Order extends BaseEntity {
     @Column(name = "status", nullable = false, length = 30)
     private OrderStatus status = OrderStatus.PENDING;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;                            // 낙관적 락 — 동시 상태 전환 충돌 감지
+
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
     private List<CompanyOrder> companyOrders = new ArrayList<>();
 
     public static Order of(
-            UUID requesterCompanyId,
             UUID receiverCompanyId,
             String recipientName,
             String phone,
@@ -88,7 +89,6 @@ public class Order extends BaseEntity {
             BigDecimal finalPrice
     ) {
         Order order = new Order();
-        order.requesterCompanyId = requesterCompanyId;
         order.receiverCompanyId = receiverCompanyId;
         order.recipientName = recipientName;
         order.phone = phone;
@@ -102,6 +102,11 @@ public class Order extends BaseEntity {
         return order;
     }
 
+    // CompanyOrder 추가 -> 도메인 메서드를 통해 캡슐화
+    public void addCompanyOrder(CompanyOrder companyOrder) {
+        this.companyOrders.add(companyOrder);
+    }
+
     public void startDelivery() {
         this.status = OrderStatus.DELIVERING;
     }
@@ -110,8 +115,31 @@ public class Order extends BaseEntity {
         this.status = OrderStatus.COMPLETED;
     }
 
-    public void cancel(String deletedBy) {
+    public void cancel(UUID deletedBy) {
         this.status = OrderStatus.CANCELLED;
         this.softDelete(deletedBy);
+    }
+
+    /**
+     * 모든 CompanyOrder가 terminal(DELIVERED 또는 CANCELLED) 상태이면 Order 상태 업데이트
+     * - 하나라도 DELIVERED가 있으면 -> COMPLETED
+     * - 전체가 CANCELLED이면 -> CANCELLED & Soft Delete
+     */
+    public void updateStatus(UUID deletedBy) {
+        boolean hasActive = this.companyOrders.stream()
+                .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
+                        && co.getStatus() != CompanyOrderStatus.CANCELLED);
+        if (hasActive) {
+            return;
+        }
+
+        boolean hasDelivered = this.companyOrders.stream()
+                .anyMatch(co -> co.getStatus() == CompanyOrderStatus.DELIVERED);
+
+        if (hasDelivered) {
+            this.complete();
+        } else {
+            this.cancel(deletedBy);
+        }
     }
 }

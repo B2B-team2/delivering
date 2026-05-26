@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -22,8 +21,6 @@ public class DeliveryCancelResponse {
     private String currentStatus;
     private List<CancelledRouteDto> cancelledRoutes;
     private UUID logId;
-    private LocalDateTime updatedAt;
-    private String updatedBy;
 
     @Getter
     @Builder

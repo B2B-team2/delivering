@@ -1,12 +1,15 @@
 package com.sparta.orderservice.draft.domain.core;
 
+import com.sparta.common.dto.BusinessException;
 import com.sparta.common.entity.BaseEntity;
+import com.sparta.orderservice.global.exception.DraftErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -36,26 +39,42 @@ public class Draft extends BaseEntity {
     @Column(name = "quantity", nullable = false)
     private int quantity = 1;
 
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;                        // 낙관적 락 — 동시 수량 수정/삭제 충돌 감지
+
+    // B2B 물류 특성상 대량 주문(전자부품 릴 단위, 포장재 MOQ 등) 고려하여 상한 설정
+    // 수량 상한 설정: 단위(Unit) 도입은 Product Service 스키마 변경까지 필요하므로 이 프로젝트 범위에서는 적용하지 않음
+    private static final int MAX_QUANTITY = 9_999_999;
+
     public static Draft of(UUID userId, UUID productId, UUID productOptionId, int quantity) {
         Draft draft = new Draft();
         draft.userId = userId;
         draft.productId = productId;
         draft.productOptionId = productOptionId;
-        draft.quantity = quantity;
+        draft.applyQuantity(quantity);
         return draft;
     }
 
     public void updateQuantity(int quantity) {
-        this.quantity = quantity;
+        applyQuantity(quantity);
     }
 
     // 삭제된 임시주문 항목을 복원하고 수량 갱신 (upsert 패턴)
     public void restore(int quantity) {
         this.clearDeleted();
-        this.quantity = quantity;
+        applyQuantity(quantity);
     }
 
-    public void delete(String deletedBy) {
+    public void delete(UUID deletedBy) {
         this.softDelete(deletedBy);
+    }
+
+    // 모든 수량 변경 -> 공통 메서드를 통해 검증 후 적용
+    private void applyQuantity(int quantity) {
+        if (quantity <= 0 || quantity > MAX_QUANTITY) {
+            throw new BusinessException(DraftErrorCode.INVALID_QUANTITY);
+        }
+        this.quantity = quantity;
     }
 }

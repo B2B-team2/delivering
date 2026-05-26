@@ -12,6 +12,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingPathVariableException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -130,7 +131,21 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
-    // 8. 지원하지 않는 HTTP 메서드 요청 처리 (HttpRequestMethodNotSupportedException)
+    // 8. 필수 쿼리 파라미터 누락 처리 (MissingServletRequestParameterException)
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(MissingServletRequestParameterException e) {
+        ErrorResponse response = ErrorResponse.builder()
+                .status(HttpStatus.BAD_REQUEST.value())
+                .message("MISSING_QUERY_PARAMETER")
+                .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
+                        .field(e.getParameterName())
+                        .message("필수 쿼리 파라미터가 누락되었습니다.")
+                        .build()))
+                .build();
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+    }
+
+    // 9. 지원하지 않는 HTTP 메서드 요청 처리 (HttpRequestMethodNotSupportedException)
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ErrorResponse> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
         log.warn("Method Not Allowed: {}", e.getMessage());

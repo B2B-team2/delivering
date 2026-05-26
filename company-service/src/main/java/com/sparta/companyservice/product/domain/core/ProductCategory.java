@@ -33,4 +33,9 @@ public class ProductCategory extends BaseEntity {
     @Builder.Default
     private Integer depth = 1;
 
+    public void update(String name, Integer depth) {
+        this.name = name;
+        this.depth = depth;
+    }
+
 }

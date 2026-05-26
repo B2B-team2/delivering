@@ -10,4 +10,5 @@ public interface CompanyDeliveryAddressRepository {
     Optional<CompanyDeliveryAddress> findById(UUID addressId);
     void delete(CompanyDeliveryAddress address);
     long count();
+    void updateAllIsDefaultFalseByCompanyId(UUID companyId);
 }
