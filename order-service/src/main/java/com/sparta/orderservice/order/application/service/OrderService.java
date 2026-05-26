@@ -19,6 +19,7 @@ import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import com.sparta.orderservice.order.domain.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,11 +28,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -59,23 +63,35 @@ public class OrderService {
         validateHubMapping(hubIdMap, allCompanyIds);
         UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId()); // 수령업체 소속 허브
 
-        // 재고 예약: 실패 시 예외 전파 → 주문 생성 전체 롤백
-        hubStockPort.reserveStock(order);
+        // Saga 보상 스택: 외부 호출 성공 시 역순 보상 등록, 예외 발생 시 LIFO 순으로 실행
+        Deque<Runnable> compensations = new ArrayDeque<>();
+        try {
+            // (1) 재고 예약 - 보상을 먼저 등록
+            // reserveStock: CompanyOrder 수만큼 루프 호출 -> 중간 실패 시 부분 예약된 재고가 hub-service에 남을 수 있음
+            // → cancelStock으로 정리
+            compensations.push(() -> hubStockPort.cancelStock(order.getOrderId()));
+            hubStockPort.reserveStock(order);
 
-        // 배송 일괄 생성: 공급업체 소속 허브(출발) → 수령업체 소속 허브(도착)
-        // TODO) 배송 생성 실패 시 이미 완료된 reserveStock이 자동 보상되지 않음 -> hub & delivery Feign 연동 완성 후 Saga 도입 필요
-        Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+            // (2)) 배송 일괄 생성 → 실패 시 (1) 보상 (재고 예약 취소)
+            Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+            compensations.push(() -> deliveryPort.cancelDeliveries(order.getOrderId()));
 
-        // 배송 ID 할당 (OrderItem과 Delivery 간 추적을 위해 저장)
-        order.getCompanyOrders().forEach(co -> {
-            UUID deliveryId = deliveryMap.get(co.getCompanyOrderId());
-            if (deliveryId != null) {
-                co.getOrderItems().forEach(item -> item.assignDelivery(deliveryId));
-            }
-        });
+            // 배송 ID 할당 (OrderItem ↔ Delivery 추적용)
+            order.getCompanyOrders().forEach(co -> {
+                UUID deliveryId = deliveryMap.get(co.getCompanyOrderId());
+                if (deliveryId != null) {
+                    co.getOrderItems().forEach(item -> item.assignDelivery(deliveryId));
+                }
+            });
 
-        // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
-        eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getTotalPrice()));
+            // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
+            // 실패 시 (2) -> (1) 순으로 보상 실행 후 예외 re-throw → TX 롤백
+            eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getTotalPrice()));
+
+        } catch (Exception e) {
+            executeCompensations(compensations);
+            throw e;
+        }
 
         return OrderResult.from(order);
     }
@@ -251,6 +267,20 @@ public class OrderService {
     // 단가 × 수량 → 항목 금액 계산 (buildOrder에서만 사용)
     private BigDecimal calculateItemPrice(CreateOrderCommand.OrderItemCommand item) {
         return item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()));
+    }
+
+    /**
+     * 보상 스택 실행 (LIFO)
+     * 보상 자체가 실패해도 나머지 보상은 계속 실행하고 에러를 로깅만 함
+     */
+    private void executeCompensations(Deque<Runnable> compensations) {
+        while (!compensations.isEmpty()) {
+            try {
+                compensations.pop().run();
+            } catch (Exception e) {
+                log.error("[Saga] 보상 트랜잭션 실패 - 수동 복구 필요: {}", e.getMessage(), e);
+            }
+        }
     }
 
     // 요청한 모든 companyId에 대해 hubId 매핑이 존재하는지 검증
