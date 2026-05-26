@@ -4,6 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.domain.core.Order;
+import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCancelRequest;
 import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCreateRequest;
 import com.sparta.orderservice.order.infrastructure.client.dto.DeliveryCreateResponse;
 import feign.FeignException;
@@ -48,6 +49,19 @@ public class DeliveryAdapter implements DeliveryPort {
             throw handleDeliveryFeignException("createDeliveries", e);
         } catch (Exception e) {
             throw handleDeliveryUnexpectedException("createDeliveries", e);
+        }
+    }
+
+    // 배송 일괄 취소 (Saga 보상 전용): createOrder 실패 시 생성된 배송 전체 취소
+    // TODO: 배송팀 내부 API 구현 완료 후 TODO 주석 제거
+    @Override
+    public void cancelDeliveries(UUID orderId) {
+        try {
+            deliveryClient.cancelDeliveries(new DeliveryCancelRequest(orderId));
+        } catch (FeignException e) {
+            throw handleDeliveryFeignException("cancelDeliveries", e);
+        } catch (Exception e) {
+            throw handleDeliveryUnexpectedException("cancelDeliveries", e);
         }
     }
 

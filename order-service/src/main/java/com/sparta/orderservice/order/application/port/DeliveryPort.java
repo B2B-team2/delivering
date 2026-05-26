@@ -14,4 +14,8 @@ public interface DeliveryPort {
     // destinationHubId: 수령업체 소속 허브 (도착 허브, 공통)
     // 리턴: Map<companyOrderId, deliveryId>
     Map<UUID, UUID> createDeliveries(Order order, Map<UUID, UUID> hubIdMap, UUID destinationHubId);
+
+    // 배송 일괄 취소 (Saga 보상 전용): createOrder 실패 시 생성된 배송 전체 취소
+    // TODO: 배송팀 내부 API(POST /api/v1/internal/deliveries/cancel) 구현 완료 후 실제 연동
+    void cancelDeliveries(UUID orderId);
 }
