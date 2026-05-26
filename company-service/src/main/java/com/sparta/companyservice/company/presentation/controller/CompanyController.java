@@ -14,7 +14,7 @@ import com.sparta.companyservice.company.presentation.dto.CompanyAddressUpdateRe
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
-import com.sparta.companyservice.global.security.CustomUserDetails;
+import com.sparta.common.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
