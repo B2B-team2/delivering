@@ -20,13 +20,21 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableHandlerMethodArgumentResolver;
 import org.springframework.http.MediaType;
+import org.springframework.core.MethodParameter;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.support.WebDataBinderFactory;
+import org.springframework.web.context.request.NativeWebRequest;
+import org.springframework.web.method.support.HandlerMethodArgumentResolver;
+import org.springframework.web.method.support.ModelAndViewContainer;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
-
+import com.sparta.common.security.CustomUserDetails;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import java.util.Collections;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -52,8 +60,23 @@ class ProductOptionControllerTest {
 
     @BeforeEach
     void setUp() {
+        CustomUserDetails userDetails = new CustomUserDetails(UUID.randomUUID().toString(), "MASTER", null, Collections.emptyList());
+        
         mockMvc = MockMvcBuilders.standaloneSetup(productOptionController)
-                .setCustomArgumentResolvers(new PageableHandlerMethodArgumentResolver())
+                .setCustomArgumentResolvers(
+                        new PageableHandlerMethodArgumentResolver(),
+                        new HandlerMethodArgumentResolver() {
+                            @Override
+                            public boolean supportsParameter(MethodParameter parameter) {
+                                return parameter.hasParameterAnnotation(AuthenticationPrincipal.class);
+                            }
+
+                            @Override
+                            public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
+                                                          NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
+                                return userDetails;
+                            }
+                        })
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
     }
@@ -180,7 +203,11 @@ class ProductOptionControllerTest {
         when(productOptionService.deleteProductOption(eq(optionId), any())).thenReturn(dto);
 
         // when & then
+        CustomUserDetails userDetails = new CustomUserDetails(UUID.randomUUID().toString(), "MASTER", null, Collections.emptyList());
+        UsernamePasswordAuthenticationToken principal = new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+
         mockMvc.perform(delete("/api/v1/product-options/{productOptionId}", optionId)
+                        .principal(principal)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.productOptionId").value(optionId.toString()));
