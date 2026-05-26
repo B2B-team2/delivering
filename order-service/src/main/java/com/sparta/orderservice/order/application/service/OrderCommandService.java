@@ -12,7 +12,6 @@ import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
-import com.sparta.orderservice.order.domain.event.OrderCreatedEvent;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.application.port.HubStockPort;
@@ -22,6 +21,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -44,32 +44,46 @@ public class OrderCommandService {
     private final HubStockPort hubStockPort;
     private final CompanyPort companyPort;
     private final DeliveryPort deliveryPort;
+    private final OrderWriter orderWriter;
 
-    // 주문 생성
-    @Transactional
+    /**
+     * 주문 생성 — DB TX 없이 각 단계를 독립 TX로 분리 (Long Transaction 방지)
+     *
+     * 기존 @Transactional 구조에서는 외부 호출(hub/delivery) 중 DB 커넥션을 점유해
+     * 트래픽 증가 시 커넥션 풀 고갈 위험이 있었음. NOT_SUPPORTED로 전환하여 개선.
+     *
+     * 흐름:
+     * (1) 도메인 객체 구성 (orderId는 Order.of() 내부에서 미리 생성)
+     * (2) company-service 허브 매핑 조회 (외부 호출, TX 없음)
+     * (3) hub-service 재고 예약 (외부 호출, TX 없음)
+     * (4) delivery-service 배송 생성 (외부 호출, TX 없음)
+     * (5) DB 저장 + 결제 이벤트 발행 (OrderWriter의 독립 TX)
+     *     → 실패 시 (4)→(3) 순으로 Saga 보상 실행
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderResult createOrder(CreateOrderCommand command, UUID requesterId) {
+        // (1) 도메인 객체 구성 (TX 없음 — orderId는 Order.of() 내부에서 미리 생성됨)
         Order order = buildOrder(command);
-        orderRepository.save(order);
 
-        // 수령업체 + 공급업체 ID 전체 → companyId : hubId 매핑 일괄 조회 (단 1회 호출)
+        // (2) 수령업체 + 공급업체 ID 전체 → companyId : hubId 매핑 일괄 조회 (TX 없음)
         List<UUID> allCompanyIds = Stream.concat(
                 Stream.of(order.getReceiverCompanyId()),
                 order.getCompanyOrders().stream().map(CompanyOrder::getCompanyId)
         ).toList();
         Map<UUID, UUID> hubIdMap = companyPort.getHubIds(allCompanyIds);
         validateHubMapping(hubIdMap, allCompanyIds);
-        UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId()); // 수령업체 소속 허브
+        UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId());
 
         // Saga 보상 스택: 외부 호출 성공 시 역순 보상 등록, 예외 발생 시 LIFO 순으로 실행
         Deque<Runnable> compensations = new ArrayDeque<>();
         try {
-            // (1) 재고 예약 - 보상을 먼저 등록
-            // reserveStock: CompanyOrder 수만큼 루프 호출 -> 중간 실패 시 부분 예약된 재고가 hub-service에 남을 수 있음
-            // → cancelStock으로 정리
+            // (3) 재고 예약 (TX 없음)
+            // reserveStock: CompanyOrder 수만큼 루프 호출 → 중간 실패 시 부분 예약 잔존
+            // → cancelStock으로 정리 (보상을 먼저 등록 후 호출)
             compensations.push(() -> hubStockPort.cancelStock(order.getOrderId()));
             hubStockPort.reserveStock(order);
 
-            // (2)) 배송 일괄 생성 → 실패 시 (1) 보상 (재고 예약 취소)
+            // (4) 배송 일괄 생성 (TX 없음) → 실패 시 (3) 보상
             Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
             compensations.push(() -> deliveryPort.cancelDeliveries(order.getOrderId()));
 
@@ -81,16 +95,14 @@ public class OrderCommandService {
                 }
             });
 
-            // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
-            // 실패 시 (2) -> (1) 순으로 보상 실행 후 예외 re-throw → TX 롤백
-            eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getTotalPrice()));
+            // (5) DB 저장 + 선결제 (독립 TX) → 실패 시 (4)→(3) 순으로 보상
+            // OrderCreatedEvent → PaymentEventHandler → createCompletedPayment (같은 TX)
+            return orderWriter.saveOrderWithEvent(order);
 
         } catch (Exception e) {
             executeCompensations(compensations);
             throw e;
         }
-
-        return OrderResult.from(order);
     }
 
     // 주문 전체 취소
