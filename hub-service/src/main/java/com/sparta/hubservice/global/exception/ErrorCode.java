@@ -1,11 +1,7 @@
 package com.sparta.hubservice.global.exception;
 
-import lombok.Getter;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
-@Getter
-@RequiredArgsConstructor
 public enum ErrorCode implements com.sparta.common.dto.ErrorCode {
 
     // Hub
@@ -31,4 +27,25 @@ public enum ErrorCode implements com.sparta.common.dto.ErrorCode {
     private final HttpStatus httpStatus;
     private final String code;
     private final String message;
+
+    ErrorCode(HttpStatus httpStatus, String code, String message) {
+        this.httpStatus = httpStatus;
+        this.code = code;
+        this.message = message;
+    }
+
+    @Override
+    public HttpStatus getHttpStatus() {
+        return httpStatus;
+    }
+
+    @Override
+    public String getCode() {
+        return code;
+    }
+
+    @Override
+    public String getMessage() {
+        return message;
+    }
 }

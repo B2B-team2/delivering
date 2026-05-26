@@ -6,7 +6,6 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 
 @EnableFeignClients
 @SpringBootApplication
-@EnableFeignClients
 public class HubServiceApplication {
 
 	public static void main(String[] args) {
