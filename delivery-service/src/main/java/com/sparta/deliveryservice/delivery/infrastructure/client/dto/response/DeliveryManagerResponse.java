@@ -12,6 +12,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class DeliveryManagerResponse {
     private UUID deliveryManagerId;
+    private String deliverySlackId;
     private String managerName;
     private String managerPhone;
 }

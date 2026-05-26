@@ -25,6 +25,9 @@ public class DeliveryManagerUpdateRequest {
     @NotBlank(message = "담당자 전화번호는 필수 입력값입니다.")
     private String phone;
 
+    @NotNull(message = "변경할 배송 담당자 Slack ID는 필수입니다.")
+    private String deliveryManagerSlackId;
+
     @NotBlank(message = "담당자 변경 사유는 필수 입력값입니다.")
     private String reason;
 }
