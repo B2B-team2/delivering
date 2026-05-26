@@ -9,6 +9,7 @@ import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServic
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCancelRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryHubRouteSearchResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryManagerResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryOrderCancelResponse;
@@ -25,6 +26,7 @@ import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliverySta
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryStatusUpdateResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryTrackingResponse;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
+import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
@@ -347,7 +349,7 @@ public class DeliveryService {
         DeliveryLog cancelLog = DeliveryLog.builder()
                 .deliveryId(delivery.getDeliveryId())
                 .routeId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-                .eventType("STATUS_CHANGED")
+                .eventType(DeliveryLogStatus.CANCELLED)
                 .previousValue(prevJson)
                 .currentValue(currJson)
                 .reason(request.getReason())
@@ -389,7 +391,7 @@ public class DeliveryService {
         DeliveryLog cancelLog = DeliveryLog.builder()
                 .deliveryId(delivery.getDeliveryId())
                 .routeId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-                .eventType("STATUS_CHANGED")
+                .eventType(DeliveryLogStatus.STATUS_CHANGED)
                 .previousValue(prevJson)
                 .currentValue(currJson)
                 .reason(request.getReason())
@@ -447,7 +449,7 @@ public class DeliveryService {
         DeliveryLog managerChangedLog = DeliveryLog.builder()
                 .deliveryId(delivery.getDeliveryId())
                 .routeId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-                .eventType("MANAGER_CHANGED")
+                .eventType(DeliveryLogStatus.MANAGER_CHANGED)
                 .previousValue(prevJson)
                 .currentValue(currJson)
                 .reason(request.getReason())
@@ -532,66 +534,71 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", allEntries = true)
-    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(UUID orderId) {
+    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(List<DeliveryOrderCancelRequest> requests) {
 
-        List<Delivery> deliveries = deliveryRepository.findByCompanyOrderId(orderId);
+        List<UUID> orderIds = requests.stream()
+                .map(DeliveryOrderCancelRequest::getOrderId)
+                .collect(Collectors.toList());
 
         List<DeliveryOrderCancelResponse.CancelledDeliveryDto> cancelledDeliveries = new ArrayList<>();
         int cancelledCount = 0;
         int skippedCount = 0;
 
         org.springframework.cache.Cache trackingCache = cacheManager.getCache("deliveryTracking");
+        for (UUID orderId : orderIds) {
+            List<Delivery> deliveries = deliveryRepository.findByCompanyOrderId(orderId);
+            for (Delivery delivery : deliveries) {
+                if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
+                    skippedCount++;
+                    continue;
+                }
 
-        for (Delivery delivery : deliveries) {
-            if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
-                skippedCount++;
-                continue;
+                String previousStatusName = delivery.getStatus().name();
+                delivery.updateStatus(DeliveryStatus.CANCELLED);
+
+
+                if (trackingCache != null) {
+                    trackingCache.evict(delivery.getTrackingNumber());
+                }
+
+                List<DeliveryRoute> deliveryRoutes = deliveryRouteRepository.findByDeliveryId(delivery.getDeliveryId());
+
+                for (DeliveryRoute route : deliveryRoutes) {
+                    String routePreviousStatus = route.getStatus().name(); // 경로의 이전 상태 저장
+                    route.updateStatus(DeliveryRouteStatus.CANCELLED, null, null);
+
+                    String routePrevJson = "";
+                    String routeCurrJson = "";
+                    try {
+                        routePrevJson = objectMapper.writeValueAsString(Map.of("status", routePreviousStatus));
+                        routeCurrJson = objectMapper.writeValueAsString(Map.of("status", "CANCELLED"));
+                    } catch (Exception e) {
+                        routePrevJson = "{\"status\":\"" + routePreviousStatus + "\"}";
+                        routeCurrJson = "{\"status\":\"CANCELLED\"}";
+                    }
+
+                    DeliveryLog routeCancelLog = DeliveryLog.builder()
+                            .deliveryId(delivery.getDeliveryId())
+                            .routeId(route.getRouteId())
+                            .eventType(DeliveryLogStatus.CANCELLED)
+                            .previousValue(routePrevJson)
+                            .currentValue(routeCurrJson)
+                            .reason("주문 일괄 강제 취소에 따른 하위 경로 자동 취소")
+                            .build();
+
+                    deliveryLogRepository.save(routeCancelLog);
+                }
+
+                cancelledDeliveries.add(DeliveryOrderCancelResponse.CancelledDeliveryDto.builder()
+                        .deliveryId(delivery.getDeliveryId())
+                        .companyOrderId(delivery.getCompanyOrderId())
+                        .previousStatus(previousStatusName)
+                        .build());
+
+                cancelledCount++;
             }
-
-            String previousStatusName = delivery.getStatus().name();
-            delivery.updateStatus(DeliveryStatus.CANCELLED);
-
-
-            if (trackingCache != null) {
-                trackingCache.evict(delivery.getTrackingNumber());
-            }
-
-            List<DeliveryRoute> deliveryRoutes = deliveryRouteRepository.findByDeliveryId(delivery.getDeliveryId());
-            for (DeliveryRoute route : deliveryRoutes) {
-                route.updateStatus(DeliveryRouteStatus.CANCELLED, null, null);
-            }
-
-            String prevJson = "";
-            String currJson = "";
-            try {
-                prevJson = objectMapper.writeValueAsString(Map.of("status", previousStatusName));
-                currJson = objectMapper.writeValueAsString(Map.of("status", "CANCELLED"));
-            } catch (Exception e) {
-                prevJson = "{\"status\":\"" + previousStatusName + "\"}";
-                currJson = "{\"status\":\"CANCELLED\"}";
-            }
-
-            DeliveryLog cancelLog = DeliveryLog.builder()
-                    .deliveryId(delivery.getDeliveryId())
-                    .routeId(UUID.fromString("00000000-0000-0000-0000-000000000000"))
-                    .eventType("STATUS_CHANGED")
-                    .previousValue(prevJson)
-                    .currentValue(currJson)
-                    .reason("주문 일괄 강제 취소")
-                    .build();
-            deliveryLogRepository.save(cancelLog);
-
-            cancelledDeliveries.add(DeliveryOrderCancelResponse.CancelledDeliveryDto.builder()
-                    .deliveryId(delivery.getDeliveryId())
-                    .companyOrderId(delivery.getCompanyOrderId())
-                    .previousStatus(previousStatusName)
-                    .build());
-
-            cancelledCount++;
         }
-
         return DeliveryOrderCancelResponse.builder()
-                .orderId(orderId)
                 .cancelledCount(cancelledCount)
                 .skippedCount(skippedCount)
                 .cancelledDeliveries(cancelledDeliveries)
