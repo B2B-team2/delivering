@@ -7,7 +7,6 @@ import com.sparta.orderservice.order.infrastructure.feign.dto.CompanyHubMappingR
 import com.sparta.orderservice.order.infrastructure.feign.dto.ProductOptionDetailsRequest;
 import com.sparta.orderservice.order.infrastructure.feign.dto.ProductOptionDetailsResponse;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -19,11 +18,11 @@ import java.util.UUID;
 public interface CompanyClient {
 
     @PostMapping("/api/v1/internal/companies/hub-mapping")
-    ResponseEntity<ApiResponse<CompanyHubMappingResponse>> getHubMapping(@RequestBody CompanyHubMappingRequest request);
+    ApiResponse<CompanyHubMappingResponse> getHubMapping(@RequestBody CompanyHubMappingRequest request);
 
     @GetMapping("/api/v1/internal/companies/{companyId}/default-address")
-    ResponseEntity<ApiResponse<CompanyDefaultAddressResponse>> getDefaultAddress(@PathVariable("companyId") UUID companyId);
+    ApiResponse<CompanyDefaultAddressResponse> getDefaultAddress(@PathVariable("companyId") UUID companyId);
 
     @PostMapping("/api/v1/internal/product-options/details")
-    ResponseEntity<ApiResponse<ProductOptionDetailsResponse>> getProductOptionDetails(@RequestBody ProductOptionDetailsRequest request);
+    ApiResponse<ProductOptionDetailsResponse> getProductOptionDetails(@RequestBody ProductOptionDetailsRequest request);
 }

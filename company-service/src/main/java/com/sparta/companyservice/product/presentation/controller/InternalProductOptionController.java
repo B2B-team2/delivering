@@ -7,7 +7,6 @@ import com.sparta.companyservice.product.presentation.dto.ProductOptionDetailsRe
 import com.sparta.companyservice.product.presentation.dto.ProductOptionDetailsResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,12 +23,12 @@ public class InternalProductOptionController {
     private final ProductOptionService productOptionService;
 
     @PostMapping("/details")
-    public ResponseEntity<ApiResponse<ProductOptionDetailsResponse>> getProductOptionDetails(
+    public ApiResponse<ProductOptionDetailsResponse> getProductOptionDetails(
             @RequestBody @Valid ProductOptionDetailsRequest request) {
         Map<UUID, ProductOptionDetailDto> details = productOptionService.getProductOptionDetails(request.getProductOptionIds());
         ProductOptionDetailsResponse response = ProductOptionDetailsResponse.builder()
                 .optionsMap(details)
                 .build();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ApiResponse.success(response);
     }
 }
