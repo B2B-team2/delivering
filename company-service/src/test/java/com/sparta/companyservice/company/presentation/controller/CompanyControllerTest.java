@@ -2,9 +2,12 @@ package com.sparta.companyservice.company.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.common.handler.GlobalExceptionHandler;
+import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
+import com.sparta.companyservice.company.application.service.CompanyAddressService;
 import com.sparta.companyservice.company.application.service.CompanyService;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
@@ -50,6 +53,9 @@ class CompanyControllerTest {
 
     @MockBean
     private CompanyService companyService;
+
+    @MockBean
+    private CompanyAddressService companyAddressService;
 
     @Test
     @WithMockUser
@@ -298,5 +304,57 @@ class CompanyControllerTest {
                 .andExpect(jsonPath("$.message").value("INVALID_PARAMETER_TYPE"))
                 .andExpect(jsonPath("$.errors[0].field").value("companyId"))
                 .andExpect(jsonPath("$.errors[0].message").value(org.hamcrest.Matchers.containsString("유효한 UUID 형식이 아닙니다.")));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("배송지 등록 API 성공 검증")
+    void createAddressSuccessTest() throws Exception {
+        UUID companyId = UUID.randomUUID();
+        CompanyAddressCreateRequest request = CompanyAddressCreateRequest.builder()
+                .companyId(companyId)
+                .addressName("집")
+                .recipientName("홍길동")
+                .phone("010-1234-5678")
+                .address("주소")
+                .postalCode("12345")
+                .isDefault(false)
+                .build();
+
+        CompanyAddressDto responseDto = CompanyAddressDto.builder()
+                .addressId(UUID.randomUUID())
+                .companyId(companyId)
+                .addressName(request.getAddressName())
+                .build();
+
+        when(companyAddressService.registerAddress(eq(companyId), any())).thenReturn(responseDto);
+
+        mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(201))
+                .andExpect(jsonPath("$.message").value("CREATED"))
+                .andExpect(jsonPath("$.data.addressName").value(request.getAddressName()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("배송지 등록 API 실패 검증: 필수 필드 누락 시 400 Bad Request 반환")
+    void createAddressFailValidationTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyAddressCreateRequest invalidRequest = CompanyAddressCreateRequest.builder()
+                .companyId(companyId)
+                .addressName("") // NotBlank 위반
+                .build();
+
+        // when & then
+        mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
     }
 }

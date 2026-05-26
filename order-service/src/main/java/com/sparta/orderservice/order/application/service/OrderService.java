@@ -27,10 +27,10 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -47,52 +47,14 @@ public class OrderService {
     // 주문 생성
     @Transactional
     public OrderResult createOrder(CreateOrderCommand command, UUID requesterId) {
-        // 전체 주문 금액 = 모든 업체 주문 항목의 (수량 × 단가) 합계
-        BigDecimal totalPrice = command.companyOrders().stream()
-                .flatMap(co -> co.orderItems().stream())
-                .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-        Order order = Order.of(
-                command.receiverCompanyId(),
-                command.recipientName(),
-                command.phone(),
-                command.slackId(),
-                command.address(),
-                command.dueDate(),
-                command.requestMemo(),
-                totalPrice,
-                BigDecimal.ZERO,
-                totalPrice          // finalPrice = totalPrice + deliveryFee
-        );
-
-        for (CreateOrderCommand.CompanyOrderCommand coCmd : command.companyOrders()) {
-            BigDecimal subtotal = coCmd.orderItems().stream()
-                    .map(item -> item.unitPrice().multiply(BigDecimal.valueOf(item.quantity())))
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-
-            CompanyOrder companyOrder = CompanyOrder.of(order, coCmd.companyId(), subtotal, BigDecimal.ZERO);
-
-            for (CreateOrderCommand.OrderItemCommand itemCmd : coCmd.orderItems()) {
-                OrderItem item = OrderItem.of(
-                        companyOrder,
-                        itemCmd.productOptionId(),
-                        itemCmd.quantity(),
-                        itemCmd.unitPrice()
-                );
-                companyOrder.getOrderItems().add(item);
-            }
-            order.getCompanyOrders().add(companyOrder);
-        }
-
+        Order order = buildOrder(command);
         orderRepository.save(order);
 
-        // 관련된 모든 업체 ID를 모아 Company Service에 단 1회 일괄 조회
-        List<UUID> allCompanyIds = new ArrayList<>();
-        allCompanyIds.add(order.getReceiverCompanyId());
-        order.getCompanyOrders().forEach(co -> allCompanyIds.add(co.getCompanyId()));
-
-        // companyId → hubId 전체 매핑 (수령업체 + 공급업체 모두 포함)
+        // 수령업체 + 공급업체 ID 전체 → companyId : hubId 매핑 일괄 조회 (단 1회 호출)
+        List<UUID> allCompanyIds = Stream.concat(
+                Stream.of(order.getReceiverCompanyId()),
+                order.getCompanyOrders().stream().map(CompanyOrder::getCompanyId)
+        ).toList();
         Map<UUID, UUID> hubIdMap = companyPort.getHubIds(allCompanyIds);
         validateHubMapping(hubIdMap, allCompanyIds);
         UUID destinationHubId = hubIdMap.get(order.getReceiverCompanyId()); // 수령업체 소속 허브
@@ -100,12 +62,20 @@ public class OrderService {
         // 재고 예약: 실패 시 예외 전파 → 주문 생성 전체 롤백
         hubStockPort.reserveStock(order);
 
-        // 배송 일괄 생성: 공급업체 소속 허브(출발) → 수령업체 소속 허브(도착), 단 1회 호출
-        // hubIdMap에서 각 공급업체의 departureHubId를 조회하여 사용
-        deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+        // 배송 일괄 생성: 공급업체 소속 허브(출발) → 수령업체 소속 허브(도착)
+        // TODO) 배송 생성 실패 시 이미 완료된 reserveStock이 자동 보상되지 않음 -> hub & delivery Feign 연동 완성 후 Saga 도입 필요
+        Map<UUID, UUID> deliveryMap = deliveryPort.createDeliveries(order, hubIdMap, destinationHubId);
+
+        // 배송 ID 할당 (OrderItem과 Delivery 간 추적을 위해 저장)
+        order.getCompanyOrders().forEach(co -> {
+            UUID deliveryId = deliveryMap.get(co.getCompanyOrderId());
+            if (deliveryId != null) {
+                co.getOrderItems().forEach(item -> item.assignDelivery(deliveryId));
+            }
+        });
 
         // 선결제: 주문 생성 이벤트 발행 → PaymentEventHandler에서 결제 COMPLETED 처리 (같은 트랜잭션)
-        eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), totalPrice));
+        eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getTotalPrice()));
 
         return OrderResult.from(order);
     }
@@ -134,17 +104,19 @@ public class OrderService {
 
         validateOrderCancellable(order);
 
-        // 이미 CANCELLED/DELIVERED인 CompanyOrder는 건너뜀
+        // 이미 CANCELLED인 CompanyOrder는 건너뜀 (PENDING 상태면 SHIPPED/DELIVERED는 없음)
         order.getCompanyOrders().stream()
-                .filter(co -> co.getStatus() != CompanyOrderStatus.CANCELLED
-                        && co.getStatus() != CompanyOrderStatus.DELIVERED)
+                .filter(co -> co.getStatus() != CompanyOrderStatus.CANCELLED)
                 .forEach(co -> co.cancel(requesterId));
         order.cancel(requesterId);
 
         // 재고 예약 전체 취소 (orderId 기준)
+        // hub-service 장애 시 예외가 전파되어 TX 전체 롤백됨 (order·payment 취소 모두 되돌아감)
+        // TODO) hub Feign 연동 완성 후 Saga 도입 시 보상 처리로 전환 필요
         hubStockPort.cancelStock(orderId);
 
         // 주문 취소 이벤트 발행 → PaymentEventHandler에서 결제 취소 처리 (같은 트랜잭션)
+        // Order·Payment가 같은 DB이므로 단일 트랜잭션으로 원자적 처리
         eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
     }
 
@@ -164,6 +136,15 @@ public class OrderService {
 
         // 재고 예약 부분 취소 (companyOrderId 기준)
         hubStockPort.cancelCompanyStock(companyOrderId);
+
+        // 주문 상태 업데이트 (모든 서브 주문이 터미널 상태면 Order도 종료)
+        Order order = companyOrder.getOrder();
+        order.updateStatus(requesterId);
+
+        // 만약 전체 주문이 취소되었다면 (마지막 서브 주문 취소 시) -> 결제 취소 이벤트 발행
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            eventPublisher.publishEvent(new OrderCancelledEvent(order.getOrderId(), requesterId));
+        }
     }
 
     // 출고 준비 확인: ORDERED → PREPARING
@@ -177,7 +158,7 @@ public class OrderService {
         return CompanyOrderResult.from(companyOrder);
     }
 
-    // 출고 완료: PREPARING → SHIPPED
+    // 출고 완료: PREPARING → SHIPPED, Order → DELIVERING
     @Transactional
     public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
         CompanyOrder companyOrder = findCompanyOrderOrThrow(companyOrderId);
@@ -185,6 +166,13 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.ship();
+
+        // CompanyOrder가 출고되면 Order → DELIVERING 전환
+        // (이미 DELIVERING/COMPLETED 상태면 중복 전환 방지)
+        Order order = companyOrder.getOrder();
+        if (order.getStatus() == OrderStatus.PENDING) {
+            order.startDelivery();
+        }
 
         // 실재고 차감
         hubStockPort.deductStock(companyOrder);
@@ -200,31 +188,69 @@ public class OrderService {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.deliver();
-        completeOrderIfAllDelivered(companyOrder.getOrder());
+        companyOrder.getOrder().updateStatus(null); // 배송 완료 시에는 삭제자 정보 없음
         return CompanyOrderDeliveredResult.from(companyOrder);
-    }
-
-    /**
-     * 모든 CompanyOrder가 완료(DELIVERED 또는 CANCELLED) 상태이면 Order → COMPLETED 전환
-     * anyMatch로 진행 중인 항목 발견 즉시 조기 종료
-     */
-    private void completeOrderIfAllDelivered(Order order) {
-        boolean hasActiveCompanyOrder = order.getCompanyOrders().stream()
-                .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
-                        && co.getStatus() != CompanyOrderStatus.CANCELLED);
-        if (!hasActiveCompanyOrder) {
-            order.complete();
-        }
     }
 
     // 결제 취소 가능 여부 조회 (PaymentService → OrderQueryAdapter → OrderService)
     public boolean isCancellable(UUID orderId) {
-        Order order = orderRepository.findOrderById(orderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+        return orderRepository.findOrderById(orderId)
+                .map(this::checkOrderCancellable)
+                .orElse(false);
+    }
+
+    private boolean checkOrderCancellable(Order order) {
         if (order.getStatus() != OrderStatus.PENDING) return false;
         return order.getCompanyOrders().stream()
                 .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
                         || co.getStatus() == CompanyOrderStatus.DELIVERED);
+    }
+
+    // Order + CompanyOrder + OrderItem 도메인 객체 구성
+    private Order buildOrder(CreateOrderCommand command) {
+        // CompanyOrder별 소계를 먼저 계산한 뒤 합산 → 아이템당 calculateItemPrice 호출 1회
+        List<BigDecimal> subtotals = command.companyOrders().stream()
+            .map(co -> co.orderItems().stream()
+                .map(this::calculateItemPrice)
+                .reduce(BigDecimal.ZERO, BigDecimal::add))
+            .toList();
+        BigDecimal totalPrice = subtotals.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        Order order = Order.of(
+            command.receiverCompanyId(),
+            command.recipientName(),
+            command.phone(),
+            command.slackId(),
+            command.address(),
+            command.dueDate(),
+            command.requestMemo(),
+            totalPrice,
+            BigDecimal.ZERO,
+            totalPrice          // finalPrice = totalPrice + deliveryFee (배송비 확정 전 임시)
+        );
+
+        List<CreateOrderCommand.CompanyOrderCommand> coCommands = command.companyOrders();
+        for (int i = 0; i < coCommands.size(); i++) {
+            order.addCompanyOrder(buildCompanyOrder(order, coCommands.get(i), subtotals.get(i)));
+        }
+        return order;
+    }
+
+    // CompanyOrder + OrderItem 도메인 객체 구성 (subtotal은 buildOrder에서 계산된 값 재사용)
+    private CompanyOrder buildCompanyOrder(Order order, CreateOrderCommand.CompanyOrderCommand coCmd,
+                                           BigDecimal subtotal) {
+        CompanyOrder companyOrder = CompanyOrder.of(order, coCmd.companyId(), subtotal, BigDecimal.ZERO);
+        coCmd.orderItems().forEach(itemCmd ->
+            companyOrder.addOrderItem(
+                OrderItem.of(companyOrder, itemCmd.productOptionId(), itemCmd.quantity(), itemCmd.unitPrice())
+            )
+        );
+        return companyOrder;
+    }
+
+    // 단가 × 수량 → 항목 금액 계산 (buildOrder에서만 사용)
+    private BigDecimal calculateItemPrice(CreateOrderCommand.OrderItemCommand item) {
+        return item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()));
     }
 
     // 요청한 모든 companyId에 대해 hubId 매핑이 존재하는지 검증
@@ -240,7 +266,7 @@ public class OrderService {
         if (order.getStatus() == OrderStatus.CANCELLED) {
             throw new BusinessException(OrderErrorCode.ORDER_ALREADY_CANCELLED);
         }
-        if (order.getStatus() == OrderStatus.COMPLETED) {
+        if (!checkOrderCancellable(order)) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
     }

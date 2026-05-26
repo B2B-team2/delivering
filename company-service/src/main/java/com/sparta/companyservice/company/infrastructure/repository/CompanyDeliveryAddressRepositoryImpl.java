@@ -33,4 +33,9 @@ public class CompanyDeliveryAddressRepositoryImpl implements CompanyDeliveryAddr
     public long count() {
         return deliveryAddressJpaRepository.count();
     }
+
+    @Override
+    public void updateAllIsDefaultFalseByCompanyId(UUID companyId) {
+        deliveryAddressJpaRepository.updateAllIsDefaultFalseByCompanyId(companyId);
+    }
 }
