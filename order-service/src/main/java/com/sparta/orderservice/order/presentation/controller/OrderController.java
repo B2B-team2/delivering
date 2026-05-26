@@ -85,22 +85,4 @@ public class OrderController {
         orderService.cancelCompanyOrder(companyOrderId, requesterId);
         return ResponseEntity.ok(ApiResponse.success());
     }
-
-    // 출고 준비 확인: ORDERED → PREPARING
-    @PatchMapping("/company/{companyOrderId}/preparing")
-    public ResponseEntity<ApiResponse<CompanyOrderResponse>> prepareCompanyOrder(
-            @PathVariable UUID companyOrderId
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                CompanyOrderResponse.from(orderService.prepareCompanyOrder(companyOrderId))));
-    }
-
-    // 출고 완료: PREPARING → SHIPPED
-    @PatchMapping("/company/{companyOrderId}/shipped")
-    public ResponseEntity<ApiResponse<CompanyOrderResponse>> shipCompanyOrder(
-            @PathVariable UUID companyOrderId
-    ) {
-        return ResponseEntity.ok(ApiResponse.success(
-                CompanyOrderResponse.from(orderService.shipCompanyOrder(companyOrderId))));
-    }
 }
