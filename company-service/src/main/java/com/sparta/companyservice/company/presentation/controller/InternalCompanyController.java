@@ -6,7 +6,6 @@ import com.sparta.companyservice.company.presentation.dto.CompanyHubMappingReque
 import com.sparta.companyservice.company.presentation.dto.CompanyHubMappingResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,17 +23,17 @@ public class InternalCompanyController {
     private final CompanyService companyService;
 
     @PostMapping("/hub-mapping")
-    public ResponseEntity<ApiResponse<CompanyHubMappingResponse>> getHubMapping(
+    public ApiResponse<CompanyHubMappingResponse> getHubMapping(
             @Valid @RequestBody CompanyHubMappingRequest request) {
         
         CompanyHubMappingResponse response = CompanyHubMappingResponse.from(
                 companyService.getHubMappings(request.getCompanyIds()));
 
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ApiResponse.success(response);
     }
 
     @GetMapping("/exists")
-    public ResponseEntity<ApiResponse<Boolean>> existsCompanyInHub(@RequestParam UUID hubId) {
-        return ResponseEntity.ok(ApiResponse.success(companyService.existsCompanyInHub(hubId)));
+    public ApiResponse<Boolean> existsCompanyInHub(@RequestParam UUID hubId) {
+        return ApiResponse.success(companyService.existsCompanyInHub(hubId));
     }
 }
