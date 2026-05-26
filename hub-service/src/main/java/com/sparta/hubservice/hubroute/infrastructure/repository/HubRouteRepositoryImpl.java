@@ -3,6 +3,8 @@ package com.sparta.hubservice.hubroute.infrastructure.repository;
 import com.sparta.hubservice.hubroute.domain.core.HubRoute;
 import com.sparta.hubservice.hubroute.domain.repository.HubRouteRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -33,6 +35,11 @@ public class HubRouteRepositoryImpl implements HubRouteRepository {
     @Override
     public List<HubRoute> findAll() {
         return hubRouteJpaRepository.findAllByDeletedAtIsNull();
+    }
+
+    @Override
+    public Page<HubRoute> findAll(Pageable pageable) {
+        return hubRouteJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
 
     @Override

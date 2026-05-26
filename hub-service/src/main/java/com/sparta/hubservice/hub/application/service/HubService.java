@@ -2,6 +2,7 @@ package com.sparta.hubservice.hub.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.hubservice.global.exception.ErrorCode;
+import com.sparta.hubservice.hub.domain.port.CompanyReader;
 import com.sparta.hubservice.hub.application.dto.HubCreateCommand;
 import com.sparta.hubservice.hub.application.dto.HubDto;
 import com.sparta.hubservice.hub.application.dto.HubUpdateCommand;
@@ -25,6 +26,7 @@ import java.util.UUID;
 public class HubService {
 
     private final HubRepository hubRepository;
+    private final CompanyReader companyReader;
 
     @Transactional
     public HubDto createHub(HubCreateCommand command) {
@@ -69,6 +71,11 @@ public class HubService {
     public void deleteHub(UUID hubId, UUID deletedBy) {
         Hub hub = hubRepository.findById(hubId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.HUB_NOT_FOUND));
+
+        if (companyReader.existsCompaniesByHubId(hubId)) {
+            throw new BusinessException(ErrorCode.HUB_IN_USE);
+        }
+
         hub.softDelete(deletedBy);
         hubRepository.save(hub);
     }

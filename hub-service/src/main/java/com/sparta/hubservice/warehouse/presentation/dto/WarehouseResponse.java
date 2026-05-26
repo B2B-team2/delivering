@@ -19,7 +19,9 @@ public class WarehouseResponse {
     private final String contactPhone;
     private final String status;
     private final LocalDateTime createdAt;
+    private final UUID createdBy;
     private final LocalDateTime updatedAt;
+    private final UUID updatedBy;
 
     public static WarehouseResponse from(WarehouseDto dto) {
         return WarehouseResponse.builder()
@@ -32,6 +34,7 @@ public class WarehouseResponse {
                 .status(dto.getStatus())
                 .createdAt(dto.getCreatedAt())
                 .updatedAt(dto.getUpdatedAt())
+                .updatedBy(dto.getUpdatedBy())
                 .build();
     }
 }

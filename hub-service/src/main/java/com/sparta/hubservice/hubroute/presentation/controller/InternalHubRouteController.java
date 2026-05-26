@@ -1,6 +1,5 @@
 package com.sparta.hubservice.hubroute.presentation.controller;
 
-import com.sparta.common.dto.ApiResponse;
 import com.sparta.hubservice.hubroute.application.service.HubRouteService;
 import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchRequest;
 import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchResponse;
@@ -20,10 +19,10 @@ public class InternalHubRouteController {
     private final HubRouteService hubRouteService;
 
     @PostMapping("/search")
-    public ResponseEntity<ApiResponse<RouteSearchResponse>> searchRoute(
+    public ResponseEntity<RouteSearchResponse> searchRoute(
             @Valid @RequestBody RouteSearchRequest request) {
         RouteSearchResponse response = RouteSearchResponse.from(
                 hubRouteService.findRoute(request.getFromHubId(), request.getToHubId()));
-        return ResponseEntity.ok(ApiResponse.success(response));
+        return ResponseEntity.ok(response);
     }
 }
