@@ -17,11 +17,12 @@ public enum OrderErrorCode implements ErrorCode {
     COMPANY_NOT_FOUND(HttpStatus.NOT_FOUND, "O006", "요청하신 업체를 찾을 수 없습니다.", "companyId"),
 
     // 외부 서비스 연동 오류
-    STOCK_INSUFFICIENT(HttpStatus.CONFLICT, "O007", "재고가 부족합니다."),
-    HUB_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O008", "재고 서비스에 연결할 수 없습니다."),
-    COMPANY_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O009", "업체 서비스에 연결할 수 없습니다."),
-    DELIVERY_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O010", "배송 서비스에 연결할 수 없습니다."),
-    EXTERNAL_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "O011", "외부 서비스 오류가 발생했습니다.", null);
+    STOCK_INSUFFICIENT(HttpStatus.CONFLICT, "O007", "재고가 부족합니다.", null),
+    HUB_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O008", "재고 서비스에 연결할 수 없습니다.", null),
+    COMPANY_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O009", "업체 서비스에 연결할 수 없습니다.", null),
+    DELIVERY_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O010", "배송 서비스에 연결할 수 없습니다.", null),
+    EXTERNAL_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "O011", "외부 서비스 오류가 발생했습니다.", null),
+    HUB_MAPPING_NOT_FOUND(HttpStatus.NOT_FOUND, "O012", "해당 업체의 허브 매핑 정보를 찾을 수 없습니다.", "companyId");
 
     private final HttpStatus httpStatus;
     private final String code;
