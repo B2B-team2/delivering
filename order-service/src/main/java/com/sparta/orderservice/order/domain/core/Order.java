@@ -102,6 +102,11 @@ public class Order extends BaseEntity {
         return order;
     }
 
+    // CompanyOrder 추가 -> 도메인 메서드를 통해 캡슐화
+    public void addCompanyOrder(CompanyOrder companyOrder) {
+        this.companyOrders.add(companyOrder);
+    }
+
     public void startDelivery() {
         this.status = OrderStatus.DELIVERING;
     }
@@ -113,5 +118,28 @@ public class Order extends BaseEntity {
     public void cancel(UUID deletedBy) {
         this.status = OrderStatus.CANCELLED;
         this.softDelete(deletedBy);
+    }
+
+    /**
+     * 모든 CompanyOrder가 terminal(DELIVERED 또는 CANCELLED) 상태이면 Order 상태 업데이트
+     * - 하나라도 DELIVERED가 있으면 -> COMPLETED
+     * - 전체가 CANCELLED이면 -> CANCELLED & Soft Delete
+     */
+    public void updateStatus(UUID deletedBy) {
+        boolean hasActive = this.companyOrders.stream()
+                .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
+                        && co.getStatus() != CompanyOrderStatus.CANCELLED);
+        if (hasActive) {
+            return;
+        }
+
+        boolean hasDelivered = this.companyOrders.stream()
+                .anyMatch(co -> co.getStatus() == CompanyOrderStatus.DELIVERED);
+
+        if (hasDelivered) {
+            this.complete();
+        } else {
+            this.cancel(deletedBy);
+        }
     }
 }
