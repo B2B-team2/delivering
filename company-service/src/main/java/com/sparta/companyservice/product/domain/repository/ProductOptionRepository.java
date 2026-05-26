@@ -1,13 +1,15 @@
 package com.sparta.companyservice.product.domain.repository;
 
 import com.sparta.companyservice.product.domain.core.ProductOption;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.util.Optional;
 import java.util.UUID;
 
 public interface ProductOptionRepository {
-    ProductOption save(ProductOption option);
+    ProductOption save(ProductOption productOption);
     Optional<ProductOption> findById(UUID productOptionId);
-    void delete(ProductOption option);
-    long count();
+    Page<ProductOption> findAll(Pageable pageable);
+    boolean existsById(UUID productOptionId);
 }
