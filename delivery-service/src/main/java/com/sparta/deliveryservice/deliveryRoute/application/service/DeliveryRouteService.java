@@ -2,6 +2,8 @@ package com.sparta.deliveryservice.deliveryRoute.application.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.deliveryservice.delivery.domain.core.Delivery;
+import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
@@ -13,6 +15,7 @@ import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.Delive
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.DeliveryRouteDetailResponse;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.DeliveryRouteStatusUpdateResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,7 +32,9 @@ public class DeliveryRouteService {
 
     private final DeliveryRouteRepository deliveryRouteRepository;
     private final DeliveryLogRepository deliveryLogRepository;
+    private final DeliveryRepository deliveryRepository;
     private final ObjectMapper objectMapper;
+    private final CacheManager cacheManager;
 
     public DeliveryRouteDetailResponse getDeliveryDetailRoutes(UUID deliveryId) {
 
@@ -114,6 +119,11 @@ public class DeliveryRouteService {
             savedLogId = savedLog.getLogId();
         }
 
+        Delivery delivery = deliveryRepository.findById(deliveryId).orElse(null);
+        if (delivery != null && cacheManager.getCache("deliveryTracking") != null) {
+            cacheManager.getCache("deliveryTracking").evict(delivery.getTrackingNumber());
+        }
+
         String estimatedDurationStr = "00:00:00";
         if (route != null && route.getEstimatedDuration() != null) {
             estimatedDurationStr = route.getEstimatedDuration().toLocalTime().toString();
@@ -170,6 +180,11 @@ public class DeliveryRouteService {
                         .status(remainingRoute.getStatus().name())
                         .build())
                 .collect(Collectors.toList());
+
+        Delivery delivery = deliveryRepository.findById(deliveryId).orElse(null);
+        if (delivery != null && cacheManager.getCache("deliveryTracking") != null) {
+            cacheManager.getCache("deliveryTracking").evict(delivery.getTrackingNumber());
+        }
 
         return DeliveryRouteDeleteResponse.builder()
                 .deliveryId(deliveryId)
