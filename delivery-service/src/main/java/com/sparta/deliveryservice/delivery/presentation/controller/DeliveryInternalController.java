@@ -29,7 +29,7 @@ public class DeliveryInternalController {
         return ApiResponse.created(responses);
     }
 
-    @PostMapping("/internal/deliveries/cancel")
+    @PostMapping("/deliveries/cancel")
     public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(@RequestBody DeliveryOrderCancelRequest request) {
         DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request.getOrderId());
         return response;
