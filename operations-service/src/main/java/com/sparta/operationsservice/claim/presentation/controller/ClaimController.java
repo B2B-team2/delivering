@@ -15,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,6 +34,7 @@ public class ClaimController {
     private final ClaimService claimService;
 
     @PostMapping
+    @PreAuthorize("hasRole('COMPANY_MANAGER')")
     public ResponseEntity<ApiResponse<ClaimResponse>> createClaim(
             @RequestBody @Valid ClaimCreateRequest request) {
         ClaimDto resultDto = claimService.createClaim(request.toCommand());
@@ -41,6 +43,7 @@ public class ClaimController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<PageResponse<ClaimResponse>>> getClaims(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
 
@@ -53,6 +56,7 @@ public class ClaimController {
     }
 
     @GetMapping("/{claimId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<ClaimResponse>> getClaim(
             @PathVariable("claimId") UUID claimId) {
         ClaimDto resultDto = claimService.getClaim(claimId);
@@ -60,6 +64,7 @@ public class ClaimController {
     }
 
     @PatchMapping("/{claimId}/status")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<ClaimResponse>> updateClaimStatus(
             @PathVariable("claimId") UUID claimId,
             @RequestBody @Valid ClaimStatusUpdateRequest request) {
