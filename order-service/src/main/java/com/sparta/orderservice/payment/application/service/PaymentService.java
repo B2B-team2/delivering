@@ -7,8 +7,7 @@ import com.sparta.orderservice.payment.domain.core.Payment;
 import com.sparta.orderservice.payment.domain.core.PaymentMethod;
 import com.sparta.orderservice.payment.domain.core.PaymentStatus;
 import com.sparta.orderservice.payment.domain.repository.PaymentRepository;
-import com.sparta.orderservice.payment.application.port.OrderCancelPort;
-import com.sparta.orderservice.payment.application.port.OrderQueryPort;
+import com.sparta.orderservice.order.application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,8 +23,7 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final OrderQueryPort orderQueryPort;
-    private final OrderCancelPort orderCancelPort;
+    private final OrderService orderService;
 
     /**
      * 선결제: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
@@ -41,7 +39,7 @@ public class PaymentService {
     /**
      * 결제 취소/환불: COMPLETED → CANCELLED
      * 취소 가능 조건: Order.PENDING + CompanyOrder SHIPPED/DELIVERED 없을 때
-     * 상태 검증은 OrderQueryPort(Adapter)에 위임
+     * 상태 검증은 OrderService에 위임
      *
      * 흐름:
      * cancelPayment() → cancelOrder() → OrderCancelledEvent 발행
@@ -60,13 +58,13 @@ public class PaymentService {
             throw new BusinessException(PaymentErrorCode.PAYMENT_ALREADY_CANCELLED);
         }
 
-        if (!orderQueryPort.isCancellable(payment.getOrderId())) {
+        if (!orderService.isCancellable(payment.getOrderId())) {
             throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
         }
 
         // 주문 취소 위임 → OrderCancelledEvent 발행 → cancelPaymentByOrderId()에서 결제 취소
         // @EventListener 동기 실행(같은 TX)이므로 리턴 시점에 Payment는 이미 CANCELLED 상태
-        orderCancelPort.cancelOrder(payment.getOrderId(), requesterId);
+        orderService.cancelOrder(payment.getOrderId(), requesterId);
 
         return PaymentResult.from(payment);
     }

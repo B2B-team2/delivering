@@ -10,13 +10,41 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
 public class DraftWriter {
 
     private final DraftRepository draftRepository;
+
+    // 임시주문 조회 + 소유권 검증 (독립 readOnly TX)
+    // createOrderFromDraft의 NOT_SUPPORTED 컨텍스트에서 새 readOnly TX를 열기 위해 DraftWriter에 위임
+    @Transactional(readOnly = true)
+    public List<Draft> readAndValidateDrafts(List<UUID> draftIds, UUID userId) {
+        List<Draft> drafts = draftIds.stream()
+                .map(id -> draftRepository.findDraftById(id)
+                        .orElseThrow(() -> new BusinessException(DraftErrorCode.DRAFT_NOT_FOUND)))
+                .toList();
+        drafts.forEach(draft -> {
+            if (!draft.getUserId().equals(userId)) {
+                throw new BusinessException(DraftErrorCode.DRAFT_ACCESS_DENIED);
+            }
+        });
+        return drafts;
+    }
+
+    // 임시주문 일괄 soft delete (독립 TX)
+    // 전달받은 ID로 재조회하여 JPA dirty checking이 동작하는 관리 상태로 처리
+    @Transactional
+    public void deleteAll(List<UUID> draftIds, UUID userId) {
+        draftIds.stream()
+                .map(id -> draftRepository.findDraftById(id)
+                        .orElseThrow(() -> new BusinessException(DraftErrorCode.DRAFT_NOT_FOUND)))
+                .forEach(draft -> draft.delete(userId));
+    }
 
     // 실제 upsert 처리 (독립 TX)
     @Transactional

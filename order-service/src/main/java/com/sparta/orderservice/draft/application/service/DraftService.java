@@ -7,13 +7,13 @@ import com.sparta.orderservice.draft.application.dto.DraftResult;
 import com.sparta.orderservice.draft.domain.core.Draft;
 import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
-import com.sparta.orderservice.draft.application.port.OrderCreatePort;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.ProductPort;
+import com.sparta.orderservice.order.application.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -36,7 +36,7 @@ public class DraftService {
 
     private final DraftRepository draftRepository;
     private final DraftWriter draftWriter;
-    private final OrderCreatePort orderCreatePort;
+    private final OrderService orderService;
     private final ProductPort productPort;
     private final CompanyPort companyPort;
 
@@ -84,16 +84,20 @@ public class DraftService {
         draft.delete(userId);
     }
 
-    // 임시주문으로 주문 생성
-    @Transactional
+    /**
+     * 임시주문으로 주문 생성 (Saga)
+     *
+     * TX를 갖지 않고 각 단계를 독립 TX로 분리:
+     * - 외부 호출(hub/delivery)이 DB TX를 점유하지 않도록 NOT_SUPPORTED 사용
+     * - draft 삭제 실패 시 이미 생성된 주문을 보상 취소
+     */
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderResult createOrderFromDraft(CreateOrderFromDraftCommand command) {
-        // 1. 임시주문 항목 조회 및 소유권 검증
-        List<Draft> drafts = command.draftIds().stream()
-                .map(this::findDraftOrThrow)
-                .toList();
-        drafts.forEach(draft -> checkOwnership(draft, command.userId()));
+        // 1. 임시주문 항목 조회 및 소유권 검증 (독립 readOnly TX)
+        List<Draft> drafts = draftWriter.readAndValidateDrafts(command.draftIds(), command.userId());
 
         // 2. Product Service 조회 → companyId별 CompanyOrderCommand 목록 구성
+        // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
         Map<UUID, ProductOptionInfo> productInfoMap = productPort.getProductOptionInfos(
                 drafts.stream().map(Draft::getProductOptionId).toList()
         );
@@ -101,11 +105,10 @@ public class DraftService {
                 buildCompanyOrderCommands(drafts, productInfoMap);
 
         // 3. 배송지 세팅: null이면 Company Service 기본 배송지(is_default=true) 자동 조회
-        // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
         DeliveryAddressInfo address = resolveDeliveryAddress(command);
 
-        // 4. 주문 생성
-        OrderResult orderResult = orderCreatePort.createOrder(new CreateOrderCommand(
+        // 4. 주문 생성 (독립 TX + 내부 hub/delivery Saga)
+        OrderResult orderResult = orderService.createOrder(new CreateOrderCommand(
                 command.receiverCompanyId(),
                 address.recipientName(),
                 address.phone(),
@@ -116,8 +119,19 @@ public class DraftService {
                 companyOrderCommands
         ), command.userId());
 
-        // 5. 임시주문 항목 soft delete
-        drafts.forEach(draft -> draft.delete(command.userId()));
+        // 5. 임시주문 항목 soft delete (독립 TX)
+        // 실패 시 Saga 보상: 생성된 주문 취소 (hub 재고 + 배송 취소 포함)
+        try {
+            draftWriter.deleteAll(command.draftIds(), command.userId());
+        } catch (Exception e) {
+            log.error("[Saga] draft 삭제 실패, 주문 취소 보상 실행: orderId={}", orderResult.orderId(), e);
+            try {
+                orderService.cancelOrder(orderResult.orderId(), command.userId());
+            } catch (Exception compensationEx) {
+                log.error("[Saga] 주문 취소 보상 실패 - 수동 복구 필요: orderId={}", orderResult.orderId(), compensationEx);
+            }
+            throw e;
+        }
 
         return orderResult;
     }
