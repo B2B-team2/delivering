@@ -61,10 +61,10 @@ public class Delivery extends BaseEntity {
     @Column(name = "recipient_name", nullable = false, length = 100)
     private String recipientName;
 
-    @Column(name = "manager_name", nullable = false, length = 100)
+    @Column(name = "manager_name", length = 100)
     private String managerName;
 
-    @Column(name = "manager_phone", nullable = false, length = 20)
+    @Column(name = "manager_phone", length = 20)
     private String managerPhone;
 
     @Column(name = "phone", nullable = false, length = 20)
@@ -76,7 +76,7 @@ public class Delivery extends BaseEntity {
     @Column(name = "recipient_slack_id", length = 100)
     private String recipientSlackId;
 
-    @Column(name = "delivery_manager_id", nullable = false)
+    @Column(name = "delivery_manager_id")
     private UUID deliveryManagerId;
 
     @Column(name = "final_dispatch_deadline_at")
@@ -127,8 +127,10 @@ public class Delivery extends BaseEntity {
         this.status = status;
     }
 
-    public void updateDeliveryManager(UUID deliveryManagerId) {
+    public void updateDeliveryManager(UUID deliveryManagerId, String managerName, String managerPhone) {
         this.deliveryManagerId = deliveryManagerId;
+        this.managerName = managerName;
+        this.managerPhone = managerPhone;
     }
 
     public void startDelivery(String trackingNumber) {
@@ -137,8 +139,15 @@ public class Delivery extends BaseEntity {
         this.startedAt = LocalDateTime.now();
     }
 
-    public void completeDelivery() {
+    public void completeDelivery(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
         this.status = DeliveryStatus.DELIVERED;
         this.completedAt = LocalDateTime.now();
+    }
+
+    public void assignDeliveryManager(UUID deliveryManagerId, String managerName, String managerPhone) {
+        this.deliveryManagerId = deliveryManagerId;
+        this.managerName = managerName;
+        this.managerPhone = managerPhone;
     }
 }

@@ -6,9 +6,11 @@ import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryHubServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryHubRouteSearchResponse;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryManagerResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryCancelRequest;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryManagerUpdateRequest;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryStatusUpdateRequest;
@@ -48,13 +50,13 @@ public class DeliveryService {
     private final DeliveryRepository deliveryRepository;
     private final DeliveryRouteRepository deliveryRouteRepository;
     private final DeliveryLogRepository deliveryLogRepository;
-    private final DeliveryHubServiceClient DeliveryHubServiceClient;
+    private final DeliveryHubServiceClient deliveryHubServiceClient;
+    private final DeliveryUserServiceClient deliveryUserServiceClient;
     private final ObjectMapper objectMapper;
 
     @Transactional
     public List<DeliveryCreateResponse> createInternalDeliveries(List<DeliveryCreateClientRequest> requests, String userId) {
         List<DeliveryCreateResponse> responses = new ArrayList<>();
-        UUID defaultManagerId = UUID.fromString("00000000-0000-0000-0000-000000000000");
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss");
 
         for (DeliveryCreateClientRequest request : requests) {
@@ -73,17 +75,20 @@ public class DeliveryService {
                     .phone(request.getPhone())
                     .postalCode(request.getPostalCode())
                     .recipientSlackId(request.getRecipientSlackId())
-                    .deliveryManagerId(defaultManagerId)
                     .build();
 
             Delivery savedDelivery = deliveryRepository.save(delivery);
+
+            DeliveryManagerResponse managerInfo = deliveryUserServiceClient.getManagerInfo(savedDelivery.getDeliveryId());
+
+            savedDelivery.assignDeliveryManager(managerInfo.getDeliveryManagerId(), managerInfo.getManagerName(), managerInfo.getManagerPhone());
 
             DeliveryHubRouteSearchRequest hubRequest = DeliveryHubRouteSearchRequest.builder()
                     .fromHubId(request.getDepartureHubId())
                     .toHubId(request.getDestinationHubId())
                     .build();
 
-            DeliveryHubRouteSearchResponse hubClientResponse = DeliveryHubServiceClient.searchHubRoutes(hubRequest);
+            DeliveryHubRouteSearchResponse hubClientResponse = deliveryHubServiceClient.searchHubRoutes(hubRequest);
 
             List<DeliveryRoute> deliveryRoutes = new ArrayList<>();
             String departureHubName = "출발 센터";
@@ -137,6 +142,8 @@ public class DeliveryService {
                     .recipientName(savedDelivery.getRecipientName())
                     .recipientSlackId(savedDelivery.getRecipientSlackId())
                     .deliveryManagerId(savedDelivery.getDeliveryManagerId())
+                    .deliveryManagerName(savedDelivery.getManagerName())
+                    .deliveryManagerPhone(savedDelivery.getManagerPhone())
                     .memo(savedDelivery.getMemo())
                     .finalDispatchDeadlineAt(savedDelivery.getFinalDispatchDeadlineAt())
                     .startedAt(savedDelivery.getStartedAt())
@@ -397,27 +404,28 @@ public class DeliveryService {
                 .orElseThrow(() -> new IllegalArgumentException("해당 배송 정보가 존재하지 않습니다. ID: " + deliveryId));
 
         UUID previousManagerId = delivery.getDeliveryManagerId();
-        String previousManagerName = (previousManagerId != null) ? "delivery" : "미지정";
-        String previousManagerPhone = "000-0000-0000";
+        String previousManagerName = delivery.getManagerName();
+        String previousManagerPhone = delivery.getManagerPhone();
 
-        delivery.updateDeliveryManager(request.getDeliveryManagerId());
+        delivery.updateDeliveryManager(request.getDeliveryManagerId(), request.getName(), request.getPhone());
 
         String prevJson = "";
         String currJson = "";
         try {
             prevJson = objectMapper.writeValueAsString(Map.of(
                     "deliveryManagerId", previousManagerId != null ? previousManagerId.toString() : "",
-                    "name", previousManagerName
-
+                    "name", previousManagerName,
+                    "phone", previousManagerPhone
             ));
 
             currJson = objectMapper.writeValueAsString(Map.of(
-                    "deliveryManagerId", delivery.getDeliveryManagerId().toString(),
-                    "name", request.getName()
+                    "deliveryManagerId", request.getDeliveryManagerId().toString(),
+                    "name", request.getName(),
+                    "phone", request.getPhone()
             ));
         } catch (Exception e) {
             prevJson = "{\"deliveryManagerId\":\"" + previousManagerId + "\"}";
-            currJson = "{\"deliveryManagerId\":\"" + delivery.getDeliveryManagerId() + "\"}";
+            currJson = "{\"deliveryManagerId\":\"" + request.getDeliveryManagerId() + "\"}";
         }
 
         DeliveryLog managerChangedLog = DeliveryLog.builder()
@@ -483,7 +491,7 @@ public class DeliveryService {
         Delivery delivery = deliveryRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 운송장 번호입니다. 운송장: " + trackingNumber));
 
-        delivery.startDelivery(trackingNumber);
+        delivery.completeDelivery(trackingNumber);
 
         DeliveryAddress addressObj = delivery.getDeliveryAddress();
         String flatAddress = (addressObj != null) ? addressObj.getAddress() : null;
