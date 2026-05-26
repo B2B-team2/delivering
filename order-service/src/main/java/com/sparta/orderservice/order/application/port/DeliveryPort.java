@@ -2,6 +2,7 @@ package com.sparta.orderservice.order.application.port;
 
 import com.sparta.orderservice.order.domain.core.Order;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -14,4 +15,8 @@ public interface DeliveryPort {
     // destinationHubId: 수령업체 소속 허브 (도착 허브, 공통)
     // 리턴: Map<companyOrderId, deliveryId>
     Map<UUID, UUID> createDeliveries(Order order, Map<UUID, UUID> hubIdMap, UUID destinationHubId);
+
+    // 배송 일괄 취소 (Saga 보상 전용): createOrder 실패 시 생성된 배송 전체 취소
+    // companyOrderIds: 취소할 CompanyOrder ID 목록
+    void cancelDeliveries(List<UUID> companyOrderIds);
 }

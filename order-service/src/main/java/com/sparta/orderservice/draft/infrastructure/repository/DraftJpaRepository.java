@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -21,4 +22,7 @@ public interface DraftJpaRepository extends JpaRepository<Draft, UUID> {
 
     // soft-deleted 포함 조회 (upsert 패턴: 같은 상품 옵션 재담기 시 복원용)
     Optional<Draft> findByUserIdAndProductOptionId(UUID userId, UUID productOptionId);
+
+    // N+1 방지용 일괄 조회 (soft-deleted 제외): WHERE draft_id IN (...) AND deleted_at IS NULL
+    List<Draft> findAllByDraftIdInAndDeletedAtIsNull(List<UUID> draftIds);
 }

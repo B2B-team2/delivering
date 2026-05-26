@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,6 +36,11 @@ public class DraftRepositoryImpl implements DraftRepository {
     @Override
     public Page<Draft> findAllDrafts(Pageable pageable) {
         return draftJpaRepository.findAllByDeletedAtIsNull(pageable);
+    }
+
+    @Override
+    public List<Draft> findAllDraftsByIds(List<UUID> draftIds) {
+        return draftJpaRepository.findAllByDraftIdInAndDeletedAtIsNull(draftIds);
     }
 
     @Override

@@ -6,12 +6,11 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
+import org.springframework.data.domain.Persistable;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,12 +25,11 @@ import java.util.UUID;
 @Table(name = "p_orders")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class Order extends BaseEntity {
+public class Order extends BaseEntity implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "order_id")
-    private UUID orderId;
+    private UUID orderId = UUID.randomUUID(); // 미리 생성 — save() 이전에도 사용 가능
 
     @Column(name = "receiver_company_id", nullable = false)
     private UUID receiverCompanyId;         // 수령업체(주문자 COMPANY_MANAGER의 소속 업체)
@@ -102,9 +100,28 @@ public class Order extends BaseEntity {
         return order;
     }
 
+    // Persistable: Spring Data JPA가 save() 시 persist/merge 여부 판단에 사용
+    // version == null → 한 번도 저장되지 않은 새 엔티티 → persist (INSERT)
+    // version != null → 이미 저장된 엔티티 → merge (UPDATE)
+    @Override
+    public UUID getId() { return orderId; }
+
+    @Override
+    public boolean isNew() { return version == null; }
+
     // CompanyOrder 추가 -> 도메인 메서드를 통해 캡슐화
     public void addCompanyOrder(CompanyOrder companyOrder) {
         this.companyOrders.add(companyOrder);
+    }
+
+    /**
+     * 주문 취소 가능 여부 — PENDING 상태이고 출고(SHIPPED)/수령(DELIVERED)된 서브주문이 없어야 함
+     */
+    public boolean isCancellable() {
+        if (this.status != OrderStatus.PENDING) return false;
+        return this.companyOrders.stream()
+                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
+                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
     }
 
     public void startDelivery() {
