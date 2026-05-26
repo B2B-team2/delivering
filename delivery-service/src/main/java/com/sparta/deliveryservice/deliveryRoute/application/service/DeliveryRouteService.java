@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
+import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
@@ -109,7 +110,7 @@ public class DeliveryRouteService {
             DeliveryLog deliveryLog = DeliveryLog.builder()
                     .deliveryId(deliveryId)
                     .routeId(routeId)
-                    .eventType("ROUTE_CHANGED")
+                    .eventType(DeliveryLogStatus.ROUTE_CHANGED)
                     .previousValue(previousValueJson)
                     .currentValue(currentValueJson)
                     .reason(request.getReason())
@@ -159,7 +160,7 @@ public class DeliveryRouteService {
             DeliveryLog deliveryLog = DeliveryLog.builder()
                     .deliveryId(deliveryId)
                     .routeId(routeId)
-                    .eventType("ROUTE_DELETE")
+                    .eventType(DeliveryLogStatus.ROUTE_CHANGED)
                     .previousValue(previousValueJson)
                     .currentValue("DELETE")
                     .reason(request.getReason())
