@@ -11,6 +11,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -76,6 +77,9 @@ public class Delivery extends BaseEntity {
     @Column(name = "recipient_slack_id", length = 100)
     private String recipientSlackId;
 
+    @Column(name = "delivery_slack_id", length = 100)
+    private String deliverySlackId;
+
     @Column(name = "delivery_manager_id")
     private UUID deliveryManagerId;
 
@@ -91,7 +95,7 @@ public class Delivery extends BaseEntity {
     @Builder
     public Delivery(UUID companyOrderId, UUID companyReceiveId, String trackingNumber, DeliveryStatus status, String memo,
                     UUID departureHubId, UUID destinationHubId, DeliveryAddress  deliveryAddress,
-                    String recipientName, String managerName, String managerPhone, String phone, String postalCode, String recipientSlackId, UUID deliveryManagerId,
+                    String recipientName, String managerName, String managerPhone, String phone, String postalCode, String recipientSlackId, UUID deliveryManagerId, String deliverySlackId,
                     LocalDateTime finalDispatchDeadlineAt) {
         this.companyOrderId = companyOrderId;
         this.companyReceiveId = companyReceiveId;
@@ -106,6 +110,7 @@ public class Delivery extends BaseEntity {
         this.postalCode = postalCode;
         this.recipientSlackId = recipientSlackId;
         this.deliveryManagerId = deliveryManagerId;
+        this.deliverySlackId = deliverySlackId;
         this.managerName = managerName;
         this.managerPhone = managerPhone;
         this.finalDispatchDeadlineAt = finalDispatchDeadlineAt;
@@ -127,8 +132,9 @@ public class Delivery extends BaseEntity {
         this.status = status;
     }
 
-    public void updateDeliveryManager(UUID deliveryManagerId, String managerName, String managerPhone) {
+    public void updateDeliveryManager(UUID deliveryManagerId, String deliveryManagerSlackId, String managerName, String managerPhone) {
         this.deliveryManagerId = deliveryManagerId;
+        this.deliverySlackId = deliveryManagerSlackId;
         this.managerName = managerName;
         this.managerPhone = managerPhone;
     }
@@ -145,8 +151,9 @@ public class Delivery extends BaseEntity {
         this.completedAt = LocalDateTime.now();
     }
 
-    public void assignDeliveryManager(UUID deliveryManagerId, String managerName, String managerPhone) {
+    public void assignDeliveryManager(UUID deliveryManagerId, String deliverySlackId, String managerName, String managerPhone) {
         this.deliveryManagerId = deliveryManagerId;
+        this.deliverySlackId = deliverySlackId;
         this.managerName = managerName;
         this.managerPhone = managerPhone;
     }

@@ -28,6 +28,7 @@ public class DeliveryManagerUpdateResponse {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class PreviousManagerDto {
         private UUID deliveryManagerId;
+        private String ManagerSlackId;
         private String name;
         private String phone;
     }
@@ -38,6 +39,7 @@ public class DeliveryManagerUpdateResponse {
     @NoArgsConstructor(access = AccessLevel.PROTECTED)
     public static class CurrentManagerDto {
         private UUID deliveryManagerId;
+        private String ManagerSlackId;
         private String name;
         private String phone;
     }

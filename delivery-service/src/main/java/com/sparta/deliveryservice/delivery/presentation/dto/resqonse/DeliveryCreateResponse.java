@@ -35,6 +35,7 @@ public class DeliveryCreateResponse {
     private UUID deliveryManagerId;
     private String deliveryManagerName;
     private String deliveryManagerPhone;
+    private String deliverySlackId;
     private String memo;
     private LocalDateTime finalDispatchDeadlineAt;
     private LocalDateTime startedAt;

@@ -16,6 +16,7 @@ import java.util.UUID;
 public class DeliveryStatusResponse {
 
     private UUID deliveryManagerId;
+    private String deliveryManagerSlackId;
     private String deliveryManagerName;
     private String deliveryManagerPhone;
     private String trackingNumber;

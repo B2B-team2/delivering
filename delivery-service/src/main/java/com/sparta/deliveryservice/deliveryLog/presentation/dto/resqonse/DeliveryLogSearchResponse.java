@@ -1,6 +1,7 @@
 package com.sparta.deliveryservice.deliveryLog.presentation.dto.resqonse;
 
 import com.sparta.common.dto.PageResponse;
+import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,7 +30,7 @@ public class DeliveryLogSearchResponse {
     public static class DeliveryLogResponseDto {
         private UUID logId;
         private UUID routeId;
-        private String eventType;
+        private DeliveryLogStatus eventType;
         private Object previousValue;
         private Object currentValue;
         private String reason;

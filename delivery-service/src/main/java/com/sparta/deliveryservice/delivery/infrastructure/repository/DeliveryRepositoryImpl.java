@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -32,5 +33,11 @@ public class DeliveryRepositoryImpl implements DeliveryRepository {
     public Page<Delivery> findAll(Pageable pageable) { return deliveryJpaRepository.findAll(pageable); }
 
     @Override
-    public Optional<Delivery> findByTrackingNumber(String trackingNumber) {return deliveryJpaRepository.findByTrackingNumber(trackingNumber);}
+    public Optional<Delivery> findByTrackingNumber(String trackingNumber) { return deliveryJpaRepository.findByTrackingNumber(trackingNumber);}
+
+    @Override
+    public boolean existsByCompanyOrderId(UUID companyOrderId) { return deliveryJpaRepository.existsByCompanyOrderId(companyOrderId);}
+
+    @Override
+    public List<Delivery> findByCompanyOrderId(UUID companyOrderId) { return deliveryJpaRepository.findByCompanyOrderId(companyOrderId);}
 }
