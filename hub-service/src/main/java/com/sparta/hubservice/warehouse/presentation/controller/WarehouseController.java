@@ -1,7 +1,9 @@
 package com.sparta.hubservice.warehouse.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.common.dto.PageResponse;
+import com.sparta.hubservice.global.exception.ErrorCode;
 import com.sparta.hubservice.warehouse.application.dto.WarehouseDto;
 import com.sparta.hubservice.warehouse.application.service.WarehouseService;
 import com.sparta.hubservice.warehouse.presentation.dto.WarehouseCreateRequest;
@@ -38,7 +40,9 @@ public class WarehouseController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<WarehouseResponse>> createWarehouse(
+            @RequestHeader("X-User-Role") String role,
             @Valid @RequestBody WarehouseCreateRequest request) {
+        requireMasterOrHubManager(role);
         WarehouseDto dto = warehouseService.createWarehouse(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(WarehouseResponse.from(dto)));
@@ -76,17 +80,27 @@ public class WarehouseController {
 
     @PatchMapping("/{warehouse_id}")
     public ResponseEntity<ApiResponse<WarehouseResponse>> updateWarehouse(
+            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID warehouse_id,
             @RequestBody WarehouseUpdateRequest request) {
+        requireMasterOrHubManager(role);
         WarehouseDto dto = warehouseService.updateWarehouse(warehouse_id, request.toCommand());
         return ResponseEntity.ok(ApiResponse.success(WarehouseResponse.from(dto)));
     }
 
     @DeleteMapping("/{warehouse_id}")
     public ResponseEntity<ApiResponse<Void>> deleteWarehouse(
+            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID warehouse_id,
             @RequestHeader("X-User-Id") UUID userId) {
+        requireMasterOrHubManager(role);
         warehouseService.deleteWarehouse(warehouse_id, userId);
         return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    private void requireMasterOrHubManager(String role) {
+        if (!"MASTER".equals(role) && !"HUB_MANAGER".equals(role)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 }
