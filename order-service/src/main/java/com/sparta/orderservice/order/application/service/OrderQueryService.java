@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -65,6 +66,32 @@ public class OrderQueryService {
         return CompanyOrderResult.from(companyOrder);
     }
 
+    /**
+     * 결제 취소 가능 여부 조회
+     */
+    public boolean isCancellable(UUID orderId) {
+        return orderRepository.findOrderById(orderId)
+            .map(Order::isCancellable)
+            .orElse(false);
+    }
+
+    /**
+     * 결제 도메인 내부 호출용
+     * 수령업체 기준 orderId 목록 조회 (getPayments COMPANY_MANAGER 필터링)
+     */
+    public List<UUID> getOrderIdsByReceiverCompanyId(UUID companyId) {
+        return orderRepository.findOrderIdsByReceiverCompanyId(companyId);
+    }
+
+    /**
+     * 결제 도메인 내부 호출용
+     * orderId → receiverCompanyId 단일 조회 (cancelPayment / getPayment 접근 권한 검증)
+     */
+    public UUID getReceiverCompanyId(UUID orderId) {
+        return orderRepository.findReceiverCompanyIdByOrderId(orderId)
+            .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
+    }
+
     // 주문 읽기 접근 검증 — 자기 회사가 수령업체 OR 공급업체인지 확인
     private void validateOrderReadAccess(Order order) {
         if (securityUtils.isMaster()) return;
@@ -90,14 +117,5 @@ public class OrderQueryService {
             return;
         }
         throw new BusinessException(OrderErrorCode.FORBIDDEN);
-    }
-
-    /**
-     * 결제 취소 가능 여부 조회
-     */
-    public boolean isCancellable(UUID orderId) {
-        return orderRepository.findOrderById(orderId)
-                .map(Order::isCancellable)
-                .orElse(false);
     }
 }

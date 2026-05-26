@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +20,14 @@ public interface OrderJpaRepository extends JpaRepository<Order, UUID> {
     // 단건 조회: JOIN으로 companyOrders + orderItems 한 방에 로딩
     @EntityGraph(attributePaths = {"companyOrders", "companyOrders.orderItems"})
     Optional<Order> findByOrderIdAndDeletedAtIsNull(UUID orderId);
+
+    // 수령업체 기준 orderId 목록 — 결제 도메인 필터링용 (전체, 페이징 없음)
+    @Query("SELECT o.orderId FROM Order o WHERE o.receiverCompanyId = :companyId AND o.deletedAt IS NULL")
+    List<UUID> findOrderIdsByReceiverCompanyId(@Param("companyId") UUID companyId);
+
+    // orderId → receiverCompanyId 단일 필드 조회 — 결제 접근 권한 검증용
+    @Query("SELECT o.receiverCompanyId FROM Order o WHERE o.orderId = :orderId AND o.deletedAt IS NULL")
+    Optional<UUID> findReceiverCompanyIdByOrderId(@Param("orderId") UUID orderId);
 
     // COMPANY_MANAGER용: 자기 회사가 수령업체 또는 공급업체로 참여한 주문 조회
     @Query(value = "SELECT DISTINCT o FROM Order o LEFT JOIN o.companyOrders co " +
