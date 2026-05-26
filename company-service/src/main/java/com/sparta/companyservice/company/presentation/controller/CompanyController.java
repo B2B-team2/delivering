@@ -8,7 +8,9 @@ import com.sparta.companyservice.company.application.dto.CompanyDto;
 import com.sparta.companyservice.company.application.service.CompanyAddressService;
 import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressDeleteResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressResponse;
+import com.sparta.companyservice.company.presentation.dto.CompanyAddressUpdateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
@@ -49,9 +51,40 @@ public class CompanyController {
     public ResponseEntity<ApiResponse<CompanyAddressResponse>> createAddress(
             @PathVariable UUID companyId,
             @RequestBody @Valid CompanyAddressCreateRequest request) {
-        CompanyAddressDto resultDto = companyAddressService.registerAddress(companyId, request.toCommand());
+        CompanyAddressDto resultDto = companyAddressService.registerAddress(companyId, request.toCommand(companyId));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(CompanyAddressResponse.from(resultDto)));
+    }
+
+    @GetMapping("/{companyId}/addresses")
+    public ResponseEntity<ApiResponse<PageResponse<CompanyAddressResponse>>> getAddresses(
+            @PathVariable UUID companyId,
+            @PageableDefault(size = 10, sort = {"isDefault", "createdAt"}, direction = Sort.Direction.DESC) Pageable pageable) {
+
+        Pageable validatedPageable = PageableUtil.validatePageSize(pageable);
+
+        PageResponse<CompanyAddressResponse> response = new PageResponse<>(
+                companyAddressService.getAddresses(companyId, validatedPageable).map(CompanyAddressResponse::from)
+        );
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @DeleteMapping("/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<CompanyAddressDeleteResponse>> deleteAddress(
+            @PathVariable UUID addressId) {
+        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 (시스템 UUID 고정값 교체)
+        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        CompanyAddressDto resultDto = companyAddressService.deleteAddress(addressId, userId);
+        CompanyAddressDeleteResponse response = CompanyAddressDeleteResponse.of(resultDto.getAddressId(), resultDto.getDeletedAt());
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    @PatchMapping("/addresses/{addressId}")
+    public ResponseEntity<ApiResponse<CompanyAddressResponse>> updateAddress(
+            @PathVariable UUID addressId,
+            @RequestBody @Valid CompanyAddressUpdateRequest request) {
+        CompanyAddressDto resultDto = companyAddressService.updateAddress(addressId, request.toCommand());
+        return ResponseEntity.ok(ApiResponse.success(CompanyAddressResponse.from(resultDto)));
     }
 
     @PatchMapping("/{companyId}")

@@ -31,4 +31,9 @@ public class ProductRepositoryImpl implements ProductRepository {
         return productJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
 
+    @Override
+    public long count() {
+        return productJpaRepository.count();
+    }
+
 }

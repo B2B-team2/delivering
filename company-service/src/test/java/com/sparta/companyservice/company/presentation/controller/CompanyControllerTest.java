@@ -1,7 +1,7 @@
 package com.sparta.companyservice.company.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sparta.common.handler.GlobalExceptionHandler;
+import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyDto;
@@ -10,6 +10,7 @@ import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
+import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -312,7 +313,6 @@ class CompanyControllerTest {
     void createAddressSuccessTest() throws Exception {
         UUID companyId = UUID.randomUUID();
         CompanyAddressCreateRequest request = CompanyAddressCreateRequest.builder()
-                .companyId(companyId)
                 .addressName("집")
                 .recipientName("홍길동")
                 .phone("010-1234-5678")
@@ -346,7 +346,6 @@ class CompanyControllerTest {
         // given
         UUID companyId = UUID.randomUUID();
         CompanyAddressCreateRequest invalidRequest = CompanyAddressCreateRequest.builder()
-                .companyId(companyId)
                 .addressName("") // NotBlank 위반
                 .build();
 
@@ -356,5 +355,40 @@ class CompanyControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("배송지 목록 조회 API 성공 검증: PageResponse 포맷 및 데이터 반환 확인")
+    void getAddressesSuccessTest() throws Exception {
+        // given
+        UUID companyId = UUID.randomUUID();
+        CompanyAddressDto addressDto = CompanyAddressDto.builder()
+                .addressId(UUID.randomUUID())
+                .companyId(companyId)
+                .addressName("기본배송지")
+                .isDefault(true)
+                .build();
+
+        Pageable pageable = PageRequest.of(0, 10, Sort.by(
+                Sort.Order.desc("isDefault"),
+                Sort.Order.desc("createdAt")
+        ));
+        
+        when(companyAddressService.getAddresses(eq(companyId), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(addressDto), pageable, 1));
+
+        // when & then
+        mockMvc.perform(get("/api/v1/companies/{companyId}/addresses", companyId)
+                        .param("page", "0")
+                        .param("size", "10")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content").isArray())
+                .andExpect(jsonPath("$.data.content[0].addressName").value("기본배송지"))
+                .andExpect(jsonPath("$.data.page").value(0))
+                .andExpect(jsonPath("$.data.size").value(10));
     }
 }

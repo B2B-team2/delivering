@@ -3,11 +3,15 @@ package com.sparta.companyservice.company.application.service;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.companyservice.company.application.dto.CompanyAddressCreateCommand;
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
+import com.sparta.companyservice.company.application.dto.CompanyAddressUpdateCommand;
+import com.sparta.companyservice.company.application.dto.CompanyDefaultAddressDto;
 import com.sparta.companyservice.company.domain.core.CompanyDeliveryAddress;
 import com.sparta.companyservice.company.domain.repository.CompanyDeliveryAddressRepository;
+import com.sparta.companyservice.company.domain.repository.CompanyRepository;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
-import com.sparta.companyservice.product.application.port.CompanyQueryPort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,11 +23,11 @@ import java.util.UUID;
 public class CompanyAddressService {
 
     private final CompanyDeliveryAddressRepository companyDeliveryAddressRepository;
-    private final CompanyQueryPort companyQueryPort;
+    private final CompanyRepository companyRepository;
 
     @Transactional
     public CompanyAddressDto registerAddress(UUID companyId, CompanyAddressCreateCommand command) {
-        if (!companyQueryPort.existsCompanyById(companyId)) {
+        if (!companyRepository.existsById(companyId)) {
             throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
         }
 
@@ -43,5 +47,51 @@ public class CompanyAddressService {
                 .build();
 
         return CompanyAddressDto.from(companyDeliveryAddressRepository.save(address));
+    }
+
+    public Page<CompanyAddressDto> getAddresses(UUID companyId, Pageable pageable) {
+        if (!companyRepository.existsById(companyId)) {
+            throw new BusinessException(CompanyErrorCode.COMPANY_NOT_FOUND);
+        }
+        return companyDeliveryAddressRepository.findAllByCompanyIdAndDeletedAtIsNull(companyId, pageable)
+                .map(CompanyAddressDto::from);
+    }
+
+    @Transactional
+    public CompanyAddressDto deleteAddress(UUID addressId, UUID deletedBy) {
+        CompanyDeliveryAddress address = companyDeliveryAddressRepository.findById(addressId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.ADDRESS_NOT_FOUND));
+
+        address.softDelete(deletedBy);
+
+        return CompanyAddressDto.from(address);
+    }
+
+    @Transactional
+    public CompanyAddressDto updateAddress(UUID addressId, CompanyAddressUpdateCommand command) {
+        CompanyDeliveryAddress address = companyDeliveryAddressRepository.findById(addressId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.ADDRESS_NOT_FOUND));
+
+        if (command.getIsDefault() && !address.getIsDefault()) {
+            companyDeliveryAddressRepository.updateAllIsDefaultFalseByCompanyId(address.getCompanyId());
+        }
+
+        address.update(
+                command.getAddressName(),
+                command.getRecipientName(),
+                command.getPhone(),
+                command.getAddress(),
+                command.getAddressDetail(),
+                command.getPostalCode(),
+                command.getIsDefault()
+        );
+
+        return CompanyAddressDto.from(address);
+    }
+
+    public CompanyDefaultAddressDto getDefaultAddress(UUID companyId) {
+        CompanyDeliveryAddress address = companyDeliveryAddressRepository.findDefaultAddressByCompanyId(companyId)
+                .orElseThrow(() -> new BusinessException(CompanyErrorCode.ADDRESS_NOT_FOUND));
+        return CompanyDefaultAddressDto.from(address);
     }
 }
