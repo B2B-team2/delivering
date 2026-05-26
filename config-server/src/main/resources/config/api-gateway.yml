@@ -36,7 +36,7 @@ spring:
         - id: hub-service-route
           uri: lb://HUB-SERVICE
           predicates:
-            - Path=/api/v1/hubs/**, /api/v1/hub-routes/**, /api/v1/warehouses/**, /api/v1/inventory/**, /hub/v3/api-docs
+            - Path=/api/v1/hubs/**, /api/v1/hub-routes/**, /api/v1/warehouses/**, /api/v1/inventory/**, /api/v1/internal/inventory/**, /api/v1/internal/hub-routes/**, /hub/v3/api-docs
           filters:
             - RewritePath=/hub/v3/api-docs, /v3/api-docs
 

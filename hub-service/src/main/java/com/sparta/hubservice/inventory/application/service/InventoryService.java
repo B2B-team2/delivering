@@ -121,7 +121,7 @@ public class InventoryService {
                     .inventoryId(inventory.getInventoryId())
                     .orderId(orderId)
                     .companyOrderId(companyOrderId)
-                    .changeQuantity(item.getQuantity())
+                    .changeQuantity(-item.getQuantity())
                     .changeType(InventoryChangeType.RESERVED)
                     .build());
         }
@@ -136,7 +136,7 @@ public class InventoryService {
         for (InventoryHistory reservation : reservations) {
             WarehouseInventory inventory = inventoryRepository.findById(reservation.getInventoryId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
-            inventory.cancelReservation(reservation.getChangeQuantity());
+            inventory.cancelReservation(-reservation.getChangeQuantity());
             historyRepository.save(InventoryHistory.builder()
                     .inventoryId(reservation.getInventoryId())
                     .orderId(orderId)
@@ -155,7 +155,7 @@ public class InventoryService {
         for (InventoryHistory reservation : reservations) {
             WarehouseInventory inventory = inventoryRepository.findById(reservation.getInventoryId())
                     .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
-            inventory.cancelReservation(reservation.getChangeQuantity());
+            inventory.cancelReservation(-reservation.getChangeQuantity());
             historyRepository.save(InventoryHistory.builder()
                     .inventoryId(reservation.getInventoryId())
                     .companyOrderId(companyOrderId)
@@ -203,6 +203,9 @@ public class InventoryService {
     public void deleteInventory(UUID inventoryId, UUID deletedBy) {
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+        if (inventory.getQuantity() > 0 || inventory.getReservedQuantity() > 0) {
+            throw new BusinessException(ErrorCode.INVENTORY_HAS_STOCK);
+        }
         inventory.softDelete(deletedBy);
         inventoryRepository.save(inventory);
     }

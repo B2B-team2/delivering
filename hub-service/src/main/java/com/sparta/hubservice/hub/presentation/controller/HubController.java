@@ -85,9 +85,7 @@ public class HubController {
     @DeleteMapping("/{hub_id}")
     public ResponseEntity<ApiResponse<Void>> deleteHub(
             @PathVariable UUID hub_id,
-            @RequestHeader(value = "X-User-Name", required = false, defaultValue = "system") String userName) {
-        //TODO User수정 필요
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+            @RequestHeader("X-User-Id") UUID userId) {
         hubService.deleteHub(hub_id, userId);
         return ResponseEntity.ok(ApiResponse.success());
     }

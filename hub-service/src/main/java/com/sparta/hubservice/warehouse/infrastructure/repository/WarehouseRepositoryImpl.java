@@ -3,6 +3,8 @@ package com.sparta.hubservice.warehouse.infrastructure.repository;
 import com.sparta.hubservice.warehouse.domain.core.Warehouse;
 import com.sparta.hubservice.warehouse.domain.repository.WarehouseRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -33,6 +35,11 @@ public class WarehouseRepositoryImpl implements WarehouseRepository {
     @Override
     public List<Warehouse> findAll() {
         return warehouseJpaRepository.findAllByDeletedAtIsNull();
+    }
+
+    @Override
+    public Page<Warehouse> findAll(Pageable pageable) {
+        return warehouseJpaRepository.findAllByDeletedAtIsNull(pageable);
     }
 
     @Override
