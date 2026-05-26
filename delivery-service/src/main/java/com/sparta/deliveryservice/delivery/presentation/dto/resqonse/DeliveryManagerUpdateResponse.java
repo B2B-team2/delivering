@@ -20,7 +20,7 @@ public class DeliveryManagerUpdateResponse {
     private CurrentManagerDto currentManager;
     private UUID logId;
     private LocalDateTime updatedAt;
-    private String updatedBy;
+    private UUID updatedBy;
 
     @Getter
     @Builder
@@ -29,6 +29,7 @@ public class DeliveryManagerUpdateResponse {
     public static class PreviousManagerDto {
         private UUID deliveryManagerId;
         private String name;
+        private String phone;
     }
 
     @Getter
@@ -38,6 +39,6 @@ public class DeliveryManagerUpdateResponse {
     public static class CurrentManagerDto {
         private UUID deliveryManagerId;
         private String name;
-        private String managerType;
+        private String phone;
     }
 }

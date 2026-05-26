@@ -1,5 +1,6 @@
 package com.sparta.deliveryservice.delivery.presentation.dto.resqonse;
 
+import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -26,7 +27,7 @@ public class DeliveryDetailResponse {
     private String departureHubName;
     private UUID destinationHubId;
     private String destinationHubName;
-    private String deliveryAddress;
+    private DeliveryAddress deliveryAddress;
     private String recipientName;
     private String recipientSlackId;
     private DeliveryManagerDto deliveryManager;
@@ -34,8 +35,6 @@ public class DeliveryDetailResponse {
     private LocalDateTime startedAt;
     private LocalDateTime completedAt;
     private List<DeliveryRouteDto> routes;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 
     @Getter
     @Builder
@@ -45,7 +44,6 @@ public class DeliveryDetailResponse {
         private UUID deliveryManagerId;
         private String name;
         private String phone;
-        private String managerType;
     }
 
     @Getter

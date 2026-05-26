@@ -96,7 +96,6 @@ public class OrderController {
     }
 
     // 출고 완료: PREPARING → SHIPPED
-    // TODO: Hub Service FeignClient 재고 차감 연동
     @PatchMapping("/company/{companyOrderId}/shipped")
     public ResponseEntity<ApiResponse<CompanyOrderResponse>> shipCompanyOrder(
             @PathVariable UUID companyOrderId

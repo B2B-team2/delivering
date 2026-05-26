@@ -60,8 +60,8 @@ public class DeliveryLog {
     private LocalDateTime createdAt;
 
     @CreatedBy // 🌟 데이터를 생성한 유저의 식별자(ID)가 자동으로 기록됩니다.
-    @Column(name = "created_by", length = 36, updatable = false)
-    private String createdBy;
+    @Column(name = "created_by", updatable = false)
+    private UUID createdBy;
 
     @Builder
     public DeliveryLog(UUID deliveryId, UUID routeId, String eventType, 
