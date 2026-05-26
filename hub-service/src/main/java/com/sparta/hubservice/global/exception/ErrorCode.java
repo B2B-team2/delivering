@@ -22,7 +22,8 @@ public enum ErrorCode implements com.sparta.common.dto.ErrorCode {
     INSUFFICIENT_STOCK(HttpStatus.CONFLICT, "I003", "재고가 부족합니다."),
     INVALID_STOCK_OPERATION(HttpStatus.BAD_REQUEST, "I004", "유효하지 않은 재고 조작입니다."),
     OPTIMISTIC_LOCK_FAILURE(HttpStatus.CONFLICT, "I005", "동시 요청입니다. 잠시 후 재시도해 주세요."),
-    CANCEL_QUANTITY_EXCEEDED(HttpStatus.CONFLICT, "I006", "취소 수량이 예약된 수량을 초과합니다.");
+    CANCEL_QUANTITY_EXCEEDED(HttpStatus.CONFLICT, "I006", "취소 수량이 예약된 수량을 초과합니다."),
+    EXTERNAL_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E001", "외부 서비스 호출 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
