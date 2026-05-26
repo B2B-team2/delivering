@@ -33,34 +33,41 @@ public class OrderController {
     private final OrderQueryService orderQueryService;
 
     // 주문 생성
+    // MASTER, COMPANY_MANAGER만 허용 (서비스 레이어에서 검증)
+    // receiverCompanyId: COMPANY_MANAGER → X-Company-Id 헤더, MASTER → 요청 body
     @PostMapping
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(
         @RequestBody @Valid OrderCreateRequest request,
-        @RequestHeader("X-User-Id") UUID requesterId
+        @RequestHeader("X-User-Id") UUID requesterId,
+        @RequestHeader(value = "X-Company-Id", required = false) UUID companyIdFromHeader
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(OrderResponse.from(orderCommandService.createOrder(request.toCommand(), requesterId))));
+        UUID receiverCompanyId = companyIdFromHeader != null ? companyIdFromHeader : request.receiverCompanyId();
+        OrderResponse response = OrderResponse.from(
+                orderCommandService.createOrder(request.toCommand(receiverCompanyId), requesterId));
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.created(response));
     }
 
-    // 전체 주문 조회 (페이징)
-    // TODO: 권한별 필터링 (마스터/허브관리자 → 전체, 업체 담당자 → 자기 회사 주문만)
+    // 주문 목록 조회 (페이징)
+    // MASTER → 전체 / COMPANY_MANAGER → 자기 회사 / 그 외 → 403 (서비스 레이어에서 처리)
     @GetMapping
     public ResponseEntity<ApiResponse<PageResponse<OrderResponse>>> getOrders(
-        @RequestHeader("X-User-Id") UUID requesterId,
         @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         PageResponse<OrderResponse> response = new PageResponse<>(
-                orderQueryService.getOrders(requesterId, pageable).map(OrderResponse::from));
+                orderQueryService.getOrders(pageable).map(OrderResponse::from));
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     // 주문 단건 상세 조회
+    // MASTER → 전체 / COMPANY_MANAGER → 자기 회사 관련 주문만 (서비스 레이어에서 검증)
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@PathVariable UUID orderId) {
-        return ResponseEntity.ok(ApiResponse.success(OrderResponse.from(orderQueryService.getOrder(orderId))));
+        OrderResponse response = OrderResponse.from(orderQueryService.getOrder(orderId));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     // 주문 취소
+    // MASTER → 전체 / COMPANY_MANAGER → 자기 회사가 수령업체인 주문만 (서비스 레이어에서 검증)
     @PatchMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelOrder(
         @PathVariable UUID orderId,
@@ -71,14 +78,17 @@ public class OrderController {
     }
 
     // 서브 주문 상세 조회
+    // MASTER → 전체 / COMPANY_MANAGER → 자기 회사가 공급업체인 CompanyOrder만 (서비스 레이어에서 검증)
     @GetMapping("/company/{companyOrderId}")
     public ResponseEntity<ApiResponse<CompanyOrderResponse>> getCompanyOrder(
         @PathVariable UUID companyOrderId
     ) {
-        return ResponseEntity.ok(ApiResponse.success(CompanyOrderResponse.from(orderQueryService.getCompanyOrder(companyOrderId))));
+        CompanyOrderResponse response = CompanyOrderResponse.from(orderQueryService.getCompanyOrder(companyOrderId));
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     // 서브 주문 부분 취소
+    // MASTER → 전체 / COMPANY_MANAGER → 자기 회사가 공급업체인 CompanyOrder만 (서비스 레이어에서 검증)
     @PatchMapping("/company/{companyOrderId}/cancel")
     public ResponseEntity<ApiResponse<Void>> cancelCompanyOrder(
         @PathVariable UUID companyOrderId,

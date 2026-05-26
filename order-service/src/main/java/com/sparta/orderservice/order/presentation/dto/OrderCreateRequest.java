@@ -14,7 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 public record OrderCreateRequest(
-        @NotNull UUID receiverCompanyId,            // 수령업체 TODO: X-Company-Id 헤더로 주입 예정 (인증 확정 후)
+        UUID receiverCompanyId,     // MASTER: 요청 body에서 직접 입력, COMPANY_MANAGER: X-Company-Id 헤더로 주입 (body 값 무시)
 
         // 아래 수령인 정보는 주문 시점 스냅샷
         // 프론트엔드가 있다면 p_delivery_addresses(Company Service)에서 pre-fill 후 사용자가 수정 가능
@@ -40,8 +40,11 @@ public record OrderCreateRequest(
             @NotNull @Positive BigDecimal unitPrice     // 구매 시점 단가
     ) {}
 
-    // Presentation → Application 변환 (Application 계층을 참조하는 방향은 허용)
-    public CreateOrderCommand toCommand() {
+    /**
+     * Presentation → Application 변환 (Application 계층을 참조하는 방향은 허용)
+     * @param receiverCompanyId: COMPANY_MANAGER는 X-Company-Id 헤더값, MASTER는 body의 receiverCompanyId
+     */
+    public CreateOrderCommand toCommand(UUID receiverCompanyId) {
         List<CreateOrderCommand.CompanyOrderCommand> companyOrderCommands = companyOrders.stream()
                 .map(co -> new CreateOrderCommand.CompanyOrderCommand(
                         co.companyId(),

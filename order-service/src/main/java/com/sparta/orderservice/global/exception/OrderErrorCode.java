@@ -23,7 +23,10 @@ public enum OrderErrorCode implements ErrorCode {
     COMPANY_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O009", "업체 서비스에 연결할 수 없습니다.", null),
     DELIVERY_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "O010", "배송 서비스에 연결할 수 없습니다.", null),
     EXTERNAL_SERVICE_ERROR(HttpStatus.BAD_GATEWAY, "O011", "외부 서비스 오류가 발생했습니다.", null),
-    HUB_MAPPING_NOT_FOUND(HttpStatus.NOT_FOUND, "O012", "해당 업체의 허브 매핑 정보를 찾을 수 없습니다.", "companyId");
+    HUB_MAPPING_NOT_FOUND(HttpStatus.NOT_FOUND, "O012", "해당 업체의 허브 매핑 정보를 찾을 수 없습니다.", "companyId"),
+
+    FORBIDDEN(HttpStatus.FORBIDDEN, "O013", "해당 주문에 대한 접근 권한이 없습니다.", null),
+    RECEIVER_COMPANY_REQUIRED(HttpStatus.BAD_REQUEST, "O014", "수령업체 ID가 필요합니다.", "receiverCompanyId");
 
     private final HttpStatus httpStatus;
     private final String code;
