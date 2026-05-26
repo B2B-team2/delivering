@@ -41,6 +41,7 @@ public class InventoryService {
         WarehouseInventory inventory = WarehouseInventory.builder()
                 .warehouseId(command.getWarehouseId())
                 .productOptionId(command.getProductOptionId())
+                .companyId(command.getCompanyId())
                 .quantity(command.getQuantity())
                 .safetyStock(command.getSafetyStock())
                 .build();
@@ -70,9 +71,14 @@ public class InventoryService {
     }
 
     @Transactional
-    public WarehouseInventoryAdjustDto adjustInventory(UUID inventoryId, WarehouseInventoryAdjustCommand command) {
+    public WarehouseInventoryAdjustDto adjustInventory(UUID inventoryId, WarehouseInventoryAdjustCommand command,
+                                                       UUID requesterCompanyId) {
         WarehouseInventory inventory = inventoryRepository.findById(inventoryId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+
+        if (requesterCompanyId != null && !requesterCompanyId.equals(inventory.getCompanyId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
 
         int previousQuantity = inventory.getQuantity();
 

@@ -1,6 +1,8 @@
 package com.sparta.hubservice.inventory.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.common.dto.BusinessException;
+import com.sparta.hubservice.global.exception.ErrorCode;
 import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryAdjustDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
@@ -42,8 +44,12 @@ public class InventoryController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<WarehouseInventoryResponse>> createInventory(
+            @RequestHeader("X-User-Role") String role,
+            @RequestHeader(value = "X-Company-Id", required = false) UUID companyId,
             @Valid @RequestBody WarehouseInventoryCreateRequest request) {
-        WarehouseInventoryDto dto = inventoryService.createInventory(request.toCommand());
+        requireInventoryWriteAccess(role);
+        UUID resolvedCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : request.getCompanyId();
+        WarehouseInventoryDto dto = inventoryService.createInventory(request.toCommand(resolvedCompanyId));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(WarehouseInventoryResponse.from(dto)));
     }
@@ -79,16 +85,34 @@ public class InventoryController {
     @PatchMapping("/{inventory_id}/adjust")
     public ResponseEntity<ApiResponse<WarehouseInventoryAdjustResponse>> adjustInventory(
             @PathVariable UUID inventory_id,
+            @RequestHeader("X-User-Role") String role,
+            @RequestHeader(value = "X-Company-Id", required = false) UUID companyId,
             @Valid @RequestBody WarehouseInventoryAdjustRequest request) {
-        WarehouseInventoryAdjustDto dto = inventoryService.adjustInventory(inventory_id, request.toCommand());
+        requireInventoryWriteAccess(role);
+        UUID requesterCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : null;
+        WarehouseInventoryAdjustDto dto = inventoryService.adjustInventory(inventory_id, request.toCommand(), requesterCompanyId);
         return ResponseEntity.ok(ApiResponse.success(WarehouseInventoryAdjustResponse.from(dto)));
     }
 
     @DeleteMapping("/{inventory_id}")
     public ResponseEntity<ApiResponse<Void>> deleteInventory(
             @PathVariable UUID inventory_id,
-            @RequestHeader("X-User-Id") UUID userId) {
+            @RequestHeader("X-User-Id") UUID userId,
+            @RequestHeader("X-User-Role") String role) {
+        requireMasterOrHubManager(role);
         inventoryService.deleteInventory(inventory_id, userId);
         return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    private void requireInventoryWriteAccess(String role) {
+        if ("HUB_DELIVERY_MANAGER".equals(role) || "COMPANY_DELIVERY_MANAGER".equals(role)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+    }
+
+    private void requireMasterOrHubManager(String role) {
+        if (!"MASTER".equals(role) && !"HUB_MANAGER".equals(role)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 }
