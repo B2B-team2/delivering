@@ -4,7 +4,7 @@ import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
-import com.sparta.orderservice.order.application.port.CompanyPort;
+import com.sparta.orderservice.global.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;

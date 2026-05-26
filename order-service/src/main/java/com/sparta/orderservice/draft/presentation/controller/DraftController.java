@@ -5,9 +5,9 @@ import com.sparta.common.dto.PageResponse;
 import com.sparta.orderservice.draft.application.service.DraftService;
 import com.sparta.orderservice.draft.presentation.dto.DraftAddRequest;
 import com.sparta.orderservice.draft.presentation.dto.DraftOrderCreateRequest;
+import com.sparta.orderservice.draft.presentation.dto.DraftOrderCreateResponse;
 import com.sparta.orderservice.draft.presentation.dto.DraftResponse;
 import com.sparta.orderservice.draft.presentation.dto.DraftUpdateRequest;
-import com.sparta.orderservice.order.presentation.dto.OrderResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -79,12 +79,12 @@ public class DraftController {
 
     // 임시주문으로 주문 생성
     @PostMapping("/orders")
-    public ResponseEntity<ApiResponse<OrderResponse>> createOrderFromDraft(
+    public ResponseEntity<ApiResponse<DraftOrderCreateResponse>> createOrderFromDraft(
             @RequestBody @Valid DraftOrderCreateRequest request,
             @RequestHeader("X-User-Id") UUID userId,
             @RequestHeader(value = "X-Company-Id", required = false) UUID receiverCompanyId  // TODO: 인증 확정 후 required = true
     ) {
-        OrderResponse response = OrderResponse.from(draftService.createOrderFromDraft(request.toCommand(userId, receiverCompanyId)));
+        DraftOrderCreateResponse response = DraftOrderCreateResponse.from(draftService.createOrderFromDraft(request.toCommand(userId, receiverCompanyId)));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(response));
     }

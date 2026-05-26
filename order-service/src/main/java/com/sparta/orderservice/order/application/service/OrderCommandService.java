@@ -12,7 +12,7 @@ import com.sparta.orderservice.order.domain.core.Order;
 import com.sparta.orderservice.order.domain.core.OrderItem;
 import com.sparta.orderservice.order.domain.core.OrderStatus;
 import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
-import com.sparta.orderservice.order.application.port.CompanyPort;
+import com.sparta.orderservice.global.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
 import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
