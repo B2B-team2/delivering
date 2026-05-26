@@ -149,7 +149,7 @@ class ProductOptionServiceTest {
         when(productOptionRepository.findById(optionId)).thenReturn(Optional.of(option));
 
         // when
-        ProductOptionDto result = productOptionService.deleteProductOption(optionId, "system");
+        ProductOptionDto result = productOptionService.deleteProductOption(optionId, UUID.randomUUID());
 
         // then
         assertThat(result.getProductOptionId()).isEqualTo(optionId);

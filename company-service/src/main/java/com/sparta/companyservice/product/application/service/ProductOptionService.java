@@ -73,7 +73,7 @@ public class ProductOptionService {
     }
 
     @Transactional
-    public ProductOptionDto deleteProductOption(UUID productOptionId, String deletedBy) {
+    public ProductOptionDto deleteProductOption(UUID productOptionId, UUID deletedBy) {
         ProductOption productOption = productOptionRepository.findById(productOptionId)
                 .orElseThrow(() -> new BusinessException(CompanyErrorCode.PRODUCT_OPTION_NOT_FOUND));
 

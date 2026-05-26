@@ -71,9 +71,10 @@ public class ProductOptionController {
 
     @DeleteMapping("/{productOptionId}")
     public ResponseEntity<ApiResponse<ProductOptionDeleteResponse>> deleteProductOption(
-            @PathVariable("productOptionId") UUID productOptionId) {
-        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 ("system" 고정값 교체)
-        ProductOptionDto resultDto = productOptionService.deleteProductOption(productOptionId, "system");
+            @PathVariable UUID productOptionId) {
+        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 (시스템 UUID 고정값 교체)
+        UUID systemId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        ProductOptionDto resultDto = productOptionService.deleteProductOption(productOptionId, systemId);
         return ResponseEntity.ok(ApiResponse.success(ProductOptionDeleteResponse.of(resultDto.getProductOptionId(), resultDto.getDeletedAt())));
     }
 }
