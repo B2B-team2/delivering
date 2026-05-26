@@ -6,6 +6,7 @@ import com.sparta.orderservice.draft.application.dto.DraftResult;
 import com.sparta.orderservice.draft.domain.core.Draft;
 import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
+import com.sparta.orderservice.global.security.SecurityUtils;
 import com.sparta.orderservice.global.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.global.dto.ProductOptionInfo;
@@ -52,6 +53,8 @@ class DraftServiceTest {
     private ProductPort productPort;
     @Mock
     private CompanyPort companyPort;
+    @Mock
+    private SecurityUtils securityUtils;
 
     @InjectMocks
     private DraftService draftService;
@@ -67,6 +70,8 @@ class DraftServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(securityUtils.isMaster()).thenReturn(true);
+
         userId = UUID.randomUUID();
         receiverCompanyId = UUID.randomUUID();
         productOptionId = UUID.randomUUID();
@@ -224,6 +229,13 @@ class DraftServiceTest {
     @Nested
     @DisplayName("updateDraft()")
     class UpdateDraft {
+
+        @BeforeEach
+        void setUpAsCompanyManager() {
+            // checkOwnership은 isMaster=false일 때만 실행되므로 COMPANY_MANAGER로 전환
+            when(securityUtils.isMaster()).thenReturn(false);
+            when(securityUtils.isCompanyManager()).thenReturn(true);
+        }
 
         @Test
         @DisplayName("소유자 본인이면 수량 수정 가능")
