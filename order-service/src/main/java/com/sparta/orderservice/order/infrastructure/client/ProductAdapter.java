@@ -6,7 +6,6 @@ import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 import com.sparta.orderservice.order.application.port.ProductPort;
 import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoItem;
 import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoRequest;
-import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -28,8 +27,6 @@ public class ProductAdapter implements ProductPort {
     @Override
     public Map<UUID, ProductOptionInfo> getProductOptionInfos(List<UUID> productOptionIds) {
         try {
-            // API 응답: { "optionsMap": { "uuid문자열": { productOptionId, companyId, unitPrice } } }
-            // String 키를 UUID로 변환하고, 값을 application DTO로 매핑하여 반환
             Map<String, ProductOptionInfoItem> optionsMap =
                     productClient.getProductOptionInfos(new ProductOptionInfoRequest(productOptionIds))
                             .optionsMap();
@@ -43,20 +40,15 @@ public class ProductAdapter implements ProductPort {
                                     e.getValue().unitPrice()
                             )
                     ));
-        } catch (FeignException e) {
-            throw handleProductFeignException("getProductOptionInfos", e);
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
-            throw handleProductUnexpectedException("getProductOptionInfos", e);
+            throw handleUnexpectedException("getProductOptionInfos", e);
         }
     }
 
-    private RuntimeException handleProductFeignException(String operation, FeignException e) {
-        log.error("Product service error [{}]: status={}", operation, e.status());
-        return new BusinessException(OrderErrorCode.EXTERNAL_SERVICE_ERROR);
-    }
-
-    private RuntimeException handleProductUnexpectedException(String operation, Exception e) {
-        log.error("Unexpected error [{}]", operation, e);
+    private RuntimeException handleUnexpectedException(String operation, Exception e) {
+        log.error("[Product] Unexpected error [{}]", operation, e);
         return new BusinessException(OrderErrorCode.EXTERNAL_SERVICE_ERROR);
     }
 }
