@@ -11,11 +11,12 @@ CREATE TABLE IF NOT EXISTS "p_delivery_routes" (
     actual_distance     NUMERIC(8,2),
     actual_duration     Time,
     status              VARCHAR(30)   NOT NULL DEFAULT 'PENDING',
-    created_at          TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by          VARCHAR(100)  NOT NULL DEFAULT 'SYSTEM',
-    updated_at          TIMESTAMP,
-    updated_by          VARCHAR(100),
-    deleted_at          TIMESTAMP,
+    created_at                   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by                   UUID,
+    updated_at                   TIMESTAMP,
+    updated_by                   UUID ,
+    deleted_at                   TIMESTAMP,
+    deleted_by                   UUID ,
     is_deleted          BOOLEAN       NOT NULL DEFAULT FALSE,
 
     CONSTRAINT pk_p_delivery_routes PRIMARY KEY (route_id)
