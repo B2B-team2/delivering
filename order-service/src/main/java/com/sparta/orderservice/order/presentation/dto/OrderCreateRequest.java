@@ -14,13 +14,16 @@ import java.util.List;
 import java.util.UUID;
 
 public record OrderCreateRequest(
-        @NotNull UUID receiverCompanyId,            // 수령업체 TODO: X-Company-Id 헤더로 주입 예정
-        // TODO: deliveryAddressId(UUID)를 받아 Company Service 내부 API로 조회 후 아래 필드 자동 세팅 예정
-        //       확정 전까지는 클라이언트(Postman)에서 직접 입력 (p_delivery_addresses 테이블 활용 목적)
-        @NotBlank String recipientName,             // 수령인 실명
+        @NotNull UUID receiverCompanyId,            // 수령업체 TODO: X-Company-Id 헤더로 주입 예정 (인증 확정 후)
+
+        // 아래 수령인 정보는 주문 시점 스냅샷
+        // 프론트엔드가 있다면 p_delivery_addresses(Company Service)에서 pre-fill 후 사용자가 수정 가능
+        // 백엔드 전용 프로젝트이므로 현재는 클라이언트(Postman)에서 직접 입력
+        @NotBlank String recipientName,             // 수령인 실명 (수령업체 담당자 — 주문자와 다를 수 있음)
         @NotBlank String phone,                     // 수령인 연락처
-        String slackId,                             // 수령인 Slack ID (nullable)
-        @NotBlank String address,                   // JSON: {"address": "기본주소", "address_detail": "상세주소"}
+        String slackId,                             // 수령인 Slack ID — nullable (배송 알림 수신용)
+        @NotBlank String address,                   // 배송 주소 (p_delivery_addresses에서 선택하거나 직접 입력)
+                                                    // JSON: {"address": "기본주소", "address_detail": "상세주소"}
         @NotNull @Future LocalDateTime dueDate,     // 납품 기한
         String requestMemo,                         // 요청 사항 (nullable)
         @NotEmpty @Valid List<CompanyOrderRequest> companyOrders

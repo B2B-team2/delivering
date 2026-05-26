@@ -68,6 +68,11 @@ public class CompanyOrder extends BaseEntity {
         return companyOrder;
     }
 
+    // OrderItem 추가 -> 도메인 메서드를 통해 캡슐화
+    public void addOrderItem(OrderItem orderItem) {
+        this.orderItems.add(orderItem);
+    }
+
     public void prepare() {
         this.status = CompanyOrderStatus.PREPARING;
     }

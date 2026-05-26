@@ -43,7 +43,9 @@ public class Draft extends BaseEntity {
     @Column(name = "version", nullable = false)
     private Long version;                        // 낙관적 락 — 동시 수량 수정/삭제 충돌 감지
 
-    private static final int MAX_QUANTITY = 9999;
+    // B2B 물류 특성상 대량 주문(전자부품 릴 단위, 포장재 MOQ 등) 고려하여 상한 설정
+    // 수량 상한 설정: 단위(Unit) 도입은 Product Service 스키마 변경까지 필요하므로 이 프로젝트 범위에서는 적용하지 않음
+    private static final int MAX_QUANTITY = 9_999_999;
 
     public static Draft of(UUID userId, UUID productId, UUID productOptionId, int quantity) {
         Draft draft = new Draft();
