@@ -23,9 +23,9 @@ public class DeliveryLogController {
 
     private final DeliveryLogService deliveryLogService;
 
-    @GetMapping("/deliveries/{deliveryId}/logs")
+    @GetMapping("/deliveries/{delivery_id}/logs")
     public ResponseEntity<ApiResponse<PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto>>> getDeliveryLogs(
-            @PathVariable("deliveryId") UUID deliveryId,
+            @PathVariable("delivery_id") UUID deliveryId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
         Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> logPage =
