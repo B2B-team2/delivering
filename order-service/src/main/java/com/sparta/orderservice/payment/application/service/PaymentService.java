@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
@@ -51,8 +52,11 @@ public class PaymentService {
      * - cancelPayment() 경유: 결제 API → 주문 취소 위임 → 이벤트 → 결제 취소
      * - cancelOrder() 직접 경유: 주문 취소 → 이벤트 → 결제 취소
      * 두 경로 모두 cancelPaymentByOrderId()에서만 결제 상태를 변경
+     *
+     * NOT_SUPPORTED: 외부 TX 없이 실행 — cancelOrder가 자신의 독립 TX를 시작함
+     * (기존 @Transactional이면 cancelOrder의 hub Feign 호출 중 DB 커넥션을 점유하는 문제 발생)
      */
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentResult cancelPayment(UUID paymentId, UUID requesterId) {
         Payment payment = findPaymentOrThrow(paymentId);
 
@@ -64,11 +68,14 @@ public class PaymentService {
             throw new BusinessException(PaymentErrorCode.PAYMENT_CANCEL_NOT_ALLOWED);
         }
 
-        // 주문 취소 위임 → OrderCancelledEvent 발행 → cancelPaymentByOrderId()에서 결제 취소
-        // @EventListener 동기 실행(같은 TX)이므로 리턴 시점에 Payment는 이미 CANCELLED 상태
-        orderCommandService.cancelOrder(payment.getOrderId(), requesterId);
+        // cancelOrder가 자신의 독립 TX로 실행됨 (cancelPayment에 합류하지 않음)
+        // → cancelPaymentByOrderId까지 포함한 모든 DB 변경이 cancelOrder TX 안에서 커밋됨
+        UUID orderId = payment.getOrderId();
+        orderCommandService.cancelOrder(orderId, requesterId);
 
-        return PaymentResult.from(payment);
+        // payment는 TX 없이 로드된 detached 상태이므로 cancelPaymentByOrderId의 변경이 반영되지 않음
+        // → 재조회하여 최신 CANCELLED 상태를 반환
+        return PaymentResult.from(findPaymentOrThrow(paymentId));
     }
 
     /**
