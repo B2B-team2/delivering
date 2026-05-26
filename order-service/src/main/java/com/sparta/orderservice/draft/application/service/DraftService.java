@@ -15,23 +15,27 @@ import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
 import com.sparta.orderservice.order.application.port.CompanyPort;
 import com.sparta.orderservice.order.application.port.ProductPort;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class DraftService {
 
     private final DraftRepository draftRepository;
+    private final DraftWriter draftWriter;
     private final OrderCreatePort orderCreatePort;
     private final ProductPort productPort;
     private final CompanyPort companyPort;
@@ -40,20 +44,20 @@ public class DraftService {
      * 임시주문 항목 추가 (upsert)
      * - 동일 userId + productOptionId가 존재하면 복원 후 수량 갱신
      * - 없으면 새로 INSERT
+     *
+     * TX 없이 DraftWriter의 독립 TX 메서드를 호출:
+     * 동시 요청으로 DataIntegrityViolationException 발생 시 새 TX로 재조회 후 수량 갱신
      */
-    @Transactional
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public DraftResult addDraft(AddDraftCommand command) {
-        Optional<Draft> existing = draftRepository.findExistingDraft(command.userId(), command.productOptionId());
-
-        Draft draft;
-        if (existing.isPresent()) {
-            draft = existing.get();
-            draft.restore(command.quantity());
-        } else {
-            draft = draftRepository.save(Draft.of(command.userId(), command.productId(), command.productOptionId(), command.quantity()));
+        try {
+            return draftWriter.tryInsertOrUpdate(command);
+        } catch (DataIntegrityViolationException e) {
+            // 동시 INSERT 충돌 → 새 TX에서 재조회 후 수량 갱신
+            log.warn("[Draft] 동시 INSERT 충돌 감지, 재조회 후 수량 갱신: userId={}, productOptionId={}",
+                    command.userId(), command.productOptionId());
+            return draftWriter.findAndRestore(command);
         }
-
-        return DraftResult.from(draft);
     }
 
     // 임시주문 목록 조회 (페이징)
