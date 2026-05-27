@@ -5,6 +5,7 @@ import com.sparta.common.dto.PageResponse;
 import com.sparta.common.util.PageableUtil;
 import com.sparta.userservice.admin.application.service.AdminService;
 import com.sparta.userservice.admin.presentation.dto.request.ApprovalRequest;
+import com.sparta.userservice.user.domain.enums.Role;
 import com.sparta.userservice.user.presentation.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
@@ -31,9 +33,13 @@ public class AdminController {
 
     @Operation(summary = "전체 사용자 조회")
     @GetMapping("/users")
-    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllUsers(Pageable pageable) {
+    public ResponseEntity<ApiResponse<PageResponse<UserResponse>>> getAllUsers(
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String email,
+            @RequestParam(required = false) Role role,
+            Pageable pageable) {
         pageable = PageableUtil.validatePageSize(pageable);
-        return ResponseEntity.ok(ApiResponse.success(adminService.getAllUsers(pageable)));
+        return ResponseEntity.ok(ApiResponse.success(adminService.getAllUsers(name, email, role, pageable)));
     }
 
     @Operation(summary = "가입 대기 목록 조회")

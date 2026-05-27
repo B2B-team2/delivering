@@ -66,9 +66,9 @@ class AdminServiceTest {
         Page<User> page = new PageImpl<>(List.of(user));
 
         given(securityUtils.isNotMaster()).willReturn(false);
-        given(userRepository.findAllByDeletedAtIsNull(any())).willReturn(page);
+        given(userRepository.searchUsers(any(), any(), any(), any())).willReturn(page);
 
-        PageResponse<UserResponse> result = adminService.getAllUsers(pageable);
+        PageResponse<UserResponse> result = adminService.getAllUsers(null, null, null, pageable);
 
         assertThat(result.getContent()).hasSize(1);
     }
@@ -79,7 +79,7 @@ class AdminServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         given(securityUtils.isNotMaster()).willReturn(true);
 
-        assertThatThrownBy(() -> adminService.getAllUsers(pageable))
+        assertThatThrownBy(() -> adminService.getAllUsers(null, null, null, pageable))
                 .isInstanceOf(BusinessException.class);
     }
 
@@ -218,7 +218,7 @@ class AdminServiceTest {
     // ===== 헬퍼 =====
 
     private User createUser(Role role, ApprovalStatus status) {
-        User user = User.create("test@test.com", "KEYCLOAK_MANAGED", "테스트", "010-1234-5678", "U123", role);
+        User user = User.create(UUID.randomUUID(), "test@test.com", "KEYCLOAK_MANAGED", "테스트", "010-1234-5678", "U123", role);
         if (status == ApprovalStatus.APPROVED) {
             user.approve(UUID.randomUUID());
         } else if (status == ApprovalStatus.REJECTED) {

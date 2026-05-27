@@ -8,8 +8,12 @@ CREATE TABLE IF NOT EXISTS "p_delivery_log" (
     previous_value JSON,
     current_value  JSON,
     reason         TEXT,
-    created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    created_by     VARCHAR(100)  NOT NULL DEFAULT 'SYSTEM',
+    created_at                   TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_by                   UUID,
+    updated_at                   TIMESTAMP,
+    updated_by                   UUID ,
+    deleted_at                   TIMESTAMP,
+    deleted_by                   UUID ,
 
     CONSTRAINT pk_p_delivery_log PRIMARY KEY (log_id)
     );

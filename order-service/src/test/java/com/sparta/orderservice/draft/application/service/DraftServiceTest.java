@@ -6,11 +6,12 @@ import com.sparta.orderservice.draft.application.dto.DraftResult;
 import com.sparta.orderservice.draft.domain.core.Draft;
 import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
-import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
+import com.sparta.orderservice.global.security.AuthContext;
+import com.sparta.orderservice.global.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.application.dto.OrderResult;
-import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
-import com.sparta.orderservice.order.application.port.CompanyPort;
-import com.sparta.orderservice.order.application.port.ProductPort;
+import com.sparta.orderservice.global.dto.ProductOptionInfo;
+import com.sparta.orderservice.global.port.CompanyPort;
+import com.sparta.orderservice.global.port.ProductPort;
 import com.sparta.orderservice.order.application.service.OrderCommandService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -52,6 +53,8 @@ class DraftServiceTest {
     private ProductPort productPort;
     @Mock
     private CompanyPort companyPort;
+    @Mock
+    private AuthContext authContext;
 
     @InjectMocks
     private DraftService draftService;
@@ -67,6 +70,8 @@ class DraftServiceTest {
 
     @BeforeEach
     void setUp() {
+        when(authContext.isCompanyManager()).thenReturn(true);
+
         userId = UUID.randomUUID();
         receiverCompanyId = UUID.randomUUID();
         productOptionId = UUID.randomUUID();
@@ -161,6 +166,18 @@ class DraftServiceTest {
 
             verify(orderCommandService, never()).createOrder(any(), any());
         }
+
+        @Test
+        @DisplayName("productPort가 일부 productOptionId를 반환하지 않으면 BusinessException 발생")
+        void missing_product_option_in_map_throws_business_exception() {
+            when(draftWriter.readAndValidateDrafts(draftIds, userId)).thenReturn(List.of(draft));
+            when(productPort.getProductOptionInfos(anyList())).thenReturn(Map.of()); // 빈 맵 — productOptionId 누락
+
+            assertThatThrownBy(() -> draftService.createOrderFromDraft(command))
+                    .isInstanceOf(BusinessException.class);
+
+            verify(orderCommandService, never()).createOrder(any(), any());
+        }
     }
 
     @Nested
@@ -224,6 +241,11 @@ class DraftServiceTest {
     @Nested
     @DisplayName("updateDraft()")
     class UpdateDraft {
+
+        @BeforeEach
+        void setUpAsCompanyManager() {
+            when(authContext.isCompanyManager()).thenReturn(true);
+        }
 
         @Test
         @DisplayName("소유자 본인이면 수량 수정 가능")

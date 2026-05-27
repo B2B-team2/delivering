@@ -1,7 +1,9 @@
 package com.sparta.hubservice.hub.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.common.dto.PageResponse;
+import com.sparta.hubservice.global.exception.ErrorCode;
 import com.sparta.hubservice.hub.application.dto.HubDto;
 import com.sparta.hubservice.hub.application.service.HubService;
 import com.sparta.hubservice.hub.presentation.dto.HubCreateRequest;
@@ -41,7 +43,9 @@ public class HubController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<HubResponse>> createHub(
+            @RequestHeader("X-User-Role") String role,
             @Valid @RequestBody HubCreateRequest request) {
+        requireMaster(role);
         HubDto dto = hubService.createHub(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(HubResponse.from(dto)));
@@ -76,16 +80,20 @@ public class HubController {
 
     @PatchMapping("/{hub_id}")
     public ResponseEntity<ApiResponse<HubResponse>> updateHub(
+            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID hub_id,
             @RequestBody HubUpdateRequest request) {
+        requireMaster(role);
         HubDto dto = hubService.updateHub(hub_id, request.toCommand());
         return ResponseEntity.ok(ApiResponse.success(HubResponse.from(dto)));
     }
 
     @DeleteMapping("/{hub_id}")
     public ResponseEntity<ApiResponse<Void>> deleteHub(
+            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID hub_id,
             @RequestHeader("X-User-Id") UUID userId) {
+        requireMaster(role);
         hubService.deleteHub(hub_id, userId);
         return ResponseEntity.ok(ApiResponse.success());
     }
@@ -97,5 +105,11 @@ public class HubController {
                 .map(HubRouteResponse::from)
                 .toList();
         return ResponseEntity.ok(ApiResponse.success(responses));
+    }
+
+    private void requireMaster(String role) {
+        if (!"MASTER".equals(role)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 }

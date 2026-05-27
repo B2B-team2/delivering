@@ -19,9 +19,6 @@ public interface HubStockPort {
     // 재고 예약 부분 취소: CompanyOrder 단위 취소 시 호출 (companyOrderId 기준)
     void cancelCompanyStock(UUID companyOrderId);
 
-    // 재고 차감: 출고(SHIPPED) 처리 시 호출
-    void deductStock(CompanyOrder companyOrder);
-
     // 재고 단건 재예약: cancelCompanyOrder Saga 보상 전용
     // cancelCompanyStock 성공 후 이후 단계 실패 시 해당 CompanyOrder의 재고를 복원
     void reserveCompanyStock(CompanyOrder companyOrder);

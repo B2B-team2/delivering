@@ -93,4 +93,5 @@ public class CompanyOrder extends BaseEntity implements Persistable<UUID> {
         this.status = CompanyOrderStatus.CANCELLED;
         this.softDelete(deletedBy);
     }
+
 }

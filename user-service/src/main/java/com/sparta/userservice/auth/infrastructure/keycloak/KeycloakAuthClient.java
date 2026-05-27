@@ -2,7 +2,6 @@ package com.sparta.userservice.auth.infrastructure.keycloak;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import com.sparta.userservice.auth.presentation.dto.response.LoginResponse;
 import com.sparta.userservice.global.config.keycloak.KeycloakProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -28,6 +28,10 @@ public class KeycloakAuthClient {
 
     private final KeycloakProperties keycloakProperties;
     private final RestTemplate restTemplate;
+
+    private org.keycloak.admin.client.resource.UsersResource getUsersResource(Keycloak keycloak) {
+        return keycloak.realm(keycloakProperties.getRealm()).users();
+    }
 
     public String getEmailByKeycloakId(String keycloakId) {
         try (Keycloak keycloak = buildAdminKeycloak()) {
@@ -39,28 +43,30 @@ public class KeycloakAuthClient {
         }
     }
 
-    public void createUser(String email, String password, String role) {
+    public UUID createUser(String email, String password, String role) {
         try (Keycloak keycloak = buildAdminKeycloak()) {
 
             CredentialRepresentation credential = createPasswordCredential(password);
             UserRepresentation user = createUserRepresentation(email, credential, role);
 
             var realmResource = keycloak.realm(keycloakProperties.getRealm());
-            var response = realmResource.users().create(user);
 
-            if (response.getStatus() == 409) {
-                throw new IllegalStateException("[Keycloak] 이미 존재하는 유저입니다.");
+            try (var response = realmResource.users().create(user)) {
+
+                if (response.getStatus() == 409) {
+                    throw new IllegalStateException("[Keycloak] 이미 존재하는 유저입니다.");
+                }
+                if (response.getStatus() >= 400) {
+                    throw new IllegalStateException("[Keycloak] 유저 생성 실패 - status=" + response.getStatus());
+                }
+
+                String userId = response.getLocation().getPath().replaceAll(".*/", "");
+                var roleRepresentation = realmResource.roles().get(role).toRepresentation();
+                realmResource.users().get(userId).roles().realmLevel().add(List.of(roleRepresentation));
+
+                log.info("[Keycloak] 유저 생성 및 Role 할당 완료. - email={}, role={}", email, role);
+                return UUID.fromString(userId);
             }
-            if (response.getStatus() >= 400) {
-                throw new IllegalStateException("[Keycloak] 유저 생성 실패 - status=" + response.getStatus());
-            }
-
-            // 생성된 유저 ID 추출 후 Realm Role 할당
-            String userId = response.getLocation().getPath().replaceAll(".*/", "");
-            var roleRepresentation = realmResource.roles().get(role).toRepresentation();
-            realmResource.users().get(userId).roles().realmLevel().add(List.of(roleRepresentation));
-
-            log.info("[Keycloak] 유저 생성 및 Role 할당 완료. - email={}, role={}", email, role);
         }
     }
 
@@ -99,7 +105,7 @@ public class KeycloakAuthClient {
         updateUserEnabled(email, false);
     }
 
-    public LoginResponse login(String email, String password) {
+    public KeycloakTokenResponse login(String email, String password) {
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 
@@ -111,13 +117,16 @@ public class KeycloakAuthClient {
 
         Map<String, Object> response = requestToken(body);
 
-        return new LoginResponse(
+        return new KeycloakTokenResponse(
                 (String) response.get("access_token"),
-                (String) response.get("refresh_token")
+                (String) response.get("refresh_token"),
+                (String) response.get("token_type"),
+                ((Number) response.get("expires_in")).longValue(),
+                ((Number) response.get("refresh_expires_in")).longValue()
         );
     }
 
-    public LoginResponse refresh(String refreshToken) {
+    public KeycloakTokenResponse refresh(String refreshToken) {
 
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 
@@ -128,9 +137,12 @@ public class KeycloakAuthClient {
 
         Map<String, Object> response = requestToken(body);
 
-        return new LoginResponse(
+        return new KeycloakTokenResponse(
                 (String) response.get("access_token"),
-                (String) response.get("refresh_token")
+                (String) response.get("refresh_token"),
+                (String) response.get("token_type"),
+                ((Number) response.get("expires_in")).longValue(),
+                ((Number) response.get("refresh_expires_in")).longValue()
         );
     }
 
@@ -164,8 +176,7 @@ public class KeycloakAuthClient {
     private void updateUserEnabled(String email, boolean enabled) {
         try (Keycloak keycloak = buildAdminKeycloak()) {
 
-            var usersResource =
-                    keycloak.realm(keycloakProperties.getRealm()).users();
+            var usersResource = getUsersResource(keycloak);
 
             var users = usersResource.searchByUsername(email, true);
 
@@ -190,7 +201,7 @@ public class KeycloakAuthClient {
     public void updateUserAttribute(String email, String key, String value) {
         try (Keycloak keycloak = buildAdminKeycloak()) {
 
-            var usersResource = keycloak.realm(keycloakProperties.getRealm()).users();
+            var usersResource = getUsersResource(keycloak);
             var users = usersResource.searchByUsername(email, true);
 
             if (users.isEmpty()) {

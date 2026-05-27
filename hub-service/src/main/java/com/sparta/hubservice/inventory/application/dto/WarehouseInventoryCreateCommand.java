@@ -11,6 +11,7 @@ public class WarehouseInventoryCreateCommand {
 
     private final UUID warehouseId;
     private final UUID productOptionId;
+    private final UUID companyId;
     private final int quantity;
     private final int safetyStock;
 }

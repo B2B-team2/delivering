@@ -171,7 +171,7 @@ class UserServiceTest {
     // ===== 헬퍼 =====
 
     private User createUser(Role role, ApprovalStatus status) {
-        User user = User.create("test@test.com", "KEYCLOAK_MANAGED", "테스트", "010-1234-5678", "U123", role);
+        User user = User.create(UUID.randomUUID(), "test@test.com", "KEYCLOAK_MANAGED", "테스트", "010-1234-5678", "U123", role);
         if (status == ApprovalStatus.APPROVED) {
             user.approve(UUID.randomUUID());
         }

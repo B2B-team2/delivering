@@ -45,13 +45,17 @@ public class Payment extends BaseEntity {
     @Column(name = "pg_transaction_id", length = 255)
     private String pgTransactionId;                 // 거래 ID (실제 PG 연동 X, mock UUID 자동 생성)
 
+    @Column(name = "receiver_company_id", nullable = false)
+    private UUID receiverCompanyId;
+
     /**
      * 선결제 완료: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
      * mock UUID를 pgTransactionId로 자동 생성
      */
-    public static Payment complete(UUID orderId, PaymentMethod paymentMethod, BigDecimal amount) {
+    public static Payment complete(UUID orderId, UUID receiverCompanyId, PaymentMethod paymentMethod, BigDecimal amount) {
         Payment payment = new Payment();
         payment.orderId = orderId;
+        payment.receiverCompanyId = receiverCompanyId;
         payment.paymentMethod = paymentMethod;
         payment.amount = amount;
         payment.pgTransactionId = UUID.randomUUID().toString();

@@ -1,6 +1,7 @@
 package com.sparta.orderservice.payment.application.service;
 
 import com.sparta.common.dto.BusinessException;
+import com.sparta.orderservice.global.security.AuthContext;
 import com.sparta.orderservice.order.application.service.OrderCommandService;
 import com.sparta.orderservice.order.application.service.OrderQueryService;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
@@ -25,6 +26,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -40,6 +42,8 @@ class PaymentServiceTest {
     private OrderQueryService orderQueryService;
     @Mock
     private OrderCommandService orderCommandService;
+    @Mock
+    private AuthContext authContext;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -51,10 +55,12 @@ class PaymentServiceTest {
 
     @BeforeEach
     void setUp() {
+        lenient().when(authContext.isMaster()).thenReturn(true);
+
         orderId = UUID.randomUUID();
         paymentId = UUID.randomUUID();
         requesterId = UUID.randomUUID();
-        completedPayment = Payment.complete(orderId, PaymentMethod.CARD, BigDecimal.valueOf(20000));
+        completedPayment = Payment.complete(orderId, UUID.randomUUID(), PaymentMethod.CARD, BigDecimal.valueOf(20000));
     }
 
     @Nested
@@ -64,7 +70,7 @@ class PaymentServiceTest {
         @Test
         @DisplayName("정상 취소: cancelOrder 위임 후 재조회 결과 반환")
         void success_cancels_order_and_returns_refetched_payment() {
-            Payment cancelledPayment = Payment.complete(orderId, PaymentMethod.CARD, BigDecimal.valueOf(20000));
+            Payment cancelledPayment = Payment.complete(orderId, UUID.randomUUID(), PaymentMethod.CARD, BigDecimal.valueOf(20000));
             cancelledPayment.cancel(requesterId);
 
             when(paymentRepository.findPaymentById(paymentId))
@@ -83,7 +89,7 @@ class PaymentServiceTest {
         @Test
         @DisplayName("이미 CANCELLED 상태 → 예외 발생, cancelOrder 미호출")
         void already_cancelled_throws_without_calling_cancel_order() {
-            Payment cancelledPayment = Payment.complete(orderId, PaymentMethod.CARD, BigDecimal.valueOf(20000));
+            Payment cancelledPayment = Payment.complete(orderId, UUID.randomUUID(), PaymentMethod.CARD, BigDecimal.valueOf(20000));
             cancelledPayment.cancel(requesterId);
             when(paymentRepository.findPaymentById(paymentId)).thenReturn(Optional.of(cancelledPayment));
 
@@ -124,7 +130,8 @@ class PaymentServiceTest {
         void creates_completed_payment_and_saves() {
             when(paymentRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            PaymentResult result = paymentService.createCompletedPayment(orderId, BigDecimal.valueOf(20000));
+            UUID receiverCompanyId = UUID.randomUUID();
+            PaymentResult result = paymentService.createCompletedPayment(orderId, receiverCompanyId, BigDecimal.valueOf(20000));
 
             verify(paymentRepository).save(any());
             assertThat(result.status()).isEqualTo(PaymentStatus.COMPLETED.name());

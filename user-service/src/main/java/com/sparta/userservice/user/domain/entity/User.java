@@ -8,14 +8,15 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import org.springframework.data.domain.Persistable;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -24,12 +25,14 @@ import java.util.UUID;
 @Table(name = "p_users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class User extends BaseEntity {
+public class User extends BaseEntity implements Persistable<UUID> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "user_id", updatable = false, nullable = false)
     private UUID id;
+
+    @Transient
+    private boolean isNew;
 
     @Column(name = "email", nullable = false, unique = true)
     private String email;
@@ -63,8 +66,15 @@ public class User extends BaseEntity {
     @Column(name = "rejected_reason", columnDefinition = "TEXT")
     private String rejectedReason;
 
-    public static User create(String email, String encodedPassword, String name, String phone, String slackId, Role role) {
+    @Override
+    public boolean isNew() {
+        return isNew;
+    }
+
+    public static User create(UUID keycloakId, String email, String encodedPassword, String name, String phone, String slackId, Role role) {
         User user = new User();
+        user.id = keycloakId;
+        user.isNew = true;
         user.email = email;
         user.password = encodedPassword;
         user.name = name;
