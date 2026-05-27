@@ -22,12 +22,7 @@ public interface HubClient {
     @PostMapping("/api/v1/internal/inventory/cancel/company")
     void cancelCompanyStock(@RequestBody StockPartialCancelRequest request);
 
-    // 재고 차감: 출고(SHIPPED) 처리 시 호출
-    @PostMapping("/api/v1/internal/inventory/deduct")
-    void deductStock(@RequestBody InventoryBulkRequest request);
-
-    // 반품 재고 복원: 반품 처리 시 호출
-    // TODO: 반품 도메인 구현 시 HubStockPort/Adapter에 메서드 추가 후 연동
-    @PostMapping("/api/v1/internal/inventory/return")
-    void returnStock(@RequestBody InventoryBulkRequest request);
+    // 반품 재고 복원 — 반품 도메인 담당 서비스 확정 후 연동 여부 결정
+//    @PostMapping("/api/v1/internal/inventory/return")
+//    void returnStock(@RequestBody InventoryBulkRequest request);
 }

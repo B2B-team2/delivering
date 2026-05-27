@@ -33,6 +33,10 @@ public class DeliveryManagerService {
         if (securityUtils.isNotMaster() && securityUtils.isNotHubManager()) {
             throw new BusinessException(UserErrorCode.FORBIDDEN);
         }
+        // HUB_MANAGER면 본인 허브로 강제 필터
+        if (securityUtils.isNotMaster() && !securityUtils.isNotHubManager()) {
+            hubId = securityUtils.getHubId();
+        }
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
                 Sort.by(Sort.Direction.DESC, "createdAt"));
         return new PageResponse<>(
@@ -42,20 +46,15 @@ public class DeliveryManagerService {
     }
 
     public DeliveryManagerResponse getDeliveryManager(UUID userId) {
-        // MASTER, HUB_MANAGER는 모두 조회 가능, 배송담당자는 본인만
         if (securityUtils.isNotMaster() && securityUtils.isNotHubManager() &&
                 !securityUtils.getUserId().equals(userId.toString())) {
             throw new BusinessException(UserErrorCode.FORBIDDEN);
         }
-
-        DeliveryManager manager = deliveryManagerRepository.findByUserIdWithUser(userId)
-                .orElseThrow(() -> new BusinessException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
-        return new DeliveryManagerResponse(manager);
+        return new DeliveryManagerResponse(findManagerWithHubValidation(userId));
     }
 
     @Transactional
     public DeliveryManagerResponse assign(DeliveryManagerAssignRequest request) {
-        // MASTER, HUB_MANAGER만 배정 가능
         if (securityUtils.isNotMaster() && securityUtils.isNotHubManager()) {
             throw new BusinessException(UserErrorCode.FORBIDDEN);
         }
@@ -72,14 +71,11 @@ public class DeliveryManagerService {
 
     @Transactional
     public DeliveryManagerResponse updateStatus(UUID userId, DeliveryManagerStatusRequest request) {
-        // MASTER, HUB_MANAGER만 상태 변경 가능
         if (securityUtils.isNotMaster() && securityUtils.isNotHubManager()) {
             throw new BusinessException(UserErrorCode.FORBIDDEN);
         }
 
-        DeliveryManager manager = deliveryManagerRepository.findByUserIdWithUser(userId)
-                .orElseThrow(() -> new BusinessException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
-
+        DeliveryManager manager = findManagerWithHubValidation(userId);
         manager.updateStatus(request.getStatus());
 
         return new DeliveryManagerResponse(manager);
@@ -95,6 +91,21 @@ public class DeliveryManagerService {
         deliveryManagerRepository.save(manager);
 
         return new InternalDeliveryManagerResponse(manager);
+    }
+
+    private DeliveryManager findManagerWithHubValidation(UUID userId) {
+        DeliveryManager manager = deliveryManagerRepository.findByUserIdWithUser(userId)
+                .orElseThrow(() -> new BusinessException(UserErrorCode.DELIVERY_MANAGER_NOT_FOUND));
+
+        // HUB_MANAGER면 본인 허브 소속 배송담당자만 접근 가능
+        if (securityUtils.isNotMaster() && !securityUtils.isNotHubManager()) {
+            UUID hubId = securityUtils.getHubId();
+            if (hubId != null && !hubId.equals(manager.getHubId())) {
+                throw new BusinessException(UserErrorCode.FORBIDDEN);
+            }
+        }
+
+        return manager;
     }
 
 }

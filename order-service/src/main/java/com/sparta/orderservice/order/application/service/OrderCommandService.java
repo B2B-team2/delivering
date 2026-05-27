@@ -144,7 +144,14 @@ public class OrderCommandService {
             hubStockPort.cancelStock(orderId);
             compensations.push(() -> hubStockPort.reserveStock(order));
 
-            // (2) 결제 취소 이벤트 (PaymentEventHandler, 같은 트랜잭션)
+            // (2) 배송 일괄 취소 (companyOrderId 기준)
+            // 실패 시: T1 보상 (재고 재예약) 후 예외 re-throw → TX 롤백
+            List<UUID> companyOrderIds = order.getCompanyOrders().stream()
+                    .map(CompanyOrder::getCompanyOrderId)
+                    .toList();
+            deliveryPort.cancelDeliveries(companyOrderIds);
+
+            // (3) 결제 취소 이벤트 (PaymentEventHandler, 같은 트랜잭션)
             // 실패 시: T1 보상 (재고 재예약) 후 예외 re-throw → TX 롤백
             eventPublisher.publishEvent(new OrderCancelledEvent(orderId, requesterId));
 

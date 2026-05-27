@@ -1,5 +1,6 @@
 package com.sparta.apigateway.filter;
 
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
@@ -70,6 +71,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
             ServerHttpRequest mutatedRequest = new ServerHttpRequestDecorator(exchange.getRequest()) {
                 @Override
+                @NonNull
                 public HttpHeaders getHeaders() {
                     HttpHeaders headers = new HttpHeaders();
                     headers.putAll(super.getHeaders());
@@ -79,6 +81,10 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                     String companyId = jwt.getClaimAsString("company_id");
                     if (companyId != null) {
                         headers.set("X-Company-Id", companyId);
+                    }
+                    String hubId = jwt.getClaimAsString("hub_id");
+                    if (hubId != null) {
+                        headers.set("X-Hub-Id", hubId);
                     }
                     return headers;
                 }

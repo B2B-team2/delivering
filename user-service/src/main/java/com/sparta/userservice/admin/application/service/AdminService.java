@@ -9,6 +9,9 @@ import com.sparta.userservice.global.config.security.util.SecurityUtils;
 import com.sparta.userservice.global.exception.UserErrorCode;
 import com.sparta.userservice.user.domain.entity.User;
 import com.sparta.userservice.user.domain.enums.ApprovalStatus;
+import com.sparta.userservice.user.domain.enums.Role;
+import com.sparta.userservice.user.infrastructure.repository.CompanyManagerRepository;
+import com.sparta.userservice.user.infrastructure.repository.HubManagerRepository;
 import com.sparta.userservice.user.infrastructure.repository.UserRepository;
 import com.sparta.userservice.user.presentation.dto.response.UserResponse;
 import lombok.RequiredArgsConstructor;
@@ -17,8 +20,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.sparta.userservice.user.domain.enums.Role;
-import com.sparta.userservice.user.infrastructure.repository.CompanyManagerRepository;
 
 import java.util.UUID;
 
@@ -31,14 +32,15 @@ public class AdminService {
     private final KeycloakAuthClient keycloakAuthClient;
     private final SecurityUtils securityUtils;
     private final CompanyManagerRepository companyManagerRepository;
+    private final HubManagerRepository hubManagerRepository;
 
-    public PageResponse<UserResponse> getAllUsers(Pageable pageable) {
+    public PageResponse<UserResponse> getAllUsers(String name, String email, Role role, Pageable pageable) {
         if (securityUtils.isNotMaster()) {
             throw new BusinessException(UserErrorCode.FORBIDDEN);
         }
         Pageable sorted = PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(),
                 Sort.by(Sort.Direction.DESC, "createdAt"));
-        return new PageResponse<>(userRepository.findAllByDeletedAtIsNull(sorted)
+        return new PageResponse<>(userRepository.searchUsers(name, email, role, sorted)
                 .map(UserResponse::new));
     }
 
@@ -77,6 +79,16 @@ public class AdminService {
                     if (cm.getCompanyId() != null) {
                         keycloakAuthClient.updateUserAttribute(
                                 user.getEmail(), "company_id", cm.getCompanyId().toString()
+                        );
+                    }
+                });
+            }
+
+            if (user.getRole() == Role.HUB_MANAGER) {
+                hubManagerRepository.findById(userId).ifPresent(hm -> {
+                    if (hm.getHubId() != null) {
+                        keycloakAuthClient.updateUserAttribute(
+                                user.getEmail(), "hub_id", hm.getHubId().toString()
                         );
                     }
                 });

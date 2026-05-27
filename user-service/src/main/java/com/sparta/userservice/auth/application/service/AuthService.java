@@ -27,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -63,7 +64,16 @@ public class AuthService {
             }
         }
 
+        // Keycloak 먼저 생성 → ID 받아서 DB에 저장
+        UUID keycloakId;
+        try {
+            keycloakId = keycloakAuthClient.createUser(request.getEmail(), request.getPassword(), role.name());
+        } catch (IllegalStateException e) {
+            throw new BusinessException(AuthErrorCode.KEYCLOAK_USER_CREATE_FAILED);
+        }
+
         User user = User.create(
+                keycloakId,
                 request.getEmail(),
                 "KEYCLOAK_MANAGED",
                 request.getName(),
@@ -91,13 +101,6 @@ public class AuthService {
                     CompanyManager.create(user)
             );
             default -> throw new BusinessException(UserErrorCode.INVALID_ROLE);
-        }
-
-        // Keycloak 실패 시 DB 트랜잭션 롤백
-        try {
-            keycloakAuthClient.createUser(request.getEmail(), request.getPassword(), role.name());
-        } catch (IllegalStateException e) {
-            throw new BusinessException(AuthErrorCode.KEYCLOAK_USER_CREATE_FAILED);
         }
     }
 

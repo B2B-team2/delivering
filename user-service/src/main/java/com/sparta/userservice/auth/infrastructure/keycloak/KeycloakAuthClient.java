@@ -19,6 +19,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -42,7 +43,7 @@ public class KeycloakAuthClient {
         }
     }
 
-    public void createUser(String email, String password, String role) {
+    public UUID createUser(String email, String password, String role) {
         try (Keycloak keycloak = buildAdminKeycloak()) {
 
             CredentialRepresentation credential = createPasswordCredential(password);
@@ -59,12 +60,12 @@ public class KeycloakAuthClient {
                     throw new IllegalStateException("[Keycloak] 유저 생성 실패 - status=" + response.getStatus());
                 }
 
-                // 생성된 유저 ID 추출 후 Realm Role 할당
                 String userId = response.getLocation().getPath().replaceAll(".*/", "");
                 var roleRepresentation = realmResource.roles().get(role).toRepresentation();
                 realmResource.users().get(userId).roles().realmLevel().add(List.of(roleRepresentation));
 
                 log.info("[Keycloak] 유저 생성 및 Role 할당 완료. - email={}, role={}", email, role);
+                return UUID.fromString(userId);
             }
         }
     }

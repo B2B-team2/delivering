@@ -124,4 +124,16 @@ public class SecurityUtils {
             return null;
         }
     }
+
+    /**
+     * hub_id — 게이트웨이에서 주입한 X-Hub-Id 헤더
+     * HUB_MANAGER 전용. MASTER는 null 반환.
+     */
+    public UUID getHubId() {
+        String hubId = getRequest().getHeader("X-Hub-Id");
+        if (hubId == null || hubId.isBlank()) {
+            return null;
+        }
+        return UUID.fromString(hubId);
+    }
 }
