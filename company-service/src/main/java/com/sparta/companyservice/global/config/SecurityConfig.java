@@ -1,23 +1,29 @@
 package com.sparta.companyservice.global.config;
 
+import com.sparta.common.security.CustomPreAuthFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(AbstractHttpConfigurer::disable) // 테스트를 위해 CSRF 보호 비활성화
+            .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().permitAll() // 개발 단계에서 편리한 테스트를 위해 모든 요청 허용 (임시)
-            );
+                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-resources/**").permitAll()
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(new CustomPreAuthFilter(), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }

@@ -11,6 +11,7 @@ import com.sparta.companyservice.product.presentation.dto.ProductResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductStatusUpdateRequest;
 import com.sparta.companyservice.product.presentation.dto.ProductStatusUpdateResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductUpdateRequest;
+import com.sparta.common.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -18,6 +19,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -37,6 +40,7 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER') or @authService.isCompanyOwner(#request.companyId)")
     public ResponseEntity<ApiResponse<ProductResponse>> createProduct(@RequestBody @Valid ProductCreateRequest request) {
         ProductDto resultDto = productService.createProduct(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -62,6 +66,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{productId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER') or @authService.isProductOwner(#productId)")
     public ResponseEntity<ApiResponse<ProductResponse>> patchProduct(
             @PathVariable UUID productId,
             @RequestBody @Valid ProductUpdateRequest request) {
@@ -70,6 +75,7 @@ public class ProductController {
     }
 
     @PatchMapping("/{productId}/status")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER') or @authService.isProductOwner(#productId)")
     public ResponseEntity<ApiResponse<ProductStatusUpdateResponse>> patchProductStatus(
             @PathVariable UUID productId,
             @RequestBody @Valid ProductStatusUpdateRequest request) {
@@ -78,10 +84,11 @@ public class ProductController {
     }
 
     @DeleteMapping("/{productId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<ProductDeleteResponse>> deleteProduct(
-            @PathVariable UUID productId) {
-        // TODO: 추후 인증/인가 로직 도입 시 실제 사용자 ID로 교체 필요
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+            @PathVariable UUID productId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = UUID.fromString(userDetails.getUserId());
         ProductDto resultDto = productService.deleteProduct(productId, userId);
         return ResponseEntity.ok(ApiResponse.success(ProductDeleteResponse.from(resultDto.getProductId(), resultDto.getDeletedAt())));
     }

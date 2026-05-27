@@ -9,6 +9,7 @@ import com.sparta.companyservice.product.presentation.dto.ProductOptionCreateReq
 import com.sparta.companyservice.product.presentation.dto.ProductOptionDeleteResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductOptionResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductOptionUpdateRequest;
+import com.sparta.common.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -16,6 +17,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -35,6 +38,7 @@ public class ProductOptionController {
     private final ProductOptionService productOptionService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER') or @authService.isProductOwner(#request.productId)")
     public ResponseEntity<ApiResponse<ProductOptionResponse>> createProductOption(
             @RequestBody @Valid ProductOptionCreateRequest request) {
         ProductOptionDto resultDto = productOptionService.createProductOption(request.toCommand());
@@ -62,6 +66,7 @@ public class ProductOptionController {
     }
 
     @PatchMapping("/{productOptionId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER') or @authService.isProductOwnerByOptionId(#productOptionId)")
     public ResponseEntity<ApiResponse<ProductOptionResponse>> updateProductOption(
             @PathVariable("productOptionId") UUID productOptionId,
             @RequestBody @Valid ProductOptionUpdateRequest request) {
@@ -70,11 +75,12 @@ public class ProductOptionController {
     }
 
     @DeleteMapping("/{productOptionId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER') or @authService.isProductOwnerByOptionId(#productOptionId)")
     public ResponseEntity<ApiResponse<ProductOptionDeleteResponse>> deleteProductOption(
-            @PathVariable UUID productOptionId) {
-        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 (시스템 UUID 고정값 교체)
-        UUID systemId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-        ProductOptionDto resultDto = productOptionService.deleteProductOption(productOptionId, systemId);
+            @PathVariable UUID productOptionId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = UUID.fromString(userDetails.getUserId());
+        ProductOptionDto resultDto = productOptionService.deleteProductOption(productOptionId, userId);
         return ResponseEntity.ok(ApiResponse.success(ProductOptionDeleteResponse.of(resultDto.getProductOptionId(), resultDto.getDeletedAt())));
     }
 }

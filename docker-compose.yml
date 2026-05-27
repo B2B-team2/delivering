@@ -1,112 +1,143 @@
 services:
-  # ── 인프라 ──────────────────────────────────────────
-  postgres:
-    image: postgis/postgis:15-3.3
-    container_name: postgres
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
     environment:
-      POSTGRES_DB: delivering
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      ZOOKEEPER_CLIENT_PORT: 2181
     ports:
-      - "5432:5432"
-    volumes:
-      - ./.docker-volumes/postgres:/var/lib/postgresql/data
+      - "2181:2181"
 
-  redis:
-    image: redis:7
-    container_name: redis
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on: [zookeeper]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     ports:
-      - "6379:6379"
-    volumes:
-      - ./.docker-volumes/redis:/data
+      - "9092:9092"
 
-  # zookeeper:
-  #   image: confluentinc/cp-zookeeper:7.5.0
-  #   container_name: zookeeper
-  #   environment:
-  #     ZOOKEEPER_CLIENT_PORT: 2181
-  #   ports:
-  #     - "2181:2181"
+  config-server:
+    build: ./config-server
+    container_name: config-server
+    ports:
+      - "8888:8888"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # kafka:
-  #   image: confluentinc/cp-kafka:7.5.0
-  #   container_name: kafka
-  #   depends_on: [zookeeper]
-  #   environment:
-  #     KAFKA_BROKER_ID: 1
-  #     KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-  #     KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-  #     KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-  #   ports:
-  #     - "9092:9092"
+  eureka-server:
+    build: ./eureka-server
+    container_name: eureka-server
+    ports:
+      - "8761:8761"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # zipkin:
-  #   image: openzipkin/zipkin
-  #   container_name: zipkin
-  #   ports:
-  #     - "9411:9411"
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
 
-  # # ── Spring 인프라 ────────────────────────────────────
-  # config-server:
-  #   build: ./config-server
-  #   container_name: config-server
-  #   ports:
-  #     - "8888:8888"
-  #   depends_on: [postgres]
+  user-service:
+    build: ./user-service
+    container_name: user-service
+    ports:
+      - "19091:19091"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
 
-  # eureka-server:
-  #   build: ./eureka-server
-  #   container_name: eureka-server
-  #   ports:
-  #     - "8761:8761"
-  #   depends_on: [config-server]
+  company-service:
+    build: ./company-service
+    container_name: company-service
+    ports:
+      - "19092:19092"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
 
-  # api-gateway:
-  #   build: ./api-gateway
-  #   container_name: api-gateway
-  #   ports:
-  #     - "8080:8080"
-  #   depends_on: [eureka-server]
+  hub-service:
+    build: ./hub-service
+    container_name: hub-service
+    ports:
+      - "19093:19093"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
 
-  # # ── 마이크로서비스 ────────────────────────────────────
-  # user-service:
-  #   build: ./user-service
-  #   container_name: user-service
-  #   ports:
-  #     - "19091:19091"
-  #   depends_on: [postgres, kafka, eureka-server]
+  order-service:
+    build: ./order-service
+    container_name: order-service
+    ports:
+      - "19094:19094"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
 
-  # company-service:
-  #   build: ./company-service
-  #   container_name: company-service
-  #   ports:
-  #     - "19092:19092"
-  #   depends_on: [postgres, kafka, eureka-server]
-
-  # hub-service:
-  #   build: ./hub-service
-  #   container_name: hub-service
-  #   ports:
-  #     - "19093:19093"
-  #   depends_on: [postgres, redis, kafka, eureka-server]
-
-  # order-service:
-  #   build: ./order-service
-  #   container_name: order-service
-  #   ports:
-  #     - "19094:19094"
-  #   depends_on: [postgres, kafka, eureka-server]
-
-  # delivery-service:
-  #   build: ./delivery-service
-  #   container_name: delivery-service
-  #   ports:
-  #     - "19095:19095"
-  #   depends_on: [postgres, kafka, eureka-server]
-
-  # operations-service:
-  #   build: ./operations-service
-  #   container_name: operations-service
-  #   ports:
-  #     - "19096:19096"
-  #   depends_on: [postgres, kafka, eureka-server]
+  operations-service:
+    build: ./operations-service
+    container_name: operations-service
+    ports:
+      - "19096:19096"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started

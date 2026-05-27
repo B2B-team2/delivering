@@ -1,6 +1,8 @@
 package com.sparta.companyservice.company.presentation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.companyservice.global.config.SecurityConfig;
+import com.sparta.companyservice.global.application.service.AuthService;
 import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
 import com.sparta.companyservice.company.application.dto.CompanyAddressDto;
 import com.sparta.companyservice.company.application.dto.CompanyCreateCommand;
@@ -10,7 +12,6 @@ import com.sparta.companyservice.company.application.service.CompanyService;
 import com.sparta.companyservice.company.presentation.dto.CompanyAddressCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
-import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
 import com.sparta.companyservice.global.exception.CompanyErrorCode;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(CompanyController.class)
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, SecurityConfig.class})
 class CompanyControllerTest {
 
     @Autowired
@@ -58,8 +59,11 @@ class CompanyControllerTest {
     @MockBean
     private CompanyAddressService companyAddressService;
 
+    @MockBean(name = "authService")
+    private AuthService authService;
+
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("API 응답 규격 검증: POST /api/v1/companies 호출 시 201 Created와 ApiResponse 포맷이 유지되는가?")
     void createCompanyApiResponseFormatTest() throws Exception {
         // given
@@ -91,7 +95,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("API 응답 규격 검증: PATCH /api/v1/companies/{companyId} 호출 시 200 OK와 ApiResponse 포맷이 유지되는가?")
     void patchCompanyApiResponseFormatTest() throws Exception {
         // given
@@ -124,7 +128,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("Bean Validation 검증: 필수 필드 누락 시 400 Bad Request를 반환하는가? (PATCH)")
     void patchCompanyValidationTest() throws Exception {
         // given
@@ -143,7 +147,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("Bean Validation 검증: 필수 필드 누락 시 400 Bad Request를 반환하는가?")
     void createCompanyValidationTest() throws Exception {
         // given
@@ -162,7 +166,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("DTO 변환 검증: 요청 JSON이 CompanyCreateRequest 객체로 정확히 역직렬화되는가?")
     void requestDeserializationTest() throws Exception {
         // given
@@ -179,7 +183,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("API 응답 규격 검증: GET /api/v1/companies 호출 시 200 OK와 PageResponse 포맷이 유지되는가?")
     void getCompaniesApiResponseFormatTest() throws Exception {
         // given
@@ -210,7 +214,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("페이지네이션 사이즈 보정 검증: 허용되지 않은 사이즈(20) 요청 시 10으로 보정되어 서비스에 전달되는가?")
     void getCompaniesSizeCorrectionTest() throws Exception {
         // given
@@ -228,7 +232,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("업체 상세 조회 성공: GET /api/v1/companies/{companyId} 호출 시 200 OK와 상세 정보가 반환되는가?")
     void getCompanySuccessTest() throws Exception {
         // given
@@ -252,7 +256,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("업체 상세 조회 실패: 존재하지 않는 업체 조회 시 404 Not Found를 반환하는가?")
     void getCompanyNotFoundTest() throws Exception {
         // given
@@ -269,7 +273,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("업체 삭제 성공: DELETE /api/v1/companies/{companyId} 호출 시 200 OK와 삭제 일시가 반환되는가?")
     void deleteCompanySuccessTest() throws Exception {
         // given
@@ -284,6 +288,8 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(delete("/api/v1/companies/{companyId}", companyId)
+                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-User-Role", "MASTER")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -294,7 +300,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "MASTER")
     @DisplayName("공통 에러 처리 검증: 경로 변수 타입 불일치 시 400 Bad Request와 상세 메시지를 반환하는가?")
     void pathVariableTypeMismatchTest() throws Exception {
         // when & then
@@ -308,10 +314,11 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "COMPANY_MANAGER")
     @DisplayName("배송지 등록 API 성공 검증")
     void createAddressSuccessTest() throws Exception {
         UUID companyId = UUID.randomUUID();
+        when(authService.isCompanyOwner(eq(companyId))).thenReturn(true);
         CompanyAddressCreateRequest request = CompanyAddressCreateRequest.builder()
                 .addressName("집")
                 .recipientName("홍길동")
@@ -340,7 +347,7 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "COMPANY_MANAGER")
     @DisplayName("배송지 등록 API 실패 검증: 필수 필드 누락 시 400 Bad Request 반환")
     void createAddressFailValidationTest() throws Exception {
         // given
@@ -358,11 +365,12 @@ class CompanyControllerTest {
     }
 
     @Test
-    @WithMockUser
+    @WithMockUser(roles = "COMPANY_MANAGER")
     @DisplayName("배송지 목록 조회 API 성공 검증: PageResponse 포맷 및 데이터 반환 확인")
     void getAddressesSuccessTest() throws Exception {
         // given
         UUID companyId = UUID.randomUUID();
+        when(authService.isCompanyOwner(eq(companyId))).thenReturn(true);
         CompanyAddressDto addressDto = CompanyAddressDto.builder()
                 .addressId(UUID.randomUUID())
                 .companyId(companyId)
