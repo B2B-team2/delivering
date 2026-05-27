@@ -1,10 +1,10 @@
 package com.sparta.deliveryservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.application.service.DeliveryLogService;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
-import com.sparta.deliveryservice.deliveryLog.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.presentation.dto.resqonse.DeliveryLogSearchResponse;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import org.junit.jupiter.api.BeforeEach;
