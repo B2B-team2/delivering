@@ -5,7 +5,6 @@ import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchRequest;
 import com.sparta.hubservice.hubroute.presentation.dto.RouteSearchResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,10 +18,9 @@ public class InternalHubRouteController {
     private final HubRouteService hubRouteService;
 
     @PostMapping("/search")
-    public ResponseEntity<RouteSearchResponse> searchRoute(
+    public RouteSearchResponse searchRoute(
             @Valid @RequestBody RouteSearchRequest request) {
-        RouteSearchResponse response = RouteSearchResponse.from(
+        return RouteSearchResponse.from(
                 hubRouteService.findRoute(request.getFromHubId(), request.getToHubId()));
-        return ResponseEntity.ok(response);
     }
 }
