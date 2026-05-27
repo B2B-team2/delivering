@@ -1,6 +1,5 @@
 package com.sparta.companyservice.product.presentation.controller;
 
-import com.sparta.common.dto.ApiResponse;
 import com.sparta.companyservice.product.application.dto.ProductOptionDetailDto;
 import com.sparta.companyservice.product.application.service.ProductOptionService;
 import com.sparta.companyservice.product.presentation.dto.ProductOptionDetailsRequest;
@@ -23,12 +22,12 @@ public class InternalProductOptionController {
     private final ProductOptionService productOptionService;
 
     @PostMapping("/details")
-    public ApiResponse<ProductOptionDetailsResponse> getProductOptionDetails(
+    public ProductOptionDetailsResponse getProductOptionDetails(
             @RequestBody @Valid ProductOptionDetailsRequest request) {
         Map<UUID, ProductOptionDetailDto> details = productOptionService.getProductOptionDetails(request.getProductOptionIds());
         ProductOptionDetailsResponse response = ProductOptionDetailsResponse.builder()
                 .optionsMap(details)
                 .build();
-        return ApiResponse.success(response);
+        return response;
     }
 }
