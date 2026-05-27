@@ -3,6 +3,7 @@ package com.sparta.hubservice.inventory.presentation.controller;
 import com.sparta.common.dto.ApiResponse;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.hubservice.global.exception.ErrorCode;
+import com.sparta.hubservice.inventory.application.service.InventoryShipmentService;
 import com.sparta.hubservice.inventory.application.dto.InventoryHistoryPageDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryAdjustDto;
 import com.sparta.hubservice.inventory.application.dto.WarehouseInventoryDto;
@@ -41,6 +42,7 @@ import java.util.UUID;
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final InventoryShipmentService shipmentService;
 
     @PostMapping
     public ResponseEntity<ApiResponse<WarehouseInventoryResponse>> createInventory(
@@ -107,6 +109,24 @@ public class InventoryController {
         requireMasterOrHubManager(role);
         UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
         inventoryService.deleteInventory(inventory_id, userId, requesterHubId);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @PatchMapping("/company-orders/{companyOrderId}/prepare")
+    public ResponseEntity<ApiResponse<Void>> prepareShipment(
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable UUID companyOrderId) {
+        requireMasterOrHubManager(role);
+        shipmentService.prepare(companyOrderId);
+        return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    @PatchMapping("/company-orders/{companyOrderId}/ship")
+    public ResponseEntity<ApiResponse<Void>> ship(
+            @RequestHeader("X-User-Role") String role,
+            @PathVariable UUID companyOrderId) {
+        requireMasterOrHubManager(role);
+        shipmentService.ship(companyOrderId);
         return ResponseEntity.ok(ApiResponse.success());
     }
 

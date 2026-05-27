@@ -177,6 +177,46 @@ public class InventoryService {
     }
 
     @Transactional
+    public void deductStockByCompanyOrder(UUID companyOrderId) {
+        List<InventoryHistory> reservations =
+                historyRepository.findByCompanyOrderIdAndChangeType(companyOrderId, InventoryChangeType.RESERVED);
+        if (reservations.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+        }
+        for (InventoryHistory reservation : reservations) {
+            WarehouseInventory inventory = inventoryRepository.findById(reservation.getInventoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            inventory.deduct(-reservation.getChangeQuantity());
+            historyRepository.save(InventoryHistory.builder()
+                    .inventoryId(inventory.getInventoryId())
+                    .companyOrderId(companyOrderId)
+                    .changeQuantity(reservation.getChangeQuantity())
+                    .changeType(InventoryChangeType.OUTBOUND)
+                    .build());
+        }
+    }
+
+    @Transactional
+    public void revertDeductByCompanyOrder(UUID companyOrderId) {
+        List<InventoryHistory> outbounds =
+                historyRepository.findByCompanyOrderIdAndChangeType(companyOrderId, InventoryChangeType.OUTBOUND);
+        if (outbounds.isEmpty()) {
+            throw new BusinessException(ErrorCode.INVENTORY_NOT_FOUND);
+        }
+        for (InventoryHistory outbound : outbounds) {
+            WarehouseInventory inventory = inventoryRepository.findById(outbound.getInventoryId())
+                    .orElseThrow(() -> new BusinessException(ErrorCode.INVENTORY_NOT_FOUND));
+            inventory.revertDeduct(-outbound.getChangeQuantity());
+            historyRepository.save(InventoryHistory.builder()
+                    .inventoryId(outbound.getInventoryId())
+                    .companyOrderId(companyOrderId)
+                    .changeQuantity(-outbound.getChangeQuantity())
+                    .changeType(InventoryChangeType.CANCELLED)
+                    .build());
+        }
+    }
+
+    @Transactional
     public void deductStock(UUID orderId, List<InventoryItemCommand> items) {
         for (var item : items) {
             WarehouseInventory inventory = findByProductOptionId(item.getProductOptionId());
