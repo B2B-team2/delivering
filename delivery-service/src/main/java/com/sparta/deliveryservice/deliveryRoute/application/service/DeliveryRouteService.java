@@ -2,14 +2,18 @@ package com.sparta.deliveryservice.deliveryRoute.application.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
+import com.sparta.deliveryservice.delivery.global.exception.DeliveryErrorCode;
+import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
 import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
+import com.sparta.deliveryservice.deliveryRoute.global.exception.DeliveryRouteErrorCode;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteDeleteRequest;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteStatusUpdateRequest;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.DeliveryRouteDeleteResponse;
@@ -19,7 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.sql.Time;
 import java.time.LocalDateTime;
@@ -34,10 +37,11 @@ public class DeliveryRouteService {
     private final DeliveryRouteRepository deliveryRouteRepository;
     private final DeliveryLogRepository deliveryLogRepository;
     private final DeliveryRepository deliveryRepository;
+    private final SecurityUtils securityUtil;
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
 
-    public DeliveryRouteDetailResponse getDeliveryDetailRoutes(UUID deliveryId) {
+    public DeliveryRouteDetailResponse getDeliveryDetailRoutes(UUID deliveryId ,UUID userId) {
 
         List<DeliveryRoute> routes = deliveryRouteRepository.findByDeliveryId(deliveryId);
 
@@ -76,10 +80,13 @@ public class DeliveryRouteService {
     public DeliveryRouteStatusUpdateResponse updateRouteStatus(
             UUID deliveryId,
             UUID routeId,
+            UUID userId,
             DeliveryRouteStatusUpdateRequest request
           ) throws JsonProcessingException {
 
-        DeliveryRoute route = deliveryRouteRepository.findById(routeId).orElse(null);
+
+        DeliveryRoute route = deliveryRouteRepository.findById(routeId)
+                .orElseThrow(() -> new BusinessException(DeliveryRouteErrorCode.DELIVERY_ROUTE_NOT_FOUND));
 
         String previousStatus = route != null ? route.getStatus().name() : "PENDING";
         DeliveryRouteStatus nextStatus = DeliveryRouteStatus.valueOf(request.getStatus().toUpperCase());
@@ -144,9 +151,10 @@ public class DeliveryRouteService {
                 .build();
     }
     @Transactional
-    public DeliveryRouteDeleteResponse deleteRoute(UUID deliveryId, UUID routeId, DeliveryRouteDeleteRequest request) throws JsonProcessingException {
+    public DeliveryRouteDeleteResponse deleteRoute(UUID deliveryId, UUID routeId, UUID userId, DeliveryRouteDeleteRequest request) throws JsonProcessingException {
 
-        DeliveryRoute route = deliveryRouteRepository.findById(routeId).orElse(null);
+        DeliveryRoute route = deliveryRouteRepository.findById(routeId)
+                .orElseThrow(() -> new BusinessException(DeliveryRouteErrorCode.DELIVERY_ROUTE_NOT_FOUND));
 
         String previousValueJson = "";
         if (route != null) {

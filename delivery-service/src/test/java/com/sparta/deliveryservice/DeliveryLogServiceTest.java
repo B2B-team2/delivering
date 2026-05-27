@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.deliveryservice.deliveryLog.application.service.DeliveryLogService;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
+import com.sparta.deliveryservice.deliveryLog.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.presentation.dto.resqonse.DeliveryLogSearchResponse;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,9 @@ class DeliveryLogServiceTest {
     @Mock
     private DeliveryLogRepository deliveryLogRepository;
 
+    @Mock
+    private SecurityUtils securityUtils;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
@@ -48,6 +52,8 @@ class DeliveryLogServiceTest {
         UUID deliveryId = UUID.randomUUID();
         UUID routeId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
         Pageable pageable = PageRequest.of(0, 10);
 
         DeliveryLog deliveryLog = DeliveryLog.builder()
@@ -71,7 +77,9 @@ class DeliveryLogServiceTest {
 
         given(deliveryLogRepository.findByDeliveryId(deliveryId, pageable)).willReturn(mockPage);
 
-        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, pageable);
+        given(securityUtils.isMaster()).willReturn(true);
+
+        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, userId, pageable);
 
         assertThat(result).isNotNull();
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -93,6 +101,8 @@ class DeliveryLogServiceTest {
     @DisplayName("배송 로그 페이징 조회 성공 - JSON 파싱 예외 발생 시 문자열로 반환 검증")
     void getDeliveryLogs_ParsingException_ReturnsRawString() {
         UUID deliveryId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+
         Pageable pageable = PageRequest.of(0, 10);
 
         DeliveryLog invalidJsonLog = DeliveryLog.builder()
@@ -109,7 +119,9 @@ class DeliveryLogServiceTest {
 
         given(deliveryLogRepository.findByDeliveryId(deliveryId, pageable)).willReturn(mockPage);
 
-        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, pageable);
+        given(securityUtils.isMaster()).willReturn(true);
+
+        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, userId, pageable);
 
         assertThat(result).isNotNull();
         DeliveryLogSearchResponse.DeliveryLogResponseDto dto = result.getContent().get(0);

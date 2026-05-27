@@ -5,5 +5,6 @@ public enum DeliveryStatus {
     PREPARING,
     SHIPPED,
     DELIVERED,
-    CANCELLED
+    CANCELLED,
+    DELETED
 }

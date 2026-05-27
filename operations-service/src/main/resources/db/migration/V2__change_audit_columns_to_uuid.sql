@@ -6,11 +6,9 @@ BEGIN
     IF v_input IS NULL OR v_input = '' THEN
         RETURN NULL;
     END IF;
-    -- UUID 형식인지 체크 (간단한 정규식)
     IF v_input ~ '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$' THEN
         RETURN v_input::uuid;
     ELSE
-        -- 'system' 등 형식이 맞지 않는 경우 시스템용 고정 UUID 반환
         RETURN '00000000-0000-0000-0000-000000000000'::uuid;
     END IF;
 EXCEPTION WHEN OTHERS THEN
@@ -18,7 +16,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql;
 
-ALTER TABLE "operation-db".p_order_claims 
+ALTER TABLE p_order_claims
     ALTER COLUMN created_by TYPE UUID USING convert_to_uuid(created_by),
     ALTER COLUMN updated_by TYPE UUID USING convert_to_uuid(updated_by),
     ALTER COLUMN deleted_by TYPE UUID USING convert_to_uuid(deleted_by);

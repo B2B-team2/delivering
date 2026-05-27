@@ -8,6 +8,7 @@ import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.De
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryCreateResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/internal")
@@ -24,14 +26,18 @@ public class DeliveryInternalController {
     private final DeliveryService deliveryService;
 
     @PostMapping("/deliveries")
-    public List<DeliveryCreateResponse> createInternalDeliveries(@Valid @RequestBody DeliveryCreateClientRequest request, @RequestHeader(value = "X-User-Id", required = false, defaultValue = "c7e2b1a0-5678-4def-9012-3456789abcde") String userId) {
-        List<DeliveryCreateResponse> responses = deliveryService.createSingleDeliveryTransaction(request, userId);
-        return responses;
+    public ResponseEntity<ApiResponse<List<DeliveryCreateResponse>>> createInternalDelivery(
+            @RequestBody List<DeliveryCreateClientRequest> requests,
+            @RequestHeader("X-User-Id") UUID userId) {
+        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests, userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/deliveries/cancel")
-    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(@RequestBody List<DeliveryOrderCancelRequest> request) {
-        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request);
+    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(
+            @RequestBody List<DeliveryOrderCancelRequest> request,
+            @RequestHeader("X-User-Id")  UUID userId) {
+        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request, userId);
         return response;
     }
 }

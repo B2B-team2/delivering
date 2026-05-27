@@ -3,9 +3,9 @@ server:
 
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/delivering
-    username: postgres
-    password: password
+    url: ${OPERATIONS_DB_URL}
+    username: ${OPERATIONS_DB_USERNAME}
+    password: ${OPERATIONS_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
 
   jpa:
@@ -27,7 +27,7 @@ spring:
 eureka:
   client:
     service-url:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: http://eureka-server:8761/eureka/
 
 management:
   endpoints:
