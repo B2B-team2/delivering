@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
+import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLogStatus;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
@@ -12,7 +13,6 @@ import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
 import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
 import com.sparta.deliveryservice.deliveryRoute.global.exception.DeliveryRouteErrorCode;
-import com.sparta.deliveryservice.deliveryRoute.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteDeleteRequest;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteStatusUpdateRequest;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.DeliveryRouteDeleteResponse;
@@ -53,7 +53,7 @@ class DeliveryRouteServiceTest {
     private DeliveryRepository deliveryRepository;
 
     @Mock
-    private SecurityUtils  securityUtils;
+    private SecurityUtils securityUtils;
 
     @Mock
     private CacheManager cacheManager;

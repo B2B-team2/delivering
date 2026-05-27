@@ -2,10 +2,10 @@ package com.sparta.deliveryservice.deliveryLog.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sparta.common.dto.BusinessException;
+import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
 import com.sparta.deliveryservice.deliveryLog.global.exception.DeliveryLogErrorCode;
-import com.sparta.deliveryservice.deliveryLog.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.presentation.dto.resqonse.DeliveryLogSearchResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,7 +21,7 @@ public class DeliveryLogService {
 
     private final DeliveryLogRepository deliveryLogRepository;
     private final ObjectMapper objectMapper;
-    private final SecurityUtils  securityUtils;
+    private final SecurityUtils securityUtils;
 
     @Transactional(readOnly = true)
     public Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> getDeliveryLogs(UUID deliveryId, UUID userId, Pageable pageable) {
