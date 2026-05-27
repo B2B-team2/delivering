@@ -1,5 +1,6 @@
 package com.sparta.deliveryservice.delivery.presentation.dto.resqonse;
 
+import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,7 +21,7 @@ public class DeliveryStatusResponse {
     private String deliveryManagerName;
     private String deliveryManagerPhone;
     private String trackingNumber;
-    private String status;
+    private DeliveryStatus status;
     private LocalDateTime startedAt;
     private String address;
     private String addressDetail;

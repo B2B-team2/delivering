@@ -11,6 +11,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,10 +27,11 @@ public class DeliveryLogController {
     @GetMapping("/deliveries/{delivery_id}/logs")
     public ResponseEntity<ApiResponse<PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto>>> getDeliveryLogs(
             @PathVariable("delivery_id") UUID deliveryId,
+            @RequestHeader("X-User-Id")  UUID userId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
         Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> logPage =
-                deliveryLogService.getDeliveryLogs(deliveryId, pageable);
+                deliveryLogService.getDeliveryLogs(deliveryId, userId, pageable);
 
         PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto> response =
                 DeliveryLogSearchResponse.of(logPage);

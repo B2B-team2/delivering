@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import java.util.UUID;
@@ -28,20 +29,20 @@ public class DeliveryRouteController {
     private final DeliveryRouteService deliveryRouteService;
 
     @GetMapping("/deliveries/{delivery_id}/routes")
-    public ResponseEntity<ApiResponse<DeliveryRouteDetailResponse>> getDeliveryDetailRoutes(@PathVariable("delivery_id") UUID deliveryId) {
-        DeliveryRouteDetailResponse response = deliveryRouteService.getDeliveryDetailRoutes(deliveryId);
+    public ResponseEntity<ApiResponse<DeliveryRouteDetailResponse>> getDeliveryDetailRoutes(@PathVariable("delivery_id") UUID deliveryId, @RequestHeader("X-User-Id")  UUID userId) {
+        DeliveryRouteDetailResponse response = deliveryRouteService.getDeliveryDetailRoutes(deliveryId, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/deliveries/{delivery_id}/routes/{route_id}")
-    public ResponseEntity<ApiResponse<DeliveryRouteStatusUpdateResponse>> getDeliveryRouteStatusUpdate(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestBody DeliveryRouteStatusUpdateRequest request) throws JsonProcessingException {
-        DeliveryRouteStatusUpdateResponse response = deliveryRouteService.updateRouteStatus(deliveryId, routeId, request);
+    public ResponseEntity<ApiResponse<DeliveryRouteStatusUpdateResponse>> getDeliveryRouteStatusUpdate(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestHeader("X-User-Id")  UUID userId, @RequestBody DeliveryRouteStatusUpdateRequest request) throws JsonProcessingException {
+        DeliveryRouteStatusUpdateResponse response = deliveryRouteService.updateRouteStatus(deliveryId, routeId, userId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/deliveries/{delivery_id}/routes/{route_id}")
-    public ResponseEntity<ApiResponse<DeliveryRouteDeleteResponse>> getDeliveryRouteStatusDelete(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestBody DeliveryRouteDeleteRequest request) throws JsonProcessingException {
-        DeliveryRouteDeleteResponse response = deliveryRouteService.deleteRoute(deliveryId, routeId, request);
+    public ResponseEntity<ApiResponse<DeliveryRouteDeleteResponse>> getDeliveryRouteStatusDelete(@PathVariable("delivery_id") UUID deliveryId, @PathVariable("route_id") UUID routeId, @RequestHeader("X-User-Id")  UUID userId, @RequestBody DeliveryRouteDeleteRequest request) throws JsonProcessingException {
+        DeliveryRouteDeleteResponse response = deliveryRouteService.deleteRoute(deliveryId, routeId, userId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
