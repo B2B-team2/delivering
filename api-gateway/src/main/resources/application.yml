@@ -2,4 +2,4 @@ spring:
   application:
     name: api-gateway       # config-server에서 api-gateway.yml 파일을 찾는 기준
   config:
-    import: optional:configserver:http://localhost:8888
+    import: optional:configserver:http://config-server:8888
