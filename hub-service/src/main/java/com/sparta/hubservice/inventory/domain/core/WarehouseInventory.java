@@ -88,6 +88,11 @@ public class WarehouseInventory extends BaseEntity {
         this.quantity += qty;
     }
 
+    public void revertDeduct(int qty) {
+        this.quantity += qty;
+        this.reservedQuantity += qty;
+    }
+
     public void returnStock(int qty) {
         this.quantity += qty;
     }
