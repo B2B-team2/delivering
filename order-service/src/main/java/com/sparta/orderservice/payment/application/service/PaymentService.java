@@ -2,7 +2,7 @@ package com.sparta.orderservice.payment.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.PaymentErrorCode;
-import com.sparta.orderservice.global.security.SecurityUtils;
+import com.sparta.orderservice.global.security.AuthContext;
 import com.sparta.orderservice.order.application.service.OrderCommandService;
 import com.sparta.orderservice.order.application.service.OrderQueryService;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
@@ -29,7 +29,7 @@ public class PaymentService {
     private final PaymentRepository paymentRepository;
     private final OrderQueryService orderQueryService;
     private final OrderCommandService orderCommandService;
-    private final SecurityUtils securityUtils;
+    private final AuthContext authContext;
 
     /**
      * 선결제: 주문 생성과 동시에 COMPLETED 상태로 결제 확정
@@ -62,16 +62,16 @@ public class PaymentService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public PaymentResult cancelPayment(UUID paymentId, UUID requesterId) {
         // MASTER, COMPANY_MANAGER만 결제 취소 가능
-        if (!securityUtils.isMaster() && !securityUtils.isCompanyManager()) {
+        if (!authContext.isMaster() && !authContext.isCompanyManager()) {
             throw new BusinessException(PaymentErrorCode.FORBIDDEN);
         }
 
         Payment payment = findPaymentOrThrow(paymentId);
 
         // COMPANY_MANAGER는 자기 회사가 수령업체인 주문의 결제만 취소 가능
-        if (securityUtils.isCompanyManager()) {
+        if (authContext.isCompanyManager()) {
             UUID receiverCompanyId = orderQueryService.getReceiverCompanyId(payment.getOrderId());
-            if (!receiverCompanyId.equals(securityUtils.getCompanyId())) {
+            if (!receiverCompanyId.equals(authContext.getCompanyId())) {
                 throw new BusinessException(PaymentErrorCode.FORBIDDEN);
             }
         }
@@ -107,14 +107,14 @@ public class PaymentService {
     }
 
     public PaymentResult getPayment(UUID paymentId) {
-        if (!securityUtils.isMaster() && !securityUtils.isCompanyManager()) {
+        if (!authContext.isMaster() && !authContext.isCompanyManager()) {
             throw new BusinessException(PaymentErrorCode.FORBIDDEN);
         }
         Payment payment = findPaymentOrThrow(paymentId);
         // COMPANY_MANAGER는 자기 회사가 수령업체인 주문의 결제만 조회 가능
-        if (securityUtils.isCompanyManager()) {
+        if (authContext.isCompanyManager()) {
             UUID receiverCompanyId = orderQueryService.getReceiverCompanyId(payment.getOrderId());
-            if (!receiverCompanyId.equals(securityUtils.getCompanyId())) {
+            if (!receiverCompanyId.equals(authContext.getCompanyId())) {
                 throw new BusinessException(PaymentErrorCode.FORBIDDEN);
             }
         }
@@ -122,11 +122,11 @@ public class PaymentService {
     }
 
     public Page<PaymentResult> getPayments(Pageable pageable) {
-        if (securityUtils.isMaster()) {
+        if (authContext.isMaster()) {
             return paymentRepository.findAllPayments(pageable).map(PaymentResult::from);
         }
-        if (securityUtils.isCompanyManager()) {
-            List<UUID> orderIds = orderQueryService.getOrderIdsByReceiverCompanyId(securityUtils.getCompanyId());
+        if (authContext.isCompanyManager()) {
+            List<UUID> orderIds = orderQueryService.getOrderIdsByReceiverCompanyId(authContext.getCompanyId());
             if (orderIds.isEmpty()) return Page.empty(pageable);
             return paymentRepository.findPaymentsByOrderIds(orderIds, pageable).map(PaymentResult::from);
         }
