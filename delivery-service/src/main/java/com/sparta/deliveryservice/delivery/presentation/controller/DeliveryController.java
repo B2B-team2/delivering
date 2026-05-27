@@ -43,10 +43,10 @@ public class DeliveryController {
     private final DeliveryService deliveryService;
 
     @PostMapping("/deliveries")
-    public ResponseEntity<ApiResponse<List<DeliveryCreateResponse>>> createDelivery(
-            @RequestBody DeliveryCreateClientRequest request) {
-        List<DeliveryCreateResponse> response = deliveryService.createSingleDeliveryTransaction(request, "TEST_USER");
-        return ResponseEntity.ok(ApiResponse.success(response));
+    public List<DeliveryCreateResponse> createDelivery(
+            @RequestBody List<DeliveryCreateClientRequest> requests) {
+        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests, "TEST_USER");
+        return response;
     }
 
     @GetMapping("/deliveries/{delivery_id}")

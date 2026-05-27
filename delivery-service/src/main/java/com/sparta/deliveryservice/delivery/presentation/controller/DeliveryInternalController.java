@@ -8,6 +8,7 @@ import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.De
 import com.sparta.deliveryservice.delivery.presentation.dto.resqonse.DeliveryCreateResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -24,9 +25,10 @@ public class DeliveryInternalController {
     private final DeliveryService deliveryService;
 
     @PostMapping("/deliveries")
-    public List<DeliveryCreateResponse> createInternalDeliveries(@Valid @RequestBody DeliveryCreateClientRequest request, @RequestHeader(value = "X-User-Id", required = false, defaultValue = "c7e2b1a0-5678-4def-9012-3456789abcde") String userId) {
-        List<DeliveryCreateResponse> responses = deliveryService.createSingleDeliveryTransaction(request, userId);
-        return responses;
+    public ResponseEntity<ApiResponse<List<DeliveryCreateResponse>>> createInternalDelivery(
+            @RequestBody List<DeliveryCreateClientRequest> requests) {
+        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests, "TEST_USER");
+        return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/deliveries/cancel")

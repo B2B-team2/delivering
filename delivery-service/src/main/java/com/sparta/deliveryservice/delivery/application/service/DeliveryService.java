@@ -62,13 +62,14 @@ public class DeliveryService {
     private final CacheManager cacheManager;
 
     @Transactional
-    public List<DeliveryCreateResponse> createSingleDeliveryTransaction(DeliveryCreateClientRequest request, String userId) {
-        List<DeliveryCreateResponse> responses = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss");
-
+    public DeliveryCreateResponse createSingleDelivery(DeliveryCreateClientRequest request, String userId) {
+        // 1. 중복 체크
         if (deliveryRepository.existsByCompanyOrderId(request.getCompanyOrderId())) {
             throw new IllegalStateException("이미 배송이 생성된 주문건입니다. 주문 ID: " + request.getCompanyOrderId());
         }
+
+        // 2. 배송 생성
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss");
         String trackingNumber = "SL" + formatter.format(LocalDateTime.now()) + (int) (Math.random() * 9000 + 1000);
 
         Delivery delivery = Delivery.builder()
@@ -88,29 +89,26 @@ public class DeliveryService {
 
         Delivery savedDelivery = deliveryRepository.save(delivery);
 
+        // 3. 허브 경로 및 매니저 할당
         DeliveryHubRouteSearchRequest hubRequest = DeliveryHubRouteSearchRequest.builder()
                 .fromHubId(request.getDepartureHubId())
                 .toHubId(request.getDestinationHubId())
                 .build();
 
         DeliveryHubRouteSearchResponse hubClientResponse = cachedHubServiceClient.getHubRouteWithCache(hubRequest);
-
         DeliveryManagerResponse managerInfo = deliveryUserServiceClient.getManagerInfo(hubClientResponse.getFromHubId());
 
         savedDelivery.assignDeliveryManager(managerInfo.getDeliveryManagerId(), managerInfo.getDeliverySlackId(), managerInfo.getManagerName(), managerInfo.getManagerPhone());
 
-        List<DeliveryRoute> deliveryRoutes = new ArrayList<>();
+        // 4. 경로 저장
+        List<DeliveryCreateResponse.DeliveryRouteResponseDto> routeResponse = new ArrayList<>();
         String departureHubName = "출발 센터";
         String destinationHubName = "도착 센터";
 
         if (hubClientResponse != null && hubClientResponse.getRoutes() != null) {
             for (DeliveryHubRouteSearchResponse.HubRouteDto dto : hubClientResponse.getRoutes()) {
-                if (dto.getSequence() == 1) {
-                    departureHubName = dto.getFromHubName();
-                }
-                if (dto.getSequence() == hubClientResponse.getRoutes().size()) {
-                    destinationHubName = dto.getToHubName();
-                }
+                if (dto.getSequence() == 1) departureHubName = dto.getFromHubName();
+                if (dto.getSequence() == hubClientResponse.getRoutes().size()) destinationHubName = dto.getToHubName();
 
                 DeliveryRoute route = DeliveryRoute.builder()
                         .deliveryId(savedDelivery.getDeliveryId())
@@ -122,23 +120,21 @@ public class DeliveryService {
                         .status(DeliveryRouteStatus.PENDING)
                         .build();
 
-                deliveryRoutes.add(deliveryRouteRepository.save(route));
+                deliveryRouteRepository.save(route);
+
+                routeResponse.add(DeliveryCreateResponse.DeliveryRouteResponseDto.builder()
+                        .routeId(route.getRouteId())
+                        .sequence(route.getSequence())
+                        .fromHubId(route.getFromHubId())
+                        .toHubId(route.getToHubId())
+                        .estimatedDistance(route.getEstimatedDistance())
+                        .estimatedDuration(route.getEstimatedDuration())
+                        .status(route.getStatus().name())
+                        .build());
             }
         }
 
-        List<DeliveryCreateResponse.DeliveryRouteResponseDto> route = deliveryRoutes.stream()
-                .map(r -> DeliveryCreateResponse.DeliveryRouteResponseDto.builder()
-                        .routeId(r.getRouteId())
-                        .sequence(r.getSequence())
-                        .fromHubId(r.getFromHubId())
-                        .toHubId(r.getToHubId())
-                        .estimatedDistance(r.getEstimatedDistance())
-                        .estimatedDuration(r.getEstimatedDuration())
-                        .status(r.getStatus().name())
-                        .build())
-                .collect(Collectors.toList());
-
-        DeliveryCreateResponse response = DeliveryCreateResponse.builder()
+        return DeliveryCreateResponse.builder()
                 .deliveryId(savedDelivery.getDeliveryId())
                 .companyOrderId(savedDelivery.getCompanyOrderId())
                 .trackingNumber(savedDelivery.getTrackingNumber())
@@ -155,16 +151,15 @@ public class DeliveryService {
                 .deliveryManagerPhone(savedDelivery.getManagerPhone())
                 .deliverySlackId(savedDelivery.getDeliverySlackId())
                 .memo(savedDelivery.getMemo())
-                .finalDispatchDeadlineAt(savedDelivery.getFinalDispatchDeadlineAt())
-                .startedAt(savedDelivery.getStartedAt())
-                .completedAt(savedDelivery.getCompletedAt())
-                .routes(route)
+                .routes(routeResponse)
                 .build();
+    }
 
-        responses.add(response);
-
-
-        return responses;
+    @Transactional
+    public List<DeliveryCreateResponse> createDelivery(List<DeliveryCreateClientRequest> requests, String userId) {
+        return requests.stream()
+                .map(request -> createSingleDelivery(request, userId))
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
