@@ -76,9 +76,10 @@ public class AdminService {
 
             if (user.getRole() == Role.COMPANY_MANAGER) {
                 companyManagerRepository.findById(userId).ifPresent(cm -> {
-                    if (cm.getCompanyId() != null) {
+                    if (request.getCompanyId() != null) {
+                        cm.assignCompany(request.getCompanyId());
                         keycloakAuthClient.updateUserAttribute(
-                                user.getEmail(), "company_id", cm.getCompanyId().toString()
+                                user.getEmail(), "company_id", request.getCompanyId().toString()
                         );
                     }
                 });
@@ -86,9 +87,10 @@ public class AdminService {
 
             if (user.getRole() == Role.HUB_MANAGER) {
                 hubManagerRepository.findById(userId).ifPresent(hm -> {
-                    if (hm.getHubId() != null) {
+                    if (request.getHubId() != null) {
+                        hm.assignHub(request.getHubId());
                         keycloakAuthClient.updateUserAttribute(
-                                user.getEmail(), "hub_id", hm.getHubId().toString()
+                                user.getEmail(), "hub_id", request.getHubId().toString()
                         );
                     }
                 });
