@@ -1,7 +1,7 @@
 package com.sparta.orderservice.payment.application.service;
 
 import com.sparta.common.dto.BusinessException;
-import com.sparta.orderservice.global.security.SecurityUtils;
+import com.sparta.orderservice.global.security.AuthContext;
 import com.sparta.orderservice.order.application.service.OrderCommandService;
 import com.sparta.orderservice.order.application.service.OrderQueryService;
 import com.sparta.orderservice.payment.application.dto.PaymentResult;
@@ -43,7 +43,7 @@ class PaymentServiceTest {
     @Mock
     private OrderCommandService orderCommandService;
     @Mock
-    private SecurityUtils securityUtils;
+    private AuthContext authContext;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -55,7 +55,7 @@ class PaymentServiceTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(securityUtils.isMaster()).thenReturn(true);
+        lenient().when(authContext.isMaster()).thenReturn(true);
 
         orderId = UUID.randomUUID();
         paymentId = UUID.randomUUID();
