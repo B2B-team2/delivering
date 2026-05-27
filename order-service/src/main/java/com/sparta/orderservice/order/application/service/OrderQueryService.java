@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-import com.sparta.orderservice.order.presentation.dto.CompanyOrderDetailsResponse;
+import com.sparta.orderservice.order.application.dto.CompanyOrderDetailsResult;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,15 +32,15 @@ public class OrderQueryService {
     /**
      * 업체 주문 상세 정보 조회 (내부 API 전용)
      */
-    public CompanyOrderDetailsResponse getCompanyOrderDetails(UUID companyOrderId) {
+    public CompanyOrderDetailsResult getCompanyOrderDetails(UUID companyOrderId) {
         CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderWithItemsAndOrder(companyOrderId)
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
 
-        return new CompanyOrderDetailsResponse(
+        return new CompanyOrderDetailsResult(
                 companyOrder.getOrder().getOrderId(),
                 companyOrder.getCompanyOrderId(),
                 companyOrder.getOrderItems().stream()
-                        .map(item -> new CompanyOrderDetailsResponse.ItemDetails(
+                        .map(item -> new CompanyOrderDetailsResult.ItemDetails(
                                 item.getProductOptionId(),
                                 item.getQuantity()
                         ))
