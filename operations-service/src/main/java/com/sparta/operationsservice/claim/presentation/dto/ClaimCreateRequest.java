@@ -18,8 +18,8 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ClaimCreateRequest {
 
-    @NotNull(message = "주문 상품 ID는 필수입니다.")
-    private UUID orderItemId;
+    @NotNull(message = "업체 주문 ID는 필수입니다.")
+    private UUID companyOrderId;
 
     @NotBlank(message = "클레임 타입은 필수입니다.")
     private String claimType;
@@ -31,7 +31,7 @@ public class ClaimCreateRequest {
 
     public ClaimCreateCommand toCommand() {
         return ClaimCreateCommand.builder()
-                .orderItemId(this.orderItemId)
+                .companyOrderId(this.companyOrderId)
                 .claimType(this.claimType)
                 .reason(this.reason)
                 .refundAmount(this.refundAmount != null ? this.refundAmount : BigDecimal.ZERO)

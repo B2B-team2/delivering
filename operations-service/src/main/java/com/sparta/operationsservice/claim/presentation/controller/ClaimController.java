@@ -26,6 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.UUID;
 
+import org.springframework.web.bind.annotation.RequestHeader;
+
+import java.util.UUID;
+
 @RestController
 @RequestMapping("/api/v1/claims")
 @RequiredArgsConstructor
@@ -67,8 +71,9 @@ public class ClaimController {
     @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<ClaimResponse>> updateClaimStatus(
             @PathVariable("claimId") UUID claimId,
+            @RequestHeader("X-User-Id") UUID adminId,
             @RequestBody @Valid ClaimStatusUpdateRequest request) {
-        ClaimDto resultDto = claimService.updateClaimStatus(claimId, request.toCommand());
+        ClaimDto resultDto = claimService.updateClaimStatus(claimId, request.toCommand(), adminId);
         return ResponseEntity.ok(ApiResponse.success(ClaimResponse.from(resultDto)));
     }
 }

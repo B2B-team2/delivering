@@ -35,15 +35,15 @@ public class ClaimDummyInitializer implements ApplicationRunner {
         }
     }
 
-    private void saveClaim(UUID orderItemId, ClaimType type, String reason, BigDecimal refundAmount) {
+    private void saveClaim(UUID companyOrderId, ClaimType type, String reason, BigDecimal refundAmount) {
         OrderClaim claim = OrderClaim.builder()
-                .orderItemId(orderItemId)
+                .companyOrderId(companyOrderId)
                 .claimType(type)
                 .reason(reason)
                 .refundAmount(refundAmount)
                 .status(ClaimStatus.REQUESTED)
                 .build();
-        
+
         orderClaimRepository.save(claim);
     }
 }
