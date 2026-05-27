@@ -1,10 +1,13 @@
 package com.sparta.orderservice.order.presentation.controller;
 
+import com.sparta.orderservice.order.application.dto.CompanyOrderDetailsResult;
 import com.sparta.orderservice.order.application.service.CompanyOrderStatusService;
+import com.sparta.orderservice.order.application.service.OrderQueryService;
 import com.sparta.orderservice.order.presentation.dto.ClaimCancelResponse;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderDeliveredRequest;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +24,15 @@ import java.util.UUID;
 public class InternalOrderController {
 
     private final CompanyOrderStatusService companyOrderStatusService;
+    private final OrderQueryService orderQueryService;
+
+    /**
+     * 업체 주문 상세 정보 조회 (상위 orderId + 상품 목록)
+     */
+    @GetMapping("/company/{companyOrderId}/details")
+    public CompanyOrderDetailsResult getCompanyOrderDetails(@PathVariable UUID companyOrderId) {
+        return orderQueryService.getCompanyOrderDetails(companyOrderId);
+    }
 
     /**
      * 업체 주문 수령 완료 처리 (SHIPPED → DELIVERED)

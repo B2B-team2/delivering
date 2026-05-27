@@ -1,6 +1,5 @@
 package com.sparta.companyservice.company.presentation.controller;
 
-import com.sparta.common.dto.ApiResponse;
 import com.sparta.companyservice.company.application.dto.CompanyDefaultAddressDto;
 import com.sparta.companyservice.company.application.service.CompanyAddressService;
 import com.sparta.companyservice.company.application.service.CompanyService;
@@ -27,23 +26,23 @@ public class InternalCompanyController {
     private final CompanyAddressService companyAddressService;
 
     @PostMapping("/hub-mapping")
-    public ApiResponse<CompanyHubMappingResponse> getHubMapping(
+    public CompanyHubMappingResponse getHubMapping(
             @Valid @RequestBody CompanyHubMappingRequest request) {
         
         CompanyHubMappingResponse response = CompanyHubMappingResponse.from(
                 companyService.getHubMappings(request.getCompanyIds()));
 
-        return ApiResponse.success(response);
+        return response;
     }
 
     @GetMapping("/exists")
-    public ApiResponse<Boolean> existsCompanyInHub(@RequestParam UUID hubId) {
-        return ApiResponse.success(companyService.existsCompanyInHub(hubId));
+    public Boolean existsCompanyInHub(@RequestParam UUID hubId) {
+        return companyService.existsCompanyInHub(hubId);
     }
 
     @GetMapping("/{companyId}/default-address")
-    public ApiResponse<CompanyDefaultAddressDto> getDefaultAddress(
+    public CompanyDefaultAddressDto getDefaultAddress(
             @PathVariable("companyId") UUID companyId) {
-        return ApiResponse.success(companyAddressService.getDefaultAddress(companyId));
+        return companyAddressService.getDefaultAddress(companyId);
     }
 }

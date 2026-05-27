@@ -12,5 +12,5 @@ public interface OrderClaimRepository {
     Optional<OrderClaim> findById(UUID claimId);
     Page<OrderClaim> findAll(Pageable pageable);
     long count();
-    boolean existsByOrderItemId(UUID orderItemId);
+    boolean existsByCompanyOrderId(UUID companyOrderId);
 }

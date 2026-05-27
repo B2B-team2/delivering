@@ -17,7 +17,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ClaimDto {
     private UUID claimId;
-    private UUID orderItemId;
+    private UUID companyOrderId;
     private String claimType;
     private String status;
     private String reason;
@@ -27,7 +27,7 @@ public class ClaimDto {
     public static ClaimDto from(OrderClaim entity) {
         return ClaimDto.builder()
                 .claimId(entity.getClaimId())
-                .orderItemId(entity.getOrderItemId())
+                .companyOrderId(entity.getCompanyOrderId())
                 .claimType(entity.getClaimType().name())
                 .status(entity.getStatus().name())
                 .reason(entity.getReason())

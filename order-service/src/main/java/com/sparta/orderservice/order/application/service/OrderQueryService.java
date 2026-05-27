@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
+import com.sparta.orderservice.order.application.dto.CompanyOrderDetailsResult;
+import java.util.stream.Collectors;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -25,6 +28,25 @@ public class OrderQueryService {
     private final OrderRepository orderRepository;
     private final CompanyOrderRepository companyOrderRepository;
     private final AuthContext authContext;
+
+    /**
+     * 업체 주문 상세 정보 조회 (내부 API 전용)
+     */
+    public CompanyOrderDetailsResult getCompanyOrderDetails(UUID companyOrderId) {
+        CompanyOrder companyOrder = companyOrderRepository.findCompanyOrderWithItemsAndOrder(companyOrderId)
+                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
+
+        return new CompanyOrderDetailsResult(
+                companyOrder.getOrder().getOrderId(),
+                companyOrder.getCompanyOrderId(),
+                companyOrder.getOrderItems().stream()
+                        .map(item -> new CompanyOrderDetailsResult.ItemDetails(
+                                item.getProductOptionId(),
+                                item.getQuantity()
+                        ))
+                        .collect(Collectors.toList())
+        );
+    }
 
     /**
      * 주문 목록 조회 (페이징)

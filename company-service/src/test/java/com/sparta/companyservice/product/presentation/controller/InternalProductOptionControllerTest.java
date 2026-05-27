@@ -65,7 +65,6 @@ class InternalProductOptionControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data.optionsMap['" + optionId + "'].unitPrice").value(15000));
+                .andExpect(jsonPath("$.optionsMap['" + optionId + "'].unitPrice").value(15000));
     }
 }

@@ -61,9 +61,8 @@ class InternalCompanyControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestBody))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data.mappings['" + companyId + "'].companyName").value("Test Company"))
-                .andExpect(jsonPath("$.data.mappings['" + companyId + "'].hubId").value(hubId.toString()));
+                .andExpect(jsonPath("$.mappings['" + companyId + "'].companyName").value("Test Company"))
+                .andExpect(jsonPath("$.mappings['" + companyId + "'].hubId").value(hubId.toString()));
     }
 
     @Test
@@ -90,8 +89,7 @@ class InternalCompanyControllerTest {
         mockMvc.perform(get("/api/v1/internal/companies/exists")
                         .param("hubId", hubId.toString()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data").value(true));
+                .andExpect(jsonPath("$").value(true));
     }
 
     @Test
@@ -119,8 +117,7 @@ class InternalCompanyControllerTest {
         // when & then
         mockMvc.perform(get("/api/v1/internal/companies/{companyId}/default-address", companyId))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value(200))
-                .andExpect(jsonPath("$.data.address").value("경기도 수원시"))
-                .andExpect(jsonPath("$.data.recipientName").value("홍길동"));
+                .andExpect(jsonPath("$.address").value("경기도 수원시"))
+                .andExpect(jsonPath("$.recipientName").value("홍길동"));
     }
 }

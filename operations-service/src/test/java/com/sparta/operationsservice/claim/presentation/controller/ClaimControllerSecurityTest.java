@@ -65,7 +65,7 @@ class ClaimControllerSecurityTest {
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .contentType("application/json")
-                        .content("{\"orderItemId\":\"" + UUID.randomUUID() + "\", \"claimType\":\"RETURN\", \"reason\":\"Defective\"}"))
+                        .content("{\"companyOrderId\":\"" + UUID.randomUUID() + "\", \"claimType\":\"RETURN\", \"reason\":\"Defective\"}"))
                 .andExpect(status().isCreated());
     }
 }

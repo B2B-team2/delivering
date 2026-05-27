@@ -37,7 +37,7 @@ public class OrderClaimRepositoryImpl implements OrderClaimRepository {
     }
 
     @Override
-    public boolean existsByOrderItemId(UUID orderItemId) {
-        return orderClaimJpaRepository.existsByOrderItemIdAndDeletedAtIsNull(orderItemId);
+    public boolean existsByCompanyOrderId(UUID companyOrderId) {
+        return orderClaimJpaRepository.existsByCompanyOrderIdAndDeletedAtIsNull(companyOrderId);
     }
 }
