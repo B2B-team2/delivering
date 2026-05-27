@@ -9,6 +9,7 @@ import com.sparta.companyservice.product.presentation.dto.ProductCategoryCreateR
 import com.sparta.companyservice.product.presentation.dto.ProductCategoryDeleteResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductCategoryResponse;
 import com.sparta.companyservice.product.presentation.dto.ProductCategoryUpdateRequest;
+import com.sparta.common.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +18,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.data.web.SortDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -36,6 +39,7 @@ public class ProductCategoryController {
     private final ProductCategoryService categoryService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<ProductCategoryResponse>> createCategory(@RequestBody @Valid ProductCategoryCreateRequest request) {
         ProductCategoryDto resultDto = categoryService.createCategory(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -65,6 +69,7 @@ public class ProductCategoryController {
     }
 
     @PatchMapping("/{categoryId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<ProductCategoryResponse>> updateCategory(
             @PathVariable UUID categoryId,
             @RequestBody @Valid ProductCategoryUpdateRequest request) {
@@ -73,10 +78,12 @@ public class ProductCategoryController {
     }
 
     @DeleteMapping("/{categoryId}")
-    public ResponseEntity<ApiResponse<ProductCategoryDeleteResponse>> deleteCategory(@PathVariable UUID categoryId) {
-        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 (시스템 UUID 고정값 교체)
-        UUID systemId = UUID.fromString("00000000-0000-0000-0000-000000000000");
-        ProductCategoryDto resultDto = categoryService.deleteCategory(categoryId, systemId);
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
+    public ResponseEntity<ApiResponse<ProductCategoryDeleteResponse>> deleteCategory(
+            @PathVariable UUID categoryId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = UUID.fromString(userDetails.getUserId());
+        ProductCategoryDto resultDto = categoryService.deleteCategory(categoryId, userId);
         return ResponseEntity.ok(ApiResponse.success(ProductCategoryDeleteResponse.of(resultDto.getCategoryId(), resultDto.getDeletedAt())));
     }
 }

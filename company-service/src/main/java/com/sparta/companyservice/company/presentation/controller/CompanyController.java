@@ -14,6 +14,7 @@ import com.sparta.companyservice.company.presentation.dto.CompanyAddressUpdateRe
 import com.sparta.companyservice.company.presentation.dto.CompanyCreateRequest;
 import com.sparta.companyservice.company.presentation.dto.CompanyResponse;
 import com.sparta.companyservice.company.presentation.dto.CompanyUpdateRequest;
+import com.sparta.common.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
@@ -21,6 +22,8 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -41,6 +44,7 @@ public class CompanyController {
     private final CompanyAddressService companyAddressService;
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyResponse>> createCompany(@RequestBody @Valid CompanyCreateRequest request) {
         CompanyDto resultDto = companyService.createCompany(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -48,6 +52,7 @@ public class CompanyController {
     }
 
     @PostMapping("/{companyId}/addresses")
+    @PreAuthorize("hasRole('COMPANY_MANAGER') and @authService.isCompanyOwner(#companyId)")
     public ResponseEntity<ApiResponse<CompanyAddressResponse>> createAddress(
             @PathVariable UUID companyId,
             @RequestBody @Valid CompanyAddressCreateRequest request) {
@@ -57,6 +62,7 @@ public class CompanyController {
     }
 
     @GetMapping("/{companyId}/addresses")
+    @PreAuthorize("hasRole('COMPANY_MANAGER') and @authService.isCompanyOwner(#companyId)")
     public ResponseEntity<ApiResponse<PageResponse<CompanyAddressResponse>>> getAddresses(
             @PathVariable UUID companyId,
             @PageableDefault(size = 10, sort = {"isDefault", "createdAt"}, direction = Sort.Direction.DESC) Pageable pageable) {
@@ -70,16 +76,18 @@ public class CompanyController {
     }
 
     @DeleteMapping("/addresses/{addressId}")
+    @PreAuthorize("@authService.isAddressOwner(#addressId)")
     public ResponseEntity<ApiResponse<CompanyAddressDeleteResponse>> deleteAddress(
-            @PathVariable UUID addressId) {
-        // TODO: 권한 로직 및 실제 사용자 정보 연동 시 수정 필요 (시스템 UUID 고정값 교체)
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+            @PathVariable UUID addressId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = UUID.fromString(userDetails.getUserId());
         CompanyAddressDto resultDto = companyAddressService.deleteAddress(addressId, userId);
         CompanyAddressDeleteResponse response = CompanyAddressDeleteResponse.of(resultDto.getAddressId(), resultDto.getDeletedAt());
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/addresses/{addressId}")
+    @PreAuthorize("@authService.isAddressOwner(#addressId)")
     public ResponseEntity<ApiResponse<CompanyAddressResponse>> updateAddress(
             @PathVariable UUID addressId,
             @RequestBody @Valid CompanyAddressUpdateRequest request) {
@@ -88,6 +96,7 @@ public class CompanyController {
     }
 
     @PatchMapping("/{companyId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER') or @authService.isCompanyOwner(#companyId)")
     public ResponseEntity<ApiResponse<CompanyResponse>> patchCompany(
             @PathVariable UUID companyId,
             @RequestBody @Valid CompanyUpdateRequest request) {
@@ -114,10 +123,11 @@ public class CompanyController {
     }
 
     @DeleteMapping("/{companyId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER')")
     public ResponseEntity<ApiResponse<CompanyResponse>> deleteCompany(
-            @PathVariable UUID companyId) {
-        // TODO: 추후 인증/인가 로직 도입 시 실제 사용자 ID로 교체 필요
-        UUID userId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+            @PathVariable UUID companyId,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        UUID userId = UUID.fromString(userDetails.getUserId());
         CompanyDto resultDto = companyService.deleteCompany(companyId, userId);
         return ResponseEntity.ok(ApiResponse.success(CompanyResponse.from(resultDto)));
     }
