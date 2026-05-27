@@ -68,25 +68,6 @@ public class HubStockAdapter implements HubStockPort {
         }
     }
 
-    // 출고 완료 시 실재고 차감
-    @Override
-    public void deductStock(CompanyOrder companyOrder) {
-        try {
-            List<InventoryItem> items = companyOrder.getOrderItems().stream()
-                    .map(item -> new InventoryItem(item.getProductOptionId(), item.getQuantity()))
-                    .toList();
-            hubClient.deductStock(new InventoryBulkRequest(
-                    companyOrder.getOrder().getOrderId(),
-                    null,   // deduct는 companyOrderId 불필요
-                    items
-            ));
-        } catch (BusinessException e) {
-            throw e;
-        } catch (Exception e) {
-            throw handleUnexpectedException("deductStock", e);
-        }
-    }
-
     // cancelCompanyOrder Saga 보상 전용: 특정 CompanyOrder의 재고 재예약
     @Override
     public void reserveCompanyStock(CompanyOrder companyOrder) {

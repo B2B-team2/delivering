@@ -1,11 +1,14 @@
 package com.sparta.orderservice.order.presentation.controller;
 
 import com.sparta.orderservice.order.application.service.CompanyOrderStatusService;
-import com.sparta.orderservice.order.presentation.dto.CompanyOrderDeliveredResponse;
+import com.sparta.orderservice.order.presentation.dto.ClaimCancelResponse;
+import com.sparta.orderservice.order.presentation.dto.CompanyOrderDeliveredRequest;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,8 +27,22 @@ public class InternalOrderController {
      * 모든 CompanyOrder가 DELIVERED이면 Order → COMPLETED 자동 전환
      */
     @PatchMapping("/company/{companyOrderId}/delivered")
-    public CompanyOrderDeliveredResponse deliverCompanyOrder(@PathVariable UUID companyOrderId) {
-        return CompanyOrderDeliveredResponse.from(companyOrderStatusService.confirmDelivery(companyOrderId));
+    public void deliverCompanyOrder(
+            @PathVariable UUID companyOrderId,
+            @RequestHeader("X-User-Id") UUID requesterId,
+            @RequestBody CompanyOrderDeliveredRequest request) {  // body 수신 유지 (delivery-service 호출 규격)
+        companyOrderStatusService.confirmDelivery(companyOrderId, requesterId);
+    }
+
+    /**
+     * 클레임 처리 서브 주문 취소 (SHIPPED/DELIVERED → CANCELLED)
+     * operations-service 내부 전용 — 상태 변경만, 재고/배송 보상 없음
+     */
+    @PatchMapping("/company/{companyOrderId}/claim-cancel")
+    public ClaimCancelResponse cancelCompanyOrderByClaim(
+            @PathVariable UUID companyOrderId,
+            @RequestHeader("X-User-Id") UUID requesterId) {
+        return ClaimCancelResponse.from(companyOrderStatusService.cancelCompanyOrderByClaim(companyOrderId, requesterId));
     }
 
     /**
