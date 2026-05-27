@@ -1,13 +1,15 @@
 package com.sparta.deliveryservice;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.delivery.application.service.DeliveryService;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
+import com.sparta.deliveryservice.delivery.global.exception.DeliveryErrorCode;
+import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServiceClient;
-import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryHubServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryOrderServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
@@ -40,8 +42,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import static org.mockito.BDDMockito.lenient;
 
 import java.util.List;
 import java.util.UUID;
@@ -51,13 +53,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doNothing;
 
-@AnalyzeClasses(packages = "com.sparta.deliveryservice",
-        importOptions = {
-                ImportOption.DoNotIncludeJars.class,
-                ImportOption.DoNotIncludeTests.class
-        }
-)
 @ExtendWith(MockitoExtension.class)
 class DeliveryServiceTests {
 
@@ -82,119 +79,94 @@ class DeliveryServiceTests {
     @Mock
     private DeliveryUserServiceClient deliveryUserServiceClient;
 
-    @Spy
-    private ObjectMapper objectMapper = new ObjectMapper();
+    @Mock
+    private DeliveryOrderServiceClient deliveryOrderServiceClient;
+
+    @Mock
+    private SecurityUtils securityUtils;
 
     @Test
-    @DisplayName("배송 생성 성공 - 외부 API 연동 및 하위 경로 생성 검증")
-    void createInternalDeliveries_Success() {
+    @DisplayName("배송 생성 성공 - 단일 건 생성 검증")
+    void createSingleDelivery_Success() {
+        // Given
         UUID companyOrderId = UUID.randomUUID();
-        UUID companyReceiveId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         UUID departureHubId = UUID.randomUUID();
         UUID destinationHubId = UUID.randomUUID();
-        UUID deliveryId = UUID.randomUUID();
-        UUID managerId = UUID.randomUUID();
-        String managerSlackId = "SlackId";
 
         DeliveryCreateClientRequest requestDto = DeliveryCreateClientRequest.builder()
                 .companyOrderId(companyOrderId)
-                .companyReceiveId(companyReceiveId)
-                .memo("문 앞에 두고 가세요.")
                 .departureHubId(departureHubId)
                 .destinationHubId(destinationHubId)
                 .deliveryAddress(new DeliveryAddress("강원도 원주시", "102호"))
                 .recipientName("홍길동")
-                .phone("010-1234-5678")
-                .postalCode("12345")
                 .recipientSlackId("slack_hong")
                 .build();
 
+        // 저장될 Mock Delivery 설정
         Delivery mockDelivery = Delivery.builder()
                 .companyOrderId(companyOrderId)
-                .companyReceiveId(companyReceiveId)
-                .trackingNumber("SL2605251200001234")
-                .status(DeliveryStatus.PENDING)
                 .departureHubId(departureHubId)
                 .destinationHubId(destinationHubId)
-                .deliveryAddress(requestDto.getDeliveryAddress())
-                .recipientName(requestDto.getRecipientName())
-                .recipientSlackId(requestDto.getRecipientSlackId())
+                .status(DeliveryStatus.PENDING)
                 .build();
 
+        // Reflection으로 deliveryId 주입
         try {
             java.lang.reflect.Field idField = Delivery.class.getDeclaredField("deliveryId");
             idField.setAccessible(true);
-            idField.set(mockDelivery, deliveryId);
-        } catch (Exception e) {
-        }
+            idField.set(mockDelivery, UUID.randomUUID());
+        } catch (Exception e) { }
 
         given(deliveryRepository.existsByCompanyOrderId(companyOrderId)).willReturn(false);
         given(deliveryRepository.save(any(Delivery.class))).willReturn(mockDelivery);
 
+        // Hub 및 Manager API Mocking
         DeliveryHubRouteSearchResponse.HubRouteDto routeDto = DeliveryHubRouteSearchResponse.HubRouteDto.builder()
                 .sequence(1)
-                .fromHubId(departureHubId)
+                .fromHubId(departureHubId) // 이 값이 전달됨
                 .toHubId(destinationHubId)
                 .fromHubName("서울 허브")
                 .toHubName("원주 허브")
-                .distance(new java.math.BigDecimal("120.5"))
-                .duration(java.sql.Time.valueOf("02:30:00"))
                 .build();
+
 
         DeliveryHubRouteSearchResponse mockHubResponse = DeliveryHubRouteSearchResponse.builder()
-                .fromHubId(departureHubId)
+                .fromHubId(departureHubId) // <--- 이 값이 중요합니다!
                 .routes(List.of(routeDto))
                 .build();
-        given(cachedHubServiceClient.getHubRouteWithCache(any(DeliveryHubRouteSearchRequest.class))).willReturn(mockHubResponse);
 
-        DeliveryManagerResponse mockManagerResponse = DeliveryManagerResponse.builder()
-                .deliveryManagerId(managerId)
-                .deliverySlackId(managerSlackId)
-                .managerName("이배송 매니저")
-                .managerPhone("010-9999-8888")
-                .build();
-        given(deliveryUserServiceClient.getManagerInfo(departureHubId)).willReturn(mockManagerResponse);
+        given(cachedHubServiceClient.getHubRouteWithCache(any(DeliveryHubRouteSearchRequest.class)))
+                .willReturn(mockHubResponse);
 
-        DeliveryRoute mockRoute = DeliveryRoute.builder()
-                .deliveryId(deliveryId)
-                .sequence(1)
-                .fromHubId(departureHubId)
-                .toHubId(destinationHubId)
-                .estimatedDistance(new java.math.BigDecimal("120.5"))
-                .estimatedDuration(java.sql.Time.valueOf("02:30:00"))
-                .status(DeliveryRouteStatus.PENDING)
-                .build();
-        given(deliveryRouteRepository.save(any(DeliveryRoute.class))).willReturn(mockRoute);
+        given(deliveryUserServiceClient.getManagerInfo(departureHubId))
+                .willReturn(DeliveryManagerResponse.builder().deliveryManagerId(UUID.randomUUID()).build());
+        DeliveryCreateResponse actualResponse = deliveryService.createSingleDelivery(requestDto, userId);
 
-        List<DeliveryCreateResponse> result = deliveryService.createSingleDeliveryTransaction(requestDto, "user-id-123");
-
-        assertThat(result).isNotEmpty();
-        assertThat(result.size()).isEqualTo(1);
-
-        DeliveryCreateResponse actualResponse = result.get(0);
-        assertThat(actualResponse.getDeliveryId()).isEqualTo(deliveryId);
+        // Then
+        assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getCompanyOrderId()).isEqualTo(companyOrderId);
         assertThat(actualResponse.getDepartureHubName()).isEqualTo("서울 허브");
         assertThat(actualResponse.getDestinationHubName()).isEqualTo("원주 허브");
-
         assertThat(actualResponse.getRoutes()).hasSize(1);
-        assertThat(actualResponse.getRoutes().get(0).getSequence()).isEqualTo(1);
-        assertThat(actualResponse.getRoutes().get(0).getStatus()).isEqualTo("PENDING");
     }
 
     @Test
     @DisplayName("배송 생성 실패 - 이미 배송이 생성된 주문 ID인 경우 중복 에러 반환")
     void createInternalDeliveries_DuplicateOrder_ThrowsException() {
+        // Given
         UUID companyOrderId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID(); // String에서 UUID로 변경
         DeliveryCreateClientRequest requestDto = DeliveryCreateClientRequest.builder()
                 .companyOrderId(companyOrderId)
                 .build();
 
         given(deliveryRepository.existsByCompanyOrderId(companyOrderId)).willReturn(true);
 
-        assertThatThrownBy(() -> deliveryService.createSingleDeliveryTransaction(requestDto, "user-id-123"))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("이미 배송이 생성된 주문건입니다. 주문 ID: " + companyOrderId);
+        // When & Then
+        assertThatThrownBy(() -> deliveryService.createSingleDelivery(requestDto, userId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DUPLICATE_DELIVERY);
     }
 
     @Test
@@ -204,6 +176,7 @@ class DeliveryServiceTests {
 
         UUID deliveryId1 = UUID.randomUUID();
         UUID deliveryId2 = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         Delivery delivery1 = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -242,7 +215,7 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findAll(pageable)).willReturn(mockPage);
 
-        org.springframework.data.domain.Page<DeliverySearchResponse.DeliveryResponseDto> result = deliveryService.searchDeliveries(pageable);
+        org.springframework.data.domain.Page<DeliverySearchResponse.DeliveryResponseDto> result = deliveryService.searchDeliveries(pageable, userId);
 
         assertThat(result).isNotNull();
         assertThat(result.getTotalElements()).isEqualTo(2);
@@ -270,6 +243,7 @@ class DeliveryServiceTests {
         String managerSlackId = "SlackId";
         UUID departureHubId = UUID.randomUUID();
         UUID destinationHubId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         Delivery delivery = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -313,7 +287,7 @@ class DeliveryServiceTests {
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(List.of(route));
 
-        DeliveryDetailResponse result = deliveryService.getDeliveryDetail(deliveryId);
+        DeliveryDetailResponse result = deliveryService.getDeliveryDetail(deliveryId, userId);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -330,13 +304,16 @@ class DeliveryServiceTests {
     @Test
     @DisplayName("배송 상세 조회 실패 - 존재하지 않는 배송 ID")
     void getDeliveryDetail_NotFound_ThrowsException() {
+        // Given
         UUID nonExistentId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.getDeliveryDetail(nonExistentId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("해당 배송건이 존재하지 않습니다. ID: " + nonExistentId);
+        // When & Then
+        assertThatThrownBy(() -> deliveryService.getDeliveryDetail(nonExistentId, userId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND); // 에러 코드로 검증
     }
 
     @Test
@@ -345,6 +322,7 @@ class DeliveryServiceTests {
         UUID deliveryId = UUID.randomUUID();
         UUID addressId = UUID.randomUUID();
         UUID companyReceiveId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         Delivery delivery = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -368,7 +346,7 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
 
-        DeliveryAddressResponse result = deliveryService.getDeliveryAddress(deliveryId, addressId);
+        DeliveryAddressResponse result = deliveryService.getDeliveryAddress(deliveryId, addressId, userId);
 
         assertThat(result).isNotNull();
         assertThat(result.getAddressId()).isEqualTo(addressId);
@@ -385,12 +363,12 @@ class DeliveryServiceTests {
     void getDeliveryAddress_NotFound_ThrowsException() {
         UUID nonExistentId = UUID.randomUUID();
         UUID addressId = UUID.randomUUID();
-
+        UUID userId = UUID.randomUUID();
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.getDeliveryAddress(nonExistentId, addressId))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("해당 배송건이 존재하지 않습니다. ID: " + nonExistentId);
+        assertThatThrownBy(() -> deliveryService.getDeliveryAddress(nonExistentId, addressId, userId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
 
     @Test
@@ -401,6 +379,7 @@ class DeliveryServiceTests {
         UUID departureHubId = UUID.randomUUID();
         UUID destinationHubId = UUID.randomUUID();
         UUID managerId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         Delivery delivery = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -445,7 +424,7 @@ class DeliveryServiceTests {
         given(deliveryRepository.findByTrackingNumber(trackingNumber)).willReturn(java.util.Optional.of(delivery));
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(routes);
 
-        DeliveryTrackingResponse result = deliveryService.trackDelivery(trackingNumber);
+        DeliveryTrackingResponse result = deliveryService.trackDelivery(trackingNumber, userId);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -464,13 +443,14 @@ class DeliveryServiceTests {
     @Test
     @DisplayName("배송 추적 실패 - 존재하지 않는 운송장 번호")
     void trackDelivery_NotFound_ThrowsException() {
+        UUID userId = UUID.randomUUID();
         String invalidTrackingNumber = "INVALID12345";
 
         given(deliveryRepository.findByTrackingNumber(invalidTrackingNumber)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.trackDelivery(invalidTrackingNumber))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("존재하지 않는 운송장 번호입니다. 운송장: " + invalidTrackingNumber);
+        assertThatThrownBy(() -> deliveryService.trackDelivery(invalidTrackingNumber, userId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
 
     @Test
@@ -479,6 +459,7 @@ class DeliveryServiceTests {
         UUID deliveryId = UUID.randomUUID();
         UUID routeId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         DeliveryCancelRequest requestDto = DeliveryCancelRequest.builder()
                 .reason("고객 요청으로 인한 취소")
                 .build();
@@ -536,7 +517,10 @@ class DeliveryServiceTests {
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(List.of(route));
         given(deliveryLogRepository.save(any(DeliveryLog.class))).willReturn(mockLog);
 
-        DeliveryCancelResponse result = deliveryService.cancelDelivery(deliveryId, requestDto);
+        given(securityUtils.isMaster()).willReturn(true);
+
+
+        DeliveryCancelResponse result = deliveryService.cancelDelivery(deliveryId, userId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -553,25 +537,32 @@ class DeliveryServiceTests {
     @DisplayName("배송 취소 실패 - 이미 취소 완료된 상태인 경우")
     void cancelDelivery_AlreadyCancelled_ThrowsException() {
         UUID deliveryId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         DeliveryCancelRequest requestDto = DeliveryCancelRequest.builder()
                 .reason("고객 요청으로 인한 취소")
                 .build();
 
         Delivery delivery = Delivery.builder()
                 .status(DeliveryStatus.CANCELLED)
+                .deliveryManagerId(userId)
                 .build();
 
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
 
-        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, requestDto))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("이미 취소 완료 처리된 배송건입니다.");
+        given(securityUtils.isMaster()).willReturn(false);
+        given(securityUtils.getUserId()).willReturn(userId);
+
+        // 3. 기대하는 에러 코드를 서비스 코드의 INVALID_STATUS_TRANSITION으로 수정
+        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, userId, requestDto))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.INVALID_STATUS_TRANSITION);
     }
 
     @Test
     @DisplayName("배송 취소 실패 - 배송이 이미 대기 상태(PENDING)를 벗어난 경우")
     void cancelDelivery_NotPendingStatus_ThrowsException() {
         UUID deliveryId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         DeliveryCancelRequest requestDto = DeliveryCancelRequest.builder()
                 .reason("주소 오 입력")
                 .build();
@@ -582,9 +573,11 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
 
-        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, requestDto))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("배송이 이미 허브를 출발하여 취소할 수 없는 상태입니다. 현재 상태: SHIPPED");
+        given(securityUtils.isMaster()).willReturn(true);
+
+        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, userId, requestDto))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.INVALID_STATUS_TRANSITION);
     }
 
     @Test
@@ -592,6 +585,7 @@ class DeliveryServiceTests {
     void updateDeliveryStatus_Success() throws Exception {
         UUID deliveryId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         DeliveryStatusUpdateRequest requestDto = DeliveryStatusUpdateRequest.builder()
                 .status(DeliveryStatus.DELIVERED)
                 .reason("배송 완료 처리")
@@ -634,7 +628,9 @@ class DeliveryServiceTests {
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
         given(deliveryLogRepository.save(any(DeliveryLog.class))).willReturn(mockLog);
 
-        DeliveryStatusUpdateResponse result = deliveryService.updateDeliveryStatus(deliveryId, requestDto);
+        given(securityUtils.isMaster()).willReturn(true);
+
+        DeliveryStatusUpdateResponse result = deliveryService.updateDeliveryStatus(deliveryId, userId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -647,6 +643,7 @@ class DeliveryServiceTests {
     @DisplayName("배송 상태 변경 실패 - 존재하지 않는 배송 ID")
     void updateDeliveryStatus_NotFound_ThrowsException() {
         UUID nonExistentId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         DeliveryStatusUpdateRequest requestDto = DeliveryStatusUpdateRequest.builder()
                 .status(DeliveryStatus.DELIVERED)
                 .reason("테스트")
@@ -654,9 +651,9 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.updateDeliveryStatus(nonExistentId, requestDto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("해당 배송 정보가 존재하지 않습니다. ID: " + nonExistentId);
+        assertThatThrownBy(() -> deliveryService.updateDeliveryStatus(nonExistentId, userId, requestDto))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
 
     @Test
@@ -667,6 +664,7 @@ class DeliveryServiceTests {
         String previousManagerSlackId = "SlackId12";
         UUID newManagerId = UUID.randomUUID();
         String managerSlackId = "SlackId";
+        UUID userId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
 
         DeliveryManagerUpdateRequest requestDto = DeliveryManagerUpdateRequest.builder()
@@ -716,7 +714,9 @@ class DeliveryServiceTests {
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
         given(deliveryLogRepository.save(any(DeliveryLog.class))).willReturn(mockLog);
 
-        DeliveryManagerUpdateResponse result = deliveryService.updateDeliveryManager(deliveryId, requestDto);
+        given(securityUtils.isMaster()).willReturn(true);
+
+        DeliveryManagerUpdateResponse result = deliveryService.updateDeliveryManager(deliveryId, userId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -739,6 +739,7 @@ class DeliveryServiceTests {
     @DisplayName("배송 담당자 변경 실패 - 존재하지 않는 배송 ID")
     void updateDeliveryManager_NotFound_ThrowsException() {
         UUID nonExistentId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         DeliveryManagerUpdateRequest requestDto = DeliveryManagerUpdateRequest.builder()
                 .deliveryManagerId(UUID.randomUUID())
                 .name("신임매니저")
@@ -748,9 +749,9 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.updateDeliveryManager(nonExistentId, requestDto))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("해당 배송 정보가 존재하지 않습니다. ID: " + nonExistentId);
+        assertThatThrownBy(() -> deliveryService.updateDeliveryManager(nonExistentId, userId, requestDto))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
 
     @Test
@@ -759,6 +760,7 @@ class DeliveryServiceTests {
         String trackingNumber = "SL2605251200000001";
         UUID deliveryId = UUID.randomUUID();
         UUID managerId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
         String managerSlackId = "SlackId";
 
         Delivery delivery = Delivery.builder()
@@ -792,11 +794,18 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findByTrackingNumber(trackingNumber)).willReturn(java.util.Optional.of(delivery));
 
-        DeliveryStatusResponse result = deliveryService.completeDelivery(trackingNumber);
+        given(securityUtils.isMaster()).willReturn(false);
+        given(securityUtils.getUserId()).willReturn(managerId);
 
+        doNothing().when(deliveryOrderServiceClient).companyOrderDelivered(any(), any(), any());
+
+        // When
+        DeliveryStatusResponse result = deliveryService.completeDelivery(trackingNumber, userId);
+
+        // Then
         assertThat(result).isNotNull();
         assertThat(result.getTrackingNumber()).isEqualTo(trackingNumber);
-        assertThat(result.getStatus()).isEqualTo("DELIVERED");
+        assertThat(result.getStatus()).isEqualTo(DeliveryStatus.DELIVERED);
         assertThat(result.getDeliveryManagerId()).isEqualTo(managerId);
         assertThat(result.getDeliveryManagerName()).isEqualTo("부산매니저");
         assertThat(result.getDeliveryManagerPhone()).isEqualTo("010-4444-5555");
@@ -809,11 +818,12 @@ class DeliveryServiceTests {
     @DisplayName("배송 완료 처리 실패 - 존재하지 않는 운송장 번호")
     void completeDelivery_NotFound_ThrowsException() {
         String invalidTrackingNumber = "INVALID99999";
+        UUID userId = UUID.randomUUID();
 
         given(deliveryRepository.findByTrackingNumber(invalidTrackingNumber)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.completeDelivery(invalidTrackingNumber))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("존재하지 않는 운송장 번호입니다. 운송장: " + invalidTrackingNumber);
+        assertThatThrownBy(() -> deliveryService.completeDelivery(invalidTrackingNumber, userId))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
 }

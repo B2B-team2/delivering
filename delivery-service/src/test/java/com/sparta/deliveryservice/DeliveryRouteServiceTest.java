@@ -1,6 +1,7 @@
 package com.sparta.deliveryservice;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
@@ -10,6 +11,8 @@ import com.sparta.deliveryservice.deliveryRoute.application.service.DeliveryRout
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
 import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
+import com.sparta.deliveryservice.deliveryRoute.global.exception.DeliveryRouteErrorCode;
+import com.sparta.deliveryservice.deliveryRoute.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteDeleteRequest;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.request.DeliveryRouteStatusUpdateRequest;
 import com.sparta.deliveryservice.deliveryRoute.presentation.dto.resqonse.DeliveryRouteDeleteResponse;
@@ -30,6 +33,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 
@@ -47,6 +51,9 @@ class DeliveryRouteServiceTest {
 
     @Mock
     private DeliveryRepository deliveryRepository;
+
+    @Mock
+    private SecurityUtils  securityUtils;
 
     @Mock
     private CacheManager cacheManager;
@@ -77,6 +84,7 @@ class DeliveryRouteServiceTest {
         UUID routeId = UUID.randomUUID();
         UUID fromHubId = UUID.randomUUID();
         UUID toHubId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         DeliveryRoute route = DeliveryRoute.builder()
                 .deliveryId(deliveryId)
@@ -105,7 +113,7 @@ class DeliveryRouteServiceTest {
 
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(List.of(route));
 
-        DeliveryRouteDetailResponse result = deliveryRouteService.getDeliveryDetailRoutes(deliveryId);
+        DeliveryRouteDetailResponse result = deliveryRouteService.getDeliveryDetailRoutes(deliveryId, userId);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -126,6 +134,7 @@ class DeliveryRouteServiceTest {
         UUID deliveryId = UUID.randomUUID();
         UUID routeId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         DeliveryRouteStatusUpdateRequest requestDto = DeliveryRouteStatusUpdateRequest.builder()
                 .status(validStatusName)
@@ -180,7 +189,7 @@ class DeliveryRouteServiceTest {
         given(deliveryRouteRepository.save(any(DeliveryRoute.class))).willReturn(route);
         given(deliveryLogRepository.save(any(DeliveryLog.class))).willReturn(mockLog);
 
-        DeliveryRouteStatusUpdateResponse result = deliveryRouteService.updateRouteStatus(deliveryId, routeId, requestDto);
+        DeliveryRouteStatusUpdateResponse result = deliveryRouteService.updateRouteStatus(deliveryId, routeId, userId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getRouteId()).isEqualTo(routeId);
@@ -189,10 +198,12 @@ class DeliveryRouteServiceTest {
         assertThat(result.getLogId()).isEqualTo(logId);
     }
     @Test
-    @DisplayName("배송 경로 상태 변경 성공 - 경로 정보가 없을 때 기본값 반환 검증")
-    void updateRouteStatus_RouteNotFound_ReturnsDefaultValues() throws Exception {
+    @DisplayName("배송 경로 상태 변경 실패 - 경로 정보가 없을 때 예외 발생")
+    void updateRouteStatus_RouteNotFound_ThrowsException() throws Exception {
+        // Given
         UUID deliveryId = UUID.randomUUID();
         UUID routeId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         DeliveryRouteStatusUpdateRequest requestDto = DeliveryRouteStatusUpdateRequest.builder()
                 .status(validStatusName)
@@ -203,13 +214,12 @@ class DeliveryRouteServiceTest {
 
         given(deliveryRouteRepository.findById(routeId)).willReturn(java.util.Optional.empty());
 
-        DeliveryRouteStatusUpdateResponse result = deliveryRouteService.updateRouteStatus(deliveryId, routeId, requestDto);
+        given(securityUtils.canUpdate(any())).willReturn(true);
 
-        assertThat(result).isNotNull();
-        assertThat(result.getRouteId()).isEqualTo(routeId);
-        assertThat(result.getCurrentStatus()).isEqualTo(validStatusName);
-        assertThat(result.getEstimatedDistance()).isEqualTo(BigDecimal.ZERO);
-        assertThat(result.getLogId()).isNull();
+        // When & Then: 예외가 발생하는지 검증
+        assertThatThrownBy(() -> deliveryRouteService.updateRouteStatus(deliveryId, routeId, userId, requestDto))
+                .isInstanceOf(BusinessException.class)
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryRouteErrorCode.DELIVERY_ROUTE_NOT_FOUND);
     }
 
     @Test
@@ -219,6 +229,7 @@ class DeliveryRouteServiceTest {
         UUID routeId = UUID.randomUUID();
         UUID remainingRouteId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
 
         DeliveryRouteDeleteRequest requestDto = DeliveryRouteDeleteRequest.builder()
                 .reason("경로 오지정으로 인한 취소")
@@ -274,7 +285,7 @@ class DeliveryRouteServiceTest {
         given(deliveryLogRepository.save(any(DeliveryLog.class))).willReturn(mockLog);
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(List.of(remainingRoute));
 
-        DeliveryRouteDeleteResponse result = deliveryRouteService.deleteRoute(deliveryId, routeId, requestDto);
+        DeliveryRouteDeleteResponse result = deliveryRouteService.deleteRoute(deliveryId, routeId, userId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
