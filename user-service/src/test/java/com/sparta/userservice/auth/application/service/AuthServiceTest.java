@@ -2,6 +2,7 @@ package com.sparta.userservice.auth.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.userservice.auth.infrastructure.keycloak.KeycloakAuthClient;
+import com.sparta.userservice.auth.infrastructure.keycloak.KeycloakTokenResponse;
 import com.sparta.userservice.auth.presentation.dto.request.LoginRequest;
 import com.sparta.userservice.auth.presentation.dto.request.SignupRequest;
 import com.sparta.userservice.auth.presentation.dto.response.LoginResponse;
@@ -26,6 +27,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -125,15 +127,15 @@ class AuthServiceTest {
     void login_success() {
         LoginRequest request = createLoginRequest("test@test.com", "Password1!");
         User user = createUser(Role.COMPANY_MANAGER, ApprovalStatus.APPROVED);
-        LoginResponse loginResponse = createLoginResponse("accessToken", "refreshToken");
+        KeycloakTokenResponse tokenResponse = createKeycloakTokenResponse("accessToken", "refreshToken");
 
         given(userRepository.findByEmailAndDeletedAtIsNull(anyString())).willReturn(Optional.of(user));
-        given(keycloakAuthClient.login(anyString(), anyString())).willReturn(loginResponse);
+        given(keycloakAuthClient.login(anyString(), anyString())).willReturn(tokenResponse);
 
         LoginResponse result = authService.login(request);
 
         assertThat(result.getAccessToken()).isEqualTo("accessToken");
-        verify(tokenService).saveRefreshToken(any(), anyString());
+        verify(tokenService).saveRefreshToken(any(), anyString(), anyLong());
     }
 
     @Test
@@ -164,7 +166,7 @@ class AuthServiceTest {
     @Test
     @DisplayName("로그아웃 - 성공")
     void logout_success() {
-        String accessToken = "accessToken";
+        String accessToken = "eyJhbGciOiJSUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.signature";
         String refreshToken = "refreshToken";
         User user = createUser(Role.COMPANY_MANAGER, ApprovalStatus.APPROVED);
 
@@ -174,7 +176,7 @@ class AuthServiceTest {
 
         authService.logout(accessToken, refreshToken);
 
-        verify(tokenService).blacklistAccessToken(accessToken);
+        verify(tokenService).blacklistAccessToken(anyString(), anyLong());
         verify(tokenService).deleteRefreshToken(any());
         verify(keycloakAuthClient).logout(refreshToken);
     }
@@ -198,17 +200,17 @@ class AuthServiceTest {
     void refresh_success() {
         String refreshToken = "refreshToken";
         User user = createUser(Role.COMPANY_MANAGER, ApprovalStatus.APPROVED);
-        LoginResponse loginResponse = createLoginResponse("newAccessToken", "newRefreshToken");
+        KeycloakTokenResponse tokenResponse = createKeycloakTokenResponse("newAccessToken", "newRefreshToken");
 
         given(keycloakAuthClient.extractEmail(refreshToken)).willReturn("test@test.com");
         given(userRepository.findByEmailAndDeletedAtIsNull(anyString())).willReturn(Optional.of(user));
         given(tokenService.getRefreshToken(any())).willReturn(refreshToken);
-        given(keycloakAuthClient.refresh(refreshToken)).willReturn(loginResponse);
+        given(keycloakAuthClient.refresh(refreshToken)).willReturn(tokenResponse);
 
         LoginResponse result = authService.refresh(refreshToken);
 
         assertThat(result.getAccessToken()).isEqualTo("newAccessToken");
-        verify(tokenService).saveRefreshToken(any(), anyString());
+        verify(tokenService).saveRefreshToken(any(), anyString(), anyLong());
     }
 
     @Test
@@ -253,8 +255,7 @@ class AuthServiceTest {
         return request;
     }
 
-    private LoginResponse createLoginResponse(String accessToken, String refreshToken) {
-        LoginResponse response = new LoginResponse(accessToken, refreshToken);
-        return response;
+    private KeycloakTokenResponse createKeycloakTokenResponse(String accessToken, String refreshToken) {
+        return new KeycloakTokenResponse(accessToken, refreshToken, "Bearer", 3600L, 7200L);
     }
 }

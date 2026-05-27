@@ -11,4 +11,5 @@ public class KeycloakTokenResponse {
     private String refreshToken;
     private String tokenType;
     private long expiresIn;
+    private long refreshExpiresIn;
 }
