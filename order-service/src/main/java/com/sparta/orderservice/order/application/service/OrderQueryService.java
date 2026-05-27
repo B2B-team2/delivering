@@ -2,7 +2,7 @@ package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
-import com.sparta.orderservice.global.security.SecurityUtils;
+import com.sparta.orderservice.global.security.AuthContext;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
@@ -15,7 +15,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -25,7 +24,7 @@ public class OrderQueryService {
 
     private final OrderRepository orderRepository;
     private final CompanyOrderRepository companyOrderRepository;
-    private final SecurityUtils securityUtils;
+    private final AuthContext authContext;
 
     /**
      * 주문 목록 조회 (페이징)
@@ -34,11 +33,11 @@ public class OrderQueryService {
      * 그 외             → 403
      */
     public Page<OrderResult> getOrders(Pageable pageable) {
-        if (securityUtils.isMaster()) {
+        if (authContext.isMaster()) {
             return orderRepository.findAllOrders(pageable).map(OrderResult::from);
         }
-        if (securityUtils.isCompanyManager()) {
-            UUID companyId = securityUtils.getCompanyId();
+        if (authContext.isCompanyManager()) {
+            UUID companyId = authContext.getCompanyId();
             return orderRepository.findOrdersByCompanyId(companyId, pageable).map(OrderResult::from);
         }
         throw new BusinessException(OrderErrorCode.FORBIDDEN);
@@ -66,27 +65,14 @@ public class OrderQueryService {
         return CompanyOrderResult.from(companyOrder);
     }
 
-    /**
-     * 결제 취소 가능 여부 조회
-     */
+    // payment 도메인 내부 호출용 — 결제 취소 가능 여부 조회
     public boolean isCancellable(UUID orderId) {
         return orderRepository.findOrderById(orderId)
             .map(Order::isCancellable)
             .orElse(false);
     }
 
-    /**
-     * 결제 도메인 내부 호출용
-     * 수령업체 기준 orderId 목록 조회 (getPayments COMPANY_MANAGER 필터링)
-     */
-    public List<UUID> getOrderIdsByReceiverCompanyId(UUID companyId) {
-        return orderRepository.findOrderIdsByReceiverCompanyId(companyId);
-    }
-
-    /**
-     * 결제 도메인 내부 호출용
-     * orderId → receiverCompanyId 단일 조회 (cancelPayment / getPayment 접근 권한 검증)
-     */
+    // payment 도메인 내부 호출용 — orderId → receiverCompanyId 조회 (cancelPayment / getPayment 접근 권한 검증)
     public UUID getReceiverCompanyId(UUID orderId) {
         return orderRepository.findReceiverCompanyIdByOrderId(orderId)
             .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
@@ -94,9 +80,9 @@ public class OrderQueryService {
 
     // 주문 읽기 접근 검증 — 자기 회사가 수령업체 OR 공급업체인지 확인
     private void validateOrderReadAccess(Order order) {
-        if (securityUtils.isMaster()) return;
-        if (securityUtils.isCompanyManager()) {
-            UUID companyId = securityUtils.getCompanyId();
+        if (authContext.isMaster()) return;
+        if (authContext.isCompanyManager()) {
+            UUID companyId = authContext.getCompanyId();
             boolean isRelated = order.getReceiverCompanyId().equals(companyId)
                     || order.getCompanyOrders().stream()
                             .anyMatch(co -> co.getCompanyId().equals(companyId));
@@ -108,9 +94,9 @@ public class OrderQueryService {
 
     // CompanyOrder 읽기 접근 검증 — 자기 회사가 공급업체인지 확인
     private void validateCompanyOrderAccess(CompanyOrder companyOrder) {
-        if (securityUtils.isMaster()) return;
-        if (securityUtils.isCompanyManager()) {
-            UUID companyId = securityUtils.getCompanyId();
+        if (authContext.isMaster()) return;
+        if (authContext.isCompanyManager()) {
+            UUID companyId = authContext.getCompanyId();
             if (!companyOrder.getCompanyId().equals(companyId)) {
                 throw new BusinessException(OrderErrorCode.FORBIDDEN);
             }

@@ -7,9 +7,9 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.UUID;
 
-// 게이트웨이가 주입한 인증 헤더를 읽는 유틸리티
+// 게이트웨이가 주입한 인증 헤더를 읽어 AuthContext를 구현 — HTTP 세부사항을 application 계층에서 격리
 @Component
-public class SecurityUtils {
+public class SecurityUtils implements AuthContext {
 
     private HttpServletRequest getRequest() {
         ServletRequestAttributes attributes =

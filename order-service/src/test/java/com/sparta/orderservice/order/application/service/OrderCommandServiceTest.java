@@ -2,7 +2,7 @@ package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.port.CompanyPort;
-import com.sparta.orderservice.global.security.SecurityUtils;
+import com.sparta.orderservice.global.security.AuthContext;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.application.port.DeliveryPort;
@@ -63,7 +63,7 @@ class OrderCommandServiceTest {
     @Mock
     private OrderWriter orderWriter;
     @Mock
-    private SecurityUtils securityUtils;
+    private AuthContext authContext;
 
     @InjectMocks
     private OrderCommandService orderCommandService;
@@ -76,8 +76,6 @@ class OrderCommandServiceTest {
 
     @BeforeEach
     void setUp() {
-        lenient().when(securityUtils.isMaster()).thenReturn(true);
-
         receiverCompanyId = UUID.randomUUID();
         supplierCompanyId = UUID.randomUUID();
         requesterId = UUID.randomUUID();
@@ -104,6 +102,11 @@ class OrderCommandServiceTest {
     @Nested
     @DisplayName("createOrder()")
     class CreateOrder {
+
+        @BeforeEach
+        void setUpRole() {
+            when(authContext.isCompanyManager()).thenReturn(true);
+        }
 
         @Test
         @DisplayName("정상 흐름: hub 조회 → 재고 예약 → 배송 생성 → 저장 순으로 실행")
@@ -209,6 +212,7 @@ class OrderCommandServiceTest {
 
         @BeforeEach
         void setUpOrder() {
+            lenient().when(authContext.isMaster()).thenReturn(true);
             pendingOrder = buildPendingOrder();
         }
 
@@ -297,6 +301,11 @@ class OrderCommandServiceTest {
     @Nested
     @DisplayName("cancelCompanyOrder()")
     class CancelCompanyOrder {
+
+        @BeforeEach
+        void setUpRole() {
+            when(authContext.isMaster()).thenReturn(true);
+        }
 
         @Test
         @DisplayName("마지막 서브주문 취소 → Order CANCELLED + OrderCancelledEvent 발행")
