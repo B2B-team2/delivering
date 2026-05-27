@@ -37,34 +37,6 @@ public class CompanyOrderWriter {
             order.startDelivery();
         }
 
-        // TX 종료 후 deductStock 인자로 사용하기 위해 지연 로딩 컬렉션 미리 초기화
-        co.getOrderItems().size();
-
         return co;
-    }
-
-    /**
-     * deductStock 외부 호출 실패 시 SHIPPED → PREPARING 복원 (Saga 보상 전용)
-     * : SHIPPED 상태인 CompanyOrder가 하나도 없어지면 Order도 PENDING으로 복원
-     */
-    @Transactional
-    public void revertShip(UUID companyOrderId) {
-        CompanyOrder co = companyOrderRepository.findCompanyOrderWithItemsAndOrder(companyOrderId)
-                .orElseThrow(() -> new BusinessException(OrderErrorCode.COMPANY_ORDER_NOT_FOUND));
-
-        if (co.getStatus() != CompanyOrderStatus.SHIPPED) {
-            return; // 이미 다른 경로로 복원됐거나 상태가 변경된 경우
-        }
-
-        co.revertShip();
-
-        Order order = co.getOrder();
-        boolean anyOtherShipped = order.getCompanyOrders().stream()
-                .anyMatch(other -> !other.getCompanyOrderId().equals(companyOrderId)
-                        && other.getStatus() == CompanyOrderStatus.SHIPPED);
-
-        if (!anyOtherShipped && order.getStatus() == OrderStatus.DELIVERING) {
-            order.revertDelivery();
-        }
     }
 }

@@ -55,7 +55,10 @@ public class DeliveryAdapter implements DeliveryPort {
     @Override
     public void cancelDeliveries(List<UUID> companyOrderIds) {
         try {
-            deliveryClient.cancelDeliveries(new DeliveryCancelRequest(companyOrderIds));
+            List<DeliveryCancelRequest> requests = companyOrderIds.stream()
+                    .map(DeliveryCancelRequest::new)
+                    .toList();
+            deliveryClient.cancelDeliveries(requests);
         } catch (BusinessException e) {
             throw e;
         } catch (Exception e) {
