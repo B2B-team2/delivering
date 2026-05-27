@@ -33,8 +33,6 @@ import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogReposi
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRoute;
 import com.sparta.deliveryservice.deliveryRoute.domain.core.DeliveryRouteStatus;
 import com.sparta.deliveryservice.deliveryRoute.domain.repository.DeliveryRouteRepository;
-import com.tngtech.archunit.core.importer.ImportOption;
-import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 import org.junit.jupiter.api.DisplayName;
@@ -43,7 +41,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import static org.mockito.BDDMockito.lenient;
 
 import java.util.List;
 import java.util.UUID;

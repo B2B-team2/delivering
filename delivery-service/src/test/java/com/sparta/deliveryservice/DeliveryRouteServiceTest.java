@@ -214,9 +214,7 @@ class DeliveryRouteServiceTest {
 
         given(deliveryRouteRepository.findById(routeId)).willReturn(java.util.Optional.empty());
 
-        given(securityUtils.canUpdate(any())).willReturn(true);
 
-        // When & Then: 예외가 발생하는지 검증
         assertThatThrownBy(() -> deliveryRouteService.updateRouteStatus(deliveryId, routeId, userId, requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryRouteErrorCode.DELIVERY_ROUTE_NOT_FOUND);
