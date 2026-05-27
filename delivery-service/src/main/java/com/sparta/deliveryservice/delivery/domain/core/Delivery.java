@@ -151,6 +151,11 @@ public class Delivery extends BaseEntity {
         this.completedAt = LocalDateTime.now();
     }
 
+    public void deleteDelivery(String trackingNumber) {
+        this.trackingNumber = trackingNumber;
+        this.status = DeliveryStatus.DELETED;
+    }
+
     public void assignDeliveryManager(UUID deliveryManagerId, String deliverySlackId, String managerName, String managerPhone) {
         this.deliveryManagerId = deliveryManagerId;
         this.deliverySlackId = deliverySlackId;

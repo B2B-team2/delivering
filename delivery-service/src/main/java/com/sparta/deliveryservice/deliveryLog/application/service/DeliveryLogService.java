@@ -1,8 +1,11 @@
 package com.sparta.deliveryservice.deliveryLog.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.deliveryLog.domin.core.DeliveryLog;
 import com.sparta.deliveryservice.deliveryLog.domin.repository.DeliveryLogRepository;
+import com.sparta.deliveryservice.deliveryLog.global.exception.DeliveryLogErrorCode;
+import com.sparta.deliveryservice.deliveryLog.global.security.SecurityUtils;
 import com.sparta.deliveryservice.deliveryLog.presentation.dto.resqonse.DeliveryLogSearchResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -17,12 +20,21 @@ import java.util.UUID;
 public class DeliveryLogService {
 
     private final DeliveryLogRepository deliveryLogRepository;
-    private final ObjectMapper objectMapper; // JSON 이력 데이터를 오가는 오브젝트 파서 주입
+    private final ObjectMapper objectMapper;
+    private final SecurityUtils  securityUtils;
 
     @Transactional(readOnly = true)
-    public Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> getDeliveryLogs(UUID deliveryId, Pageable pageable) {
+    public Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> getDeliveryLogs(UUID deliveryId, UUID userId, Pageable pageable) {
+
+        if (!securityUtils.isMaster()) {
+            throw new BusinessException(DeliveryLogErrorCode.LOG_ACCESS_DENIED);
+        }
 
         Page<DeliveryLog> logPage = deliveryLogRepository.findByDeliveryId(deliveryId, pageable);
+
+        if (logPage.isEmpty()) {
+            throw new BusinessException(DeliveryLogErrorCode.DELIVERY_LOG_NOT_FOUND);
+        }
 
         return logPage.map(log -> {
             Object parsedPrevious = null;
