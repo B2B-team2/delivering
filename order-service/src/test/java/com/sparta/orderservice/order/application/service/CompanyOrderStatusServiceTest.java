@@ -157,7 +157,7 @@ class CompanyOrderStatusServiceTest {
             when(companyOrderRepository.findCompanyOrderWithOrderAndSiblings(co.getCompanyOrderId()))
                     .thenReturn(Optional.of(co));
 
-            CompanyOrderDeliveredResult result = companyOrderStatusService.confirmDelivery(co.getCompanyOrderId());
+            CompanyOrderDeliveredResult result = companyOrderStatusService.confirmDelivery(co.getCompanyOrderId(), UUID.randomUUID());
 
             assertThat(result.companyOrderStatus()).isEqualTo(CompanyOrderStatus.DELIVERED.name());
             assertThat(result.orderStatus()).isEqualTo(OrderStatus.COMPLETED.name());
@@ -172,7 +172,7 @@ class CompanyOrderStatusServiceTest {
             when(companyOrderRepository.findCompanyOrderWithOrderAndSiblings(co.getCompanyOrderId()))
                     .thenReturn(Optional.of(co));
 
-            assertThatThrownBy(() -> companyOrderStatusService.confirmDelivery(co.getCompanyOrderId()))
+            assertThatThrownBy(() -> companyOrderStatusService.confirmDelivery(co.getCompanyOrderId(), UUID.randomUUID()))
                     .isInstanceOf(BusinessException.class);
         }
     }

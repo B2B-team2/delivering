@@ -69,13 +69,13 @@ public class CompanyOrderStatusService {
 
     // 업체 주문 수령 완료: SHIPPED → DELIVERED
     @Transactional
-    public CompanyOrderDeliveredResult confirmDelivery(UUID companyOrderId) {
+    public CompanyOrderDeliveredResult confirmDelivery(UUID companyOrderId, UUID requesterId) {
         CompanyOrder companyOrder = findWithOrderAndSiblingsOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.SHIPPED) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.deliver();
-        companyOrder.getOrder().updateStatus(null);
+        companyOrder.getOrder().updateStatus(requesterId);
         return CompanyOrderDeliveredResult.from(companyOrder);
     }
 

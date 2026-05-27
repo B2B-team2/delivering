@@ -17,7 +17,6 @@ public interface DeliveryClient {
     List<DeliveryCreateResponse> createDeliveries(@RequestBody List<DeliveryCreateRequest> requests);
 
     // 배송 일괄 취소 (Saga 보상 전용 내부 API)
-    // TODO: 배송팀 구현 완료 후 연동 - POST /api/v1/internal/deliveries/cancel
     @PostMapping("/api/v1/internal/deliveries/cancel")
-    void cancelDeliveries(@RequestBody DeliveryCancelRequest request);
+    void cancelDeliveries(@RequestBody List<DeliveryCancelRequest> requests);
 }
