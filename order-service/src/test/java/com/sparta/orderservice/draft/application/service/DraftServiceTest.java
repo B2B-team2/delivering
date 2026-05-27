@@ -166,6 +166,18 @@ class DraftServiceTest {
 
             verify(orderCommandService, never()).createOrder(any(), any());
         }
+
+        @Test
+        @DisplayName("productPort가 일부 productOptionId를 반환하지 않으면 BusinessException 발생")
+        void missing_product_option_in_map_throws_business_exception() {
+            when(draftWriter.readAndValidateDrafts(draftIds, userId)).thenReturn(List.of(draft));
+            when(productPort.getProductOptionInfos(anyList())).thenReturn(Map.of()); // 빈 맵 — productOptionId 누락
+
+            assertThatThrownBy(() -> draftService.createOrderFromDraft(command))
+                    .isInstanceOf(BusinessException.class);
+
+            verify(orderCommandService, never()).createOrder(any(), any());
+        }
     }
 
     @Nested
