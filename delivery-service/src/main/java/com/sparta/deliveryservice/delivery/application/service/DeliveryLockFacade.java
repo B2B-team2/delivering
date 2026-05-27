@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 @Slf4j
@@ -20,7 +21,7 @@ public class DeliveryLockFacade {
     private final RedissonClient redissonClient;
     private final DeliveryService deliveryService;
 
-    public List<DeliveryCreateResponse> createDeliveriesWithLock(List<DeliveryCreateClientRequest> requests, String userId) {
+    public List<DeliveryCreateResponse> createDeliveriesWithLock(List<DeliveryCreateClientRequest> requests, UUID userId) {
         List<DeliveryCreateResponse> totalResponses = new ArrayList<>();
 
         for (DeliveryCreateClientRequest request : requests) {
