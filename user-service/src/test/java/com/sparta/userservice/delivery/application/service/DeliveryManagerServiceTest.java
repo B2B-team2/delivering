@@ -9,7 +9,6 @@ import com.sparta.userservice.delivery.presentation.dto.response.DeliveryManager
 import com.sparta.userservice.global.config.security.util.SecurityUtils;
 import com.sparta.userservice.user.domain.entity.DeliveryManager;
 import com.sparta.userservice.user.domain.entity.User;
-import com.sparta.userservice.user.domain.enums.ApprovalStatus;
 import com.sparta.userservice.user.domain.enums.DeliveryManagerStatus;
 import com.sparta.userservice.user.domain.enums.ManagerType;
 import com.sparta.userservice.user.domain.enums.Role;
@@ -208,7 +207,7 @@ class DeliveryManagerServiceTest {
     // ===== 헬퍼 =====
 
     private DeliveryManager createDeliveryManager(ManagerType managerType) {
-        User user = User.create("test@test.com", "KEYCLOAK_MANAGED", "테스트", "010-1234-5678", "U123", Role.COMPANY_DELIVERY_MANAGER);
+        User user = User.create(UUID.randomUUID(), "test@test.com", "KEYCLOAK_MANAGED", "테스트", "010-1234-5678", "U123", Role.COMPANY_DELIVERY_MANAGER);
         user.approve(UUID.randomUUID());
         return DeliveryManager.create(user, managerType, 0);
     }

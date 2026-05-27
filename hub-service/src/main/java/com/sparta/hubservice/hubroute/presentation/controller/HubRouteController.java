@@ -1,7 +1,9 @@
 package com.sparta.hubservice.hubroute.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.common.dto.PageResponse;
+import com.sparta.hubservice.global.exception.ErrorCode;
 import com.sparta.hubservice.hubroute.application.dto.HubRouteDto;
 import com.sparta.hubservice.hubroute.application.service.HubRouteService;
 import com.sparta.hubservice.hubroute.presentation.dto.HubRouteCreateRequest;
@@ -48,7 +50,9 @@ public class HubRouteController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<HubRouteResponse>> createHubRoute(
+            @RequestHeader("X-User-Role") String role,
             @Valid @RequestBody HubRouteCreateRequest request) {
+        requireMaster(role);
         HubRouteDto dto = hubRouteService.createHubRoute(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.created(HubRouteResponse.from(dto)));
@@ -79,17 +83,27 @@ public class HubRouteController {
 
     @PatchMapping("/{route_id}")
     public ResponseEntity<ApiResponse<HubRouteResponse>> updateHubRoute(
+            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID route_id,
             @RequestBody HubRouteUpdateRequest request) {
+        requireMaster(role);
         HubRouteDto dto = hubRouteService.updateHubRoute(route_id, request.toCommand());
         return ResponseEntity.ok(ApiResponse.success(HubRouteResponse.from(dto)));
     }
 
     @DeleteMapping("/{route_id}")
     public ResponseEntity<ApiResponse<Void>> deleteHubRoute(
+            @RequestHeader("X-User-Role") String role,
             @PathVariable UUID route_id,
             @RequestHeader("X-User-Id") UUID userId) {
+        requireMaster(role);
         hubRouteService.deleteHubRoute(route_id, userId);
         return ResponseEntity.ok(ApiResponse.success());
+    }
+
+    private void requireMaster(String role) {
+        if (!"MASTER".equals(role)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
     }
 }
