@@ -58,9 +58,12 @@ public class WarehouseService {
     }
 
     @Transactional
-    public WarehouseDto updateWarehouse(UUID warehouseId, WarehouseUpdateCommand command) {
+    public WarehouseDto updateWarehouse(UUID warehouseId, WarehouseUpdateCommand command, UUID requesterHubId) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WAREHOUSE_NOT_FOUND));
+        if (requesterHubId != null && !requesterHubId.equals(warehouse.getHubId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         WarehouseStatus status = command.getStatus() != null ? WarehouseStatus.valueOf(command.getStatus()) : null;
         warehouse.update(command.getWarehouseName(), command.getAddress(), command.getRegion(),
                 command.getContactPhone(), status);
@@ -68,9 +71,12 @@ public class WarehouseService {
     }
 
     @Transactional
-    public void deleteWarehouse(UUID warehouseId, UUID deletedBy) {
+    public void deleteWarehouse(UUID warehouseId, UUID deletedBy, UUID requesterHubId) {
         Warehouse warehouse = warehouseRepository.findById(warehouseId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.WAREHOUSE_NOT_FOUND));
+        if (requesterHubId != null && !requesterHubId.equals(warehouse.getHubId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         warehouse.softDelete(deletedBy);
         warehouseRepository.save(warehouse);
     }
