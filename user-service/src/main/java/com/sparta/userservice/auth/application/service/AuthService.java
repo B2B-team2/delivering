@@ -1,7 +1,10 @@
 package com.sparta.userservice.auth.application.service;
 
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.sparta.common.dto.BusinessException;
 import com.sparta.userservice.auth.infrastructure.keycloak.KeycloakAuthClient;
+import com.sparta.userservice.auth.infrastructure.keycloak.KeycloakTokenResponse;
 import com.sparta.userservice.user.infrastructure.repository.CompanyManagerRepository;
 import com.sparta.userservice.delivery.infrastructure.repository.DeliveryManagerRepository;
 import com.sparta.userservice.user.infrastructure.repository.HubManagerRepository;
@@ -22,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.Instant;
 
 @Slf4j
 @Service
@@ -105,14 +110,14 @@ public class AuthService {
             throw new BusinessException(UserErrorCode.USER_NOT_APPROVED);
         }
 
-        LoginResponse loginResponse = keycloakAuthClient.login(
+        KeycloakTokenResponse tokenResponse = keycloakAuthClient.login(
                 request.getEmail(),
                 request.getPassword()
         );
 
-        tokenService.saveRefreshToken(user.getId(), loginResponse.getRefreshToken());
+        tokenService.saveRefreshToken(user.getId(), tokenResponse.getRefreshToken(), tokenResponse.getRefreshExpiresIn());
 
-        return loginResponse;
+        return new LoginResponse(tokenResponse.getAccessToken(), tokenResponse.getRefreshToken());
     }
 
     public LoginResponse refresh(String refreshToken) {
@@ -128,11 +133,11 @@ public class AuthService {
             throw new BusinessException(UserErrorCode.INVALID_REFRESH_TOKEN);
         }
 
-        LoginResponse loginResponse = keycloakAuthClient.refresh(refreshToken);
+        KeycloakTokenResponse tokenResponse = keycloakAuthClient.refresh(refreshToken);
 
-        tokenService.saveRefreshToken(user.getId(), loginResponse.getRefreshToken());
+        tokenService.saveRefreshToken(user.getId(), tokenResponse.getRefreshToken(), tokenResponse.getRefreshExpiresIn());
 
-        return loginResponse;
+        return new LoginResponse(tokenResponse.getAccessToken(), tokenResponse.getRefreshToken());
     }
 
     public void logout(String accessToken, String refreshToken) {
@@ -147,7 +152,11 @@ public class AuthService {
         User user = userRepository.findByEmailAndDeletedAtIsNull(email)
                 .orElseThrow(() -> new BusinessException(UserErrorCode.USER_NOT_FOUND));
 
-        tokenService.blacklistAccessToken(accessToken);
+        DecodedJWT decoded = JWT.decode(accessToken);
+        long remainingSeconds = decoded.getExpiresAt().toInstant().getEpochSecond()
+                - Instant.now().getEpochSecond();
+
+        tokenService.blacklistAccessToken(accessToken, Math.max(remainingSeconds, 0));
         tokenService.deleteRefreshToken(user.getId());
         keycloakAuthClient.logout(refreshToken);
     }

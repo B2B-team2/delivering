@@ -21,37 +21,39 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) {
-        ErrorCode code = (ErrorCode) e.getErrorCode();
+        com.sparta.common.dto.ErrorCode errorCode = e.getErrorCode();
 
-        if (code == ErrorCode.HUB_IN_USE) {
-            ErrorResponse response = ErrorResponse.builder()
-                    .status(code.getHttpStatus().value())
-                    .message(code.getMessage())
-                    .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
-                            .field("hubId")
-                            .message("해당 허브에 소속된 창고/업체/배송담당자가 존재하여 삭제할 수 없습니다.")
-                            .build()))
-                    .build();
-            return ResponseEntity.status(code.getHttpStatus()).body(response);
-        }
+        if (errorCode instanceof ErrorCode code) {
+            if (code == ErrorCode.HUB_IN_USE) {
+                ErrorResponse response = ErrorResponse.builder()
+                        .status(code.getHttpStatus().value())
+                        .message(code.getMessage())
+                        .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
+                                .field("hubId")
+                                .message("해당 허브에 소속된 창고/업체/배송담당자가 존재하여 삭제할 수 없습니다.")
+                                .build()))
+                        .build();
+                return ResponseEntity.status(code.getHttpStatus()).body(response);
+            }
 
-        if (code == ErrorCode.INVENTORY_HAS_STOCK) {
-            ErrorResponse response = ErrorResponse.builder()
-                    .status(code.getHttpStatus().value())
-                    .message(code.getMessage())
-                    .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
-                            .field("inventoryId")
-                            .message(code.getMessage())
-                            .build()))
-                    .build();
-            return ResponseEntity.status(code.getHttpStatus()).body(response);
+            if (code == ErrorCode.INVENTORY_HAS_STOCK) {
+                ErrorResponse response = ErrorResponse.builder()
+                        .status(code.getHttpStatus().value())
+                        .message(code.getMessage())
+                        .errors(List.of(ErrorResponse.FieldErrorDetail.builder()
+                                .field("inventoryId")
+                                .message(code.getMessage())
+                                .build()))
+                        .build();
+                return ResponseEntity.status(code.getHttpStatus()).body(response);
+            }
         }
 
         ErrorResponse response = ErrorResponse.builder()
-                .status(code.getHttpStatus().value())
-                .message(code.getMessage())
+                .status(errorCode.getHttpStatus().value())
+                .message(errorCode.getMessage())
                 .build();
-        return ResponseEntity.status(code.getHttpStatus()).body(response);
+        return ResponseEntity.status(errorCode.getHttpStatus()).body(response);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

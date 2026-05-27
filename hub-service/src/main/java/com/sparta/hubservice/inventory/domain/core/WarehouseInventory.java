@@ -33,6 +33,9 @@ public class WarehouseInventory extends BaseEntity {
     @Column(nullable = false)
     private UUID productOptionId;
 
+    @Column
+    private UUID companyId;
+
     @Column(nullable = false)
     private int quantity;
 
@@ -46,9 +49,10 @@ public class WarehouseInventory extends BaseEntity {
     private Long version;
 
     @Builder
-    public WarehouseInventory(UUID warehouseId, UUID productOptionId, int quantity, int safetyStock) {
+    public WarehouseInventory(UUID warehouseId, UUID productOptionId, UUID companyId, int quantity, int safetyStock) {
         this.warehouseId = warehouseId;
         this.productOptionId = productOptionId;
+        this.companyId = companyId;
         this.quantity = quantity;
         this.reservedQuantity = 0;
         this.safetyStock = safetyStock;
