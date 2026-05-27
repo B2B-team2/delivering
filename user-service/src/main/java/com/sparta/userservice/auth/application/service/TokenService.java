@@ -19,12 +19,8 @@ public class TokenService {
     private static final String REFRESH_PREFIX = "user:token:";
 
     // Refresh Token Redis 저장 (login 시 재사용)
-    public void saveRefreshToken(UUID userId, String refreshToken) {
-        redisService.set(
-                REFRESH_PREFIX + userId,
-                refreshToken,
-                Duration.ofDays(7)
-        );
+    public void saveRefreshToken(UUID userId, String refreshToken, long refreshExpiresIn) {
+        redisService.set(REFRESH_PREFIX + userId, refreshToken, Duration.ofSeconds(refreshExpiresIn));
     }
 
     // Redis 저장 Refresh Token 조회
@@ -38,13 +34,9 @@ public class TokenService {
     }
 
     // Access Token 블랙리스트 등록 (logout 시 재사용)
-    public void blacklistAccessToken(String accessToken) {
+    public void blacklistAccessToken(String accessToken, long expiresIn) {
         try {
-            redisService.set(
-                    BLACKLIST_PREFIX + accessToken,
-                    "logout",
-                    Duration.ofHours(1)
-            );
+            redisService.set(BLACKLIST_PREFIX + accessToken, "logout", Duration.ofSeconds(expiresIn));
         } catch (Exception e) {
             log.warn("[AUTH] Access Token 블랙리스트 등록 실패 - {}", e.getMessage());
         }
