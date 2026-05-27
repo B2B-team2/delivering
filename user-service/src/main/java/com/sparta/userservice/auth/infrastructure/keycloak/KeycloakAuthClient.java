@@ -114,6 +114,7 @@ public class KeycloakAuthClient {
         body.add("client_secret", keycloakProperties.getClientSecret());
         body.add("username", email);
         body.add("password", password);
+        body.add("scope", "openid profile email user-attributes");
 
         Map<String, Object> response = requestToken(body);
 
@@ -197,7 +198,7 @@ public class KeycloakAuthClient {
             );
         }
     }
-    
+
     public void updateUserAttribute(String email, String key, String value) {
         try (Keycloak keycloak = buildAdminKeycloak()) {
 
