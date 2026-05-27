@@ -159,6 +159,9 @@ public class DraftService {
         return drafts.stream()
                 .map(draft -> {
                     ProductOptionInfo info = productInfoMap.get(draft.getProductOptionId());
+                    if (info == null) {
+                        throw new BusinessException(DraftErrorCode.PRODUCT_OPTION_NOT_FOUND);
+                    }
                     return Map.entry(
                             info.companyId(),
                             new CreateOrderCommand.OrderItemCommand(
