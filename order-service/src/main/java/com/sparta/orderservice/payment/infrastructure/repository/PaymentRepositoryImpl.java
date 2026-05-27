@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,7 +43,7 @@ public class PaymentRepositoryImpl implements PaymentRepository {
     }
 
     @Override
-    public Page<Payment> findPaymentsByOrderIds(List<UUID> orderIds, Pageable pageable) {
-        return paymentJpaRepository.findByOrderIdInAndDeletedAtIsNull(orderIds, pageable);
+    public Page<Payment> findPaymentsByReceiverCompanyId(UUID receiverCompanyId, Pageable pageable) {
+        return paymentJpaRepository.findByReceiverCompanyIdAndDeletedAtIsNull(receiverCompanyId, pageable);
     }
 }

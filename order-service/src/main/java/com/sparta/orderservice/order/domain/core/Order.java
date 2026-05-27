@@ -128,6 +128,13 @@ public class Order extends BaseEntity implements Persistable<UUID> {
         this.status = OrderStatus.DELIVERING;
     }
 
+    /**
+     * SHIPPED → PREPARING 복원 시, 출고 중인 CompanyOrder가 없어지면 호출 (Saga 보상 전용)
+     */
+    public void revertDelivery() {
+        this.status = OrderStatus.PENDING;
+    }
+
     public void complete() {
         this.status = OrderStatus.COMPLETED;
     }

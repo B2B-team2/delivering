@@ -1,6 +1,7 @@
 package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
+import com.sparta.orderservice.global.exception.OrderErrorCode;
 import com.sparta.orderservice.order.application.dto.CompanyOrderDeliveredResult;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
 import com.sparta.orderservice.order.application.port.HubStockPort;
@@ -26,6 +27,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -38,6 +40,8 @@ class CompanyOrderStatusServiceTest {
     private CompanyOrderRepository companyOrderRepository;
     @Mock
     private HubStockPort hubStockPort;
+    @Mock
+    private CompanyOrderWriter companyOrderWriter;
 
     @InjectMocks
     private CompanyOrderStatusService companyOrderStatusService;
@@ -92,9 +96,11 @@ class CompanyOrderStatusServiceTest {
             Order order = buildPendingOrder();
             CompanyOrder co = CompanyOrder.of(order, supplierCompanyId, BigDecimal.valueOf(20000), BigDecimal.ZERO);
             order.addCompanyOrder(co);
+            // persistShip이 커밋 완료된 상태(SHIPPED + DELIVERING)의 CompanyOrder를 반환한다고 모킹
             co.prepare();
-            when(companyOrderRepository.findCompanyOrderWithItemsAndOrder(co.getCompanyOrderId()))
-                    .thenReturn(Optional.of(co));
+            co.ship();
+            order.startDelivery();
+            when(companyOrderWriter.persistShip(co.getCompanyOrderId())).thenReturn(co);
 
             CompanyOrderResult result = companyOrderStatusService.shipCompanyOrder(co.getCompanyOrderId());
 
@@ -104,17 +110,35 @@ class CompanyOrderStatusServiceTest {
         }
 
         @Test
-        @DisplayName("PREPARING 아닌 상태(ORDERED)에서 출고 → 예외 발생")
+        @DisplayName("PREPARING 아닌 상태(ORDERED) → persistShip에서 예외 발생, 재고 차감 미호출")
         void non_preparing_status_throws() {
             Order order = buildPendingOrder();
             CompanyOrder co = CompanyOrder.of(order, supplierCompanyId, BigDecimal.valueOf(20000), BigDecimal.ZERO);
-            when(companyOrderRepository.findCompanyOrderWithItemsAndOrder(co.getCompanyOrderId()))
-                    .thenReturn(Optional.of(co));
+            when(companyOrderWriter.persistShip(co.getCompanyOrderId()))
+                    .thenThrow(new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION));
 
             assertThatThrownBy(() -> companyOrderStatusService.shipCompanyOrder(co.getCompanyOrderId()))
                     .isInstanceOf(BusinessException.class);
 
             verify(hubStockPort, never()).deductStock(any());
+        }
+
+        @Test
+        @DisplayName("재고 차감 실패 → revertShip 보상 실행 후 예외 전파")
+        void deduct_stock_fails_triggers_revert_ship_compensation() {
+            Order order = buildPendingOrder();
+            CompanyOrder co = CompanyOrder.of(order, supplierCompanyId, BigDecimal.valueOf(20000), BigDecimal.ZERO);
+            order.addCompanyOrder(co);
+            co.prepare();
+            co.ship();
+            order.startDelivery();
+            when(companyOrderWriter.persistShip(co.getCompanyOrderId())).thenReturn(co);
+            doThrow(new RuntimeException("hub down")).when(hubStockPort).deductStock(co);
+
+            assertThatThrownBy(() -> companyOrderStatusService.shipCompanyOrder(co.getCompanyOrderId()))
+                    .isInstanceOf(RuntimeException.class);
+
+            verify(companyOrderWriter).revertShip(co.getCompanyOrderId());
         }
     }
 

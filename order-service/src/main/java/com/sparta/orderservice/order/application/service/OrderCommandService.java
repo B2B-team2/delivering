@@ -2,7 +2,7 @@ package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
-import com.sparta.orderservice.global.security.SecurityUtils;
+import com.sparta.orderservice.global.security.AuthContext;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
@@ -44,7 +44,7 @@ public class OrderCommandService {
     private final CompanyPort companyPort;
     private final DeliveryPort deliveryPort;
     private final OrderWriter orderWriter;
-    private final SecurityUtils securityUtils;
+    private final AuthContext authContext;
 
     /**
      * 주문 생성 — DB TX 없이 각 단계를 독립 TX로 분리
@@ -59,8 +59,8 @@ public class OrderCommandService {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderResult createOrder(CreateOrderCommand command, UUID requesterId) {
-        // MASTER, COMPANY_MANAGER만 주문 생성 가능
-        if (!securityUtils.isMaster() && !securityUtils.isCompanyManager()) {
+        // COMPANY_MANAGER만 주문 생성 가능
+        if (!authContext.isCompanyManager()) {
             throw new BusinessException(OrderErrorCode.FORBIDDEN);
         }
         if (command.receiverCompanyId() == null) {
@@ -120,11 +120,11 @@ public class OrderCommandService {
                 .orElseThrow(() -> new BusinessException(OrderErrorCode.ORDER_NOT_FOUND));
 
         // COMPANY_MANAGER는 자기 회사가 수령업체(주문 생성자)인 주문만 취소 가능
-        if (securityUtils.isCompanyManager()) {
-            if (!order.getReceiverCompanyId().equals(securityUtils.getCompanyId())) {
+        if (authContext.isCompanyManager()) {
+            if (!order.getReceiverCompanyId().equals(authContext.getCompanyId())) {
                 throw new BusinessException(OrderErrorCode.FORBIDDEN);
             }
-        } else if (!securityUtils.isMaster()) {
+        } else if (!authContext.isMaster()) {
             throw new BusinessException(OrderErrorCode.FORBIDDEN);
         }
 
@@ -160,11 +160,11 @@ public class OrderCommandService {
         CompanyOrder companyOrder = findCompanyOrderWithOrderAndSiblingsOrThrow(companyOrderId);
 
         // COMPANY_MANAGER는 자기 회사가 공급업체인 CompanyOrder만 취소 가능
-        if (securityUtils.isCompanyManager()) {
-            if (!companyOrder.getCompanyId().equals(securityUtils.getCompanyId())) {
+        if (authContext.isCompanyManager()) {
+            if (!companyOrder.getCompanyId().equals(authContext.getCompanyId())) {
                 throw new BusinessException(OrderErrorCode.FORBIDDEN);
             }
-        } else if (!securityUtils.isMaster()) {
+        } else if (!authContext.isMaster()) {
             throw new BusinessException(OrderErrorCode.FORBIDDEN);
         }
 
