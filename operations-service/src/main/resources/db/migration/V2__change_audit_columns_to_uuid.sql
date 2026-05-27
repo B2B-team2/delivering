@@ -16,7 +16,7 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE plpgsql;
 
-ALTER TABLE p_order_claims 
+ALTER TABLE p_order_claims
     ALTER COLUMN created_by TYPE UUID USING convert_to_uuid(created_by),
     ALTER COLUMN updated_by TYPE UUID USING convert_to_uuid(updated_by),
     ALTER COLUMN deleted_by TYPE UUID USING convert_to_uuid(deleted_by);
