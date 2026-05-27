@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -36,8 +35,8 @@ public class PaymentService {
      * OrderCommandService.createOrder() 내에서 같은 트랜잭션으로 호출됨
      */
     @Transactional
-    public PaymentResult createCompletedPayment(UUID orderId, BigDecimal amount) {
-        Payment payment = Payment.complete(orderId, PaymentMethod.CARD, amount);
+    public PaymentResult createCompletedPayment(UUID orderId, UUID receiverCompanyId, BigDecimal amount) {
+        Payment payment = Payment.complete(orderId, receiverCompanyId, PaymentMethod.CARD, amount);
         paymentRepository.save(payment);
         return PaymentResult.from(payment);
     }
@@ -126,9 +125,7 @@ public class PaymentService {
             return paymentRepository.findAllPayments(pageable).map(PaymentResult::from);
         }
         if (authContext.isCompanyManager()) {
-            List<UUID> orderIds = orderQueryService.getOrderIdsByReceiverCompanyId(authContext.getCompanyId());
-            if (orderIds.isEmpty()) return Page.empty(pageable);
-            return paymentRepository.findPaymentsByOrderIds(orderIds, pageable).map(PaymentResult::from);
+            return paymentRepository.findPaymentsByReceiverCompanyId(authContext.getCompanyId(), pageable).map(PaymentResult::from);
         }
         throw new BusinessException(PaymentErrorCode.FORBIDDEN);
     }

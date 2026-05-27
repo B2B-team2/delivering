@@ -15,7 +15,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -71,11 +70,6 @@ public class OrderQueryService {
         return orderRepository.findOrderById(orderId)
             .map(Order::isCancellable)
             .orElse(false);
-    }
-
-    // payment 도메인 내부 호출용 — 수령업체 기준 orderId 목록 조회 (getPayments COMPANY_MANAGER 필터링)
-    public List<UUID> getOrderIdsByReceiverCompanyId(UUID companyId) {
-        return orderRepository.findOrderIdsByReceiverCompanyId(companyId);
     }
 
     // payment 도메인 내부 호출용 — orderId → receiverCompanyId 조회 (cancelPayment / getPayment 접근 권한 검증)

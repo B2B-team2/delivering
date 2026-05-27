@@ -29,7 +29,7 @@ public class OrderWriter {
     @Transactional
     public OrderResult saveOrderWithEvent(Order order) {
         orderRepository.save(order);
-        eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getTotalPrice()));
+        eventPublisher.publishEvent(new OrderCreatedEvent(order.getOrderId(), order.getReceiverCompanyId(), order.getTotalPrice()));
         return OrderResult.from(order);
     }
 }
