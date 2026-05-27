@@ -36,6 +36,7 @@ jobs:
           script: |
             cd /root/delivering
             git pull origin develop
+            ./gradlew clean build -x test
             docker compose up --build -d
 
       - name: Notify success
