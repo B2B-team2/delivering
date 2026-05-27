@@ -25,7 +25,10 @@ public class PaymentController {
 
     private final PaymentService paymentService;
 
-    // 결제 취소 (COMPLETED → CANCELLED)
+    /**
+     * 결제 취소 (COMPLETED → CANCELLED)
+     * MASTER → 전체 / COMPANY_MANAGER → 자기 회사가 수령업체인 주문의 결제만
+     */
     @PatchMapping("/payments/{paymentId}/cancel")
     public ResponseEntity<ApiResponse<PaymentResponse>> cancelPayment(
             @PathVariable UUID paymentId,
@@ -34,7 +37,10 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success(PaymentResponse.from(paymentService.cancelPayment(paymentId, requesterId))));
     }
 
-    // 결제 목록 조회
+    /**
+     * 결제 목록 조회
+     * MASTER → 전체 / COMPANY_MANAGER → 자기 회사가 수령업체인 결제만
+     */
     @GetMapping("/payments")
     public ResponseEntity<ApiResponse<PageResponse<PaymentResponse>>> getPayments(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
@@ -43,7 +49,10 @@ public class PaymentController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    // 결제 단건 조회
+    /**
+     * 결제 단건 조회
+     * MASTER → 전체 / COMPANY_MANAGER → 자기 회사가 수령업체인 결제만
+     */
     @GetMapping("/payments/{paymentId}")
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(
             @PathVariable UUID paymentId

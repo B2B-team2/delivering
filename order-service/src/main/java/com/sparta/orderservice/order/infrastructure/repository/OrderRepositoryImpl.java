@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -35,13 +34,12 @@ public class OrderRepositoryImpl implements OrderRepository {
 
     @Override
     public Page<Order> findOrdersByCompanyId(UUID companyId, Pageable pageable) {
-        // TODO: 권한별 필터링 구현 시 - requesterCompanyId OR receiverCompanyId 조건 (@Query 필요)
-        throw new UnsupportedOperationException("권한별 필터링 구현 예정");
+        return orderJpaRepository.findByCompanyIdAndDeletedAtIsNull(companyId, pageable);
     }
 
     @Override
-    public Page<Order> findOrdersByCompanyIds(List<UUID> companyIds, Pageable pageable) {
-        // TODO: 권한별 필터링 구현 시 - 허브 담당자 소속 회사 목록 기준 조회 (@Query 필요)
-        throw new UnsupportedOperationException("권한별 필터링 구현 예정");
+    public Optional<UUID> findReceiverCompanyIdByOrderId(UUID orderId) {
+        return orderJpaRepository.findReceiverCompanyIdByOrderId(orderId);
     }
+
 }

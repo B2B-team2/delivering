@@ -2,8 +2,8 @@ package com.sparta.orderservice.order.infrastructure.client;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
-import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
-import com.sparta.orderservice.order.application.port.ProductPort;
+import com.sparta.orderservice.global.dto.ProductOptionInfo;
+import com.sparta.orderservice.global.port.ProductPort;
 import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoItem;
 import com.sparta.orderservice.order.infrastructure.client.dto.ProductOptionInfoRequest;
 import lombok.RequiredArgsConstructor;

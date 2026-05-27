@@ -7,12 +7,13 @@ import com.sparta.orderservice.draft.application.dto.DraftResult;
 import com.sparta.orderservice.draft.domain.core.Draft;
 import com.sparta.orderservice.draft.domain.repository.DraftRepository;
 import com.sparta.orderservice.global.exception.DraftErrorCode;
+import com.sparta.orderservice.global.security.AuthContext;
 import com.sparta.orderservice.order.application.dto.CreateOrderCommand;
 import com.sparta.orderservice.order.application.dto.OrderResult;
-import com.sparta.orderservice.order.application.dto.DeliveryAddressInfo;
-import com.sparta.orderservice.order.application.dto.ProductOptionInfo;
-import com.sparta.orderservice.order.application.port.CompanyPort;
-import com.sparta.orderservice.order.application.port.ProductPort;
+import com.sparta.orderservice.global.port.CompanyPort;
+import com.sparta.orderservice.global.dto.DeliveryAddressInfo;
+import com.sparta.orderservice.global.dto.ProductOptionInfo;
+import com.sparta.orderservice.global.port.ProductPort;
 import com.sparta.orderservice.order.application.service.OrderCommandService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +40,7 @@ public class DraftService {
     private final OrderCommandService orderCommandService;
     private final ProductPort productPort;
     private final CompanyPort companyPort;
+    private final AuthContext authContext;
 
     /**
      * 임시주문 항목 추가 (upsert)
@@ -50,26 +52,34 @@ public class DraftService {
      */
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public DraftResult addDraft(AddDraftCommand command) {
+        if (!authContext.isCompanyManager()) {
+            throw new BusinessException(DraftErrorCode.FORBIDDEN);
+        }
         try {
             return draftWriter.tryInsertOrUpdate(command);
         } catch (DataIntegrityViolationException e) {
-            // 동시 INSERT 충돌 → 새 TX에서 재조회 후 수량 갱신
             log.warn("[Draft] 동시 INSERT 충돌 감지, 재조회 후 수량 갱신: userId={}, productOptionId={}",
                     command.userId(), command.productOptionId());
             return draftWriter.findAndRestore(command);
         }
     }
 
-    // 임시주문 목록 조회 (페이징)
-    // TODO: 권한별 필터링 (마스터 → 전체, 업체담당자 → 본인 것만)
     public Page<DraftResult> getDrafts(UUID userId, Pageable pageable) {
-        return draftRepository.findDraftsByUserId(userId, pageable)
-                .map(DraftResult::from);
+        if (authContext.isMaster()) {
+            return draftRepository.findAllDrafts(pageable).map(DraftResult::from);
+        }
+        if (authContext.isCompanyManager()) {
+            return draftRepository.findDraftsByUserId(userId, pageable).map(DraftResult::from);
+        }
+        throw new BusinessException(DraftErrorCode.FORBIDDEN);
     }
 
     // 임시주문 항목 수량 수정
     @Transactional
     public DraftResult updateDraft(UUID draftId, int quantity, UUID userId) {
+        if (!authContext.isCompanyManager()) {
+            throw new BusinessException(DraftErrorCode.FORBIDDEN);
+        }
         Draft draft = findDraftOrThrow(draftId);
         checkOwnership(draft, userId);
         draft.updateQuantity(quantity);
@@ -79,6 +89,9 @@ public class DraftService {
     // 임시주문 항목 삭제 (soft delete)
     @Transactional
     public void deleteDraft(UUID draftId, UUID userId) {
+        if (!authContext.isCompanyManager()) {
+            throw new BusinessException(DraftErrorCode.FORBIDDEN);
+        }
         Draft draft = findDraftOrThrow(draftId);
         checkOwnership(draft, userId);
         draft.delete(userId);
@@ -91,13 +104,16 @@ public class DraftService {
      * - 외부 호출(hub/delivery)이 DB TX를 점유하지 않도록 NOT_SUPPORTED 사용
      * - draft 삭제 실패 시 이미 생성된 주문을 보상 취소
      */
+    // receiverCompanyId null 검증은 OrderCommandService.createOrder에서 처리
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public OrderResult createOrderFromDraft(CreateOrderFromDraftCommand command) {
+        if (!authContext.isCompanyManager()) {
+            throw new BusinessException(DraftErrorCode.FORBIDDEN);
+        }
         // 1. 임시주문 항목 조회 및 소유권 검증 (독립 readOnly TX)
         List<Draft> drafts = draftWriter.readAndValidateDrafts(command.draftIds(), command.userId());
 
         // 2. Product Service 조회 → companyId별 CompanyOrderCommand 목록 구성
-        // TODO: receiverCompanyId는 X-Company-Id 헤더로 주입 예정 (인증 확정 후)
         Map<UUID, ProductOptionInfo> productInfoMap = productPort.getProductOptionInfos(
                 drafts.stream().map(Draft::getProductOptionId).toList()
         );
@@ -182,7 +198,6 @@ public class DraftService {
                 .orElseThrow(() -> new BusinessException(DraftErrorCode.DRAFT_NOT_FOUND));
     }
 
-    // 본인 임시주문 항목인지 검증
     private void checkOwnership(Draft draft, UUID userId) {
         if (!draft.getUserId().equals(userId)) {
             throw new BusinessException(DraftErrorCode.DRAFT_ACCESS_DENIED);

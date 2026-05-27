@@ -7,7 +7,7 @@ import java.util.UUID;
 
 // Presentation → Application 전달용 커맨드 객체
 public record CreateOrderCommand(
-        UUID receiverCompanyId,  // TODO: User service, 세션 기반 인증 확정 후 주입 예정
+        UUID receiverCompanyId,  // COMPANY_MANAGER: X-Company-Id 헤더, MASTER: 요청 body
         String recipientName,
         String phone,
         String slackId,

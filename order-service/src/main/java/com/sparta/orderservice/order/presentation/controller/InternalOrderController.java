@@ -1,11 +1,9 @@
 package com.sparta.orderservice.order.presentation.controller;
 
-import com.sparta.orderservice.order.application.dto.CompanyOrderDeliveredResult;
-import com.sparta.orderservice.order.application.service.OrderCommandService;
+import com.sparta.orderservice.order.application.service.CompanyOrderStatusService;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderDeliveredResponse;
 import com.sparta.orderservice.order.presentation.dto.CompanyOrderResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,37 +17,30 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class InternalOrderController {
 
-    private final OrderCommandService orderCommandService;
+    private final CompanyOrderStatusService companyOrderStatusService;
 
     /**
      * 업체 주문 수령 완료 처리 (SHIPPED → DELIVERED)
      * 모든 CompanyOrder가 DELIVERED이면 Order → COMPLETED 자동 전환
      */
     @PatchMapping("/company/{companyOrderId}/delivered")
-    public ResponseEntity<CompanyOrderDeliveredResponse> deliverCompanyOrder(
-            @PathVariable UUID companyOrderId
-    ) {
-        CompanyOrderDeliveredResult result = orderCommandService.confirmDelivery(companyOrderId);
-        return ResponseEntity.ok(CompanyOrderDeliveredResponse.from(result));
+    public CompanyOrderDeliveredResponse deliverCompanyOrder(@PathVariable UUID companyOrderId) {
+        return CompanyOrderDeliveredResponse.from(companyOrderStatusService.confirmDelivery(companyOrderId));
     }
 
     /**
      * 출고 준비 확인 (ORDERED → PREPARING)
      */
     @PatchMapping("/company/{companyOrderId}/preparing")
-    public ResponseEntity<CompanyOrderResponse> prepareCompanyOrder(
-            @PathVariable UUID companyOrderId
-    ) {
-        return ResponseEntity.ok(CompanyOrderResponse.from(orderCommandService.prepareCompanyOrder(companyOrderId)));
+    public CompanyOrderResponse prepareCompanyOrder(@PathVariable UUID companyOrderId) {
+        return CompanyOrderResponse.from(companyOrderStatusService.prepareCompanyOrder(companyOrderId));
     }
 
     /**
      * 출고 완료 (PREPARING → SHIPPED)
      */
     @PatchMapping("/company/{companyOrderId}/shipped")
-    public ResponseEntity<CompanyOrderResponse> shipCompanyOrder(
-            @PathVariable UUID companyOrderId
-    ) {
-        return ResponseEntity.ok(CompanyOrderResponse.from(orderCommandService.shipCompanyOrder(companyOrderId)));
+    public CompanyOrderResponse shipCompanyOrder(@PathVariable UUID companyOrderId) {
+        return CompanyOrderResponse.from(companyOrderStatusService.shipCompanyOrder(companyOrderId));
     }
 }

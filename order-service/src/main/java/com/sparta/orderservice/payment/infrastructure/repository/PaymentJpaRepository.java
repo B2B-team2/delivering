@@ -4,7 +4,6 @@ import com.sparta.orderservice.payment.domain.core.Payment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,4 +18,6 @@ public interface PaymentJpaRepository extends JpaRepository<Payment, UUID> {
     Optional<Payment> findByOrderIdAndDeletedAtIsNull(UUID orderId);
 
     Page<Payment> findAllByDeletedAtIsNull(Pageable pageable);
+
+    Page<Payment> findByReceiverCompanyIdAndDeletedAtIsNull(UUID receiverCompanyId, Pageable pageable);
 }

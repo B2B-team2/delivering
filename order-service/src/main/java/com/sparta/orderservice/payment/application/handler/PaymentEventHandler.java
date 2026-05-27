@@ -20,7 +20,7 @@ public class PaymentEventHandler {
 
     @EventListener
     public void handleOrderCreated(OrderCreatedEvent event) {
-        paymentService.createCompletedPayment(event.orderId(), event.totalPrice());
+        paymentService.createCompletedPayment(event.orderId(), event.receiverCompanyId(), event.totalPrice());
     }
 
     /**
