@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/internal")
@@ -26,14 +27,17 @@ public class DeliveryInternalController {
 
     @PostMapping("/deliveries")
     public ResponseEntity<ApiResponse<List<DeliveryCreateResponse>>> createInternalDelivery(
-            @RequestBody List<DeliveryCreateClientRequest> requests) {
-        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests, "TEST_USER");
+            @RequestBody List<DeliveryCreateClientRequest> requests,
+            @RequestHeader("X-User-Id") UUID userId) {
+        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/deliveries/cancel")
-    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(@RequestBody List<DeliveryOrderCancelRequest> request) {
-        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request);
+    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(
+            @RequestBody List<DeliveryOrderCancelRequest> request,
+            @RequestHeader("X-User-Id")  UUID userId) {
+        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request, userId);
         return response;
     }
 }

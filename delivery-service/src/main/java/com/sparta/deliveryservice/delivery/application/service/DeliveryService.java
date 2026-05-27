@@ -1,15 +1,20 @@
 package com.sparta.deliveryservice.delivery.application.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
 import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
+import com.sparta.deliveryservice.delivery.global.exception.DeliveryErrorCode;
+import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryOrderServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCancelRequest;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCompleteRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryHubRouteSearchResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryManagerResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryOrderCancelResponse;
@@ -58,14 +63,16 @@ public class DeliveryService {
     private final DeliveryLogRepository deliveryLogRepository;
     private final CachedHubServiceClient cachedHubServiceClient;
     private final DeliveryUserServiceClient deliveryUserServiceClient;
+    private final DeliveryOrderServiceClient deliveryOrderServiceClient;
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
+    private final SecurityUtils securityUtils;
 
     @Transactional
-    public DeliveryCreateResponse createSingleDelivery(DeliveryCreateClientRequest request, String userId) {
-        // 1. 중복 체크
+    public DeliveryCreateResponse createSingleDelivery(DeliveryCreateClientRequest request, UUID userId) {
+
         if (deliveryRepository.existsByCompanyOrderId(request.getCompanyOrderId())) {
-            throw new IllegalStateException("이미 배송이 생성된 주문건입니다. 주문 ID: " + request.getCompanyOrderId());
+            throw new BusinessException(DeliveryErrorCode.DUPLICATE_DELIVERY);
         }
 
         // 2. 배송 생성
@@ -156,14 +163,17 @@ public class DeliveryService {
     }
 
     @Transactional
-    public List<DeliveryCreateResponse> createDelivery(List<DeliveryCreateClientRequest> requests, String userId) {
+    public List<DeliveryCreateResponse> createDelivery(List<DeliveryCreateClientRequest> requests, UUID userId) {
+        if (!securityUtils.isMaster()) {
+            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
+        }
         return requests.stream()
                 .map(request -> createSingleDelivery(request, userId))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public Page<DeliverySearchResponse.DeliveryResponseDto> searchDeliveries(Pageable pageable) {
+    public Page<DeliverySearchResponse.DeliveryResponseDto> searchDeliveries(Pageable pageable, UUID userId) {
 
         Page<Delivery> deliveryPage = deliveryRepository.findAll(pageable);
 
@@ -184,10 +194,10 @@ public class DeliveryService {
     }
 
     @Transactional(readOnly = true)
-    public DeliveryDetailResponse getDeliveryDetail(UUID deliveryId) {
+    public DeliveryDetailResponse getDeliveryDetail(UUID deliveryId, UUID userId) {
 
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 배송건이 존재하지 않습니다. ID: " + deliveryId));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         List<DeliveryRoute> deliveryRoutes = deliveryRouteRepository.findByDeliveryId(deliveryId);
 
@@ -234,9 +244,9 @@ public class DeliveryService {
     }
 
     @Transactional(readOnly = true)
-    public DeliveryAddressResponse getDeliveryAddress(UUID deliveryId, UUID addressId) {
+    public DeliveryAddressResponse getDeliveryAddress(UUID deliveryId, UUID addressId, UUID userId) {
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 배송건이 존재하지 않습니다. ID: " + deliveryId));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         return DeliveryAddressResponse.builder()
                 .addressId(addressId)
@@ -251,10 +261,10 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "deliveryTracking", key = "#trackingNumber", unless = "#result == null")
-    public DeliveryTrackingResponse trackDelivery(String trackingNumber) {
+    public DeliveryTrackingResponse trackDelivery(String trackingNumber, UUID userId) {
 
         Delivery delivery = deliveryRepository.findByTrackingNumber(trackingNumber)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 운송장 번호입니다. 운송장: " + trackingNumber));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
         List<DeliveryRoute> deliveryRoutes = deliveryRouteRepository.findByDeliveryId(delivery.getDeliveryId());
         deliveryRoutes.sort(Comparator.comparingInt(DeliveryRoute::getSequence));
@@ -302,16 +312,20 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#result.trackingNumber")
-    public DeliveryCancelResponse cancelDelivery(UUID deliveryId, DeliveryCancelRequest request) {
+    public DeliveryCancelResponse cancelDelivery(UUID deliveryId, UUID userId, DeliveryCancelRequest request) {
 
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 배송 정보가 존재하지 않습니다. ID: " + deliveryId));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
-        if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
-            throw new IllegalStateException("이미 취소 완료 처리된 배송건입니다.");
+        if (!(securityUtils.isMaster() || securityUtils.getUserId().equals(delivery.getDeliveryManagerId()))) {
+            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
         }
+        if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
+            throw new BusinessException(DeliveryErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
         if (delivery.getStatus() != DeliveryStatus.PENDING) {
-            throw new IllegalStateException("배송이 이미 허브를 출발하여 취소할 수 없는 상태입니다. 현재 상태: " + delivery.getStatus());
+            throw new BusinessException(DeliveryErrorCode.INVALID_STATUS_TRANSITION);
         }
 
         String previousStatusName = delivery.getStatus().name();
@@ -364,9 +378,13 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#result.trackingNumber")
-    public DeliveryStatusUpdateResponse updateDeliveryStatus(UUID deliveryId, DeliveryStatusUpdateRequest request) {
+    public DeliveryStatusUpdateResponse updateDeliveryStatus(UUID deliveryId, UUID userId, DeliveryStatusUpdateRequest request) {
+
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 배송 정보가 존재하지 않습니다. ID: " + deliveryId));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+        if (!(securityUtils.isMaster() || securityUtils.getUserId().equals(delivery.getDeliveryManagerId()))) {
+            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
+        }
 
         String previousStatusName = delivery.getStatus().name();
 
@@ -408,10 +426,14 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#result.trackingNumber")
-    public DeliveryManagerUpdateResponse updateDeliveryManager(UUID deliveryId, DeliveryManagerUpdateRequest request) {
+    public DeliveryManagerUpdateResponse updateDeliveryManager(UUID deliveryId, UUID userId, DeliveryManagerUpdateRequest request) {
 
         Delivery delivery = deliveryRepository.findById(deliveryId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 배송 정보가 존재하지 않습니다. ID: " + deliveryId));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        if (!(securityUtils.isMaster() || securityUtils.getUserId().equals(delivery.getDeliveryManagerId()))) {
+            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
+        }
 
         UUID previousManagerId = delivery.getDeliveryManagerId();
         String previousManagerSlackId = delivery.getDeliverySlackId();
@@ -478,10 +500,15 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#trackingNumber")
-    public DeliveryStatusResponse startDelivery(String trackingNumber) {
+    public DeliveryStatusResponse startDelivery(String trackingNumber, UUID userId) {
+
 
         Delivery delivery = deliveryRepository.findByTrackingNumber(trackingNumber)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 운송장 번호입니다. 운송장: " + trackingNumber));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        if (!(securityUtils.isMaster() || securityUtils.getUserId().equals(delivery.getDeliveryManagerId()))) {
+            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
+        }
 
         delivery.startDelivery(trackingNumber);
 
@@ -494,7 +521,7 @@ public class DeliveryService {
                 .deliveryManagerName(delivery.getManagerName())
                 .deliveryManagerPhone(delivery.getPhone())
                 .trackingNumber(delivery.getTrackingNumber())
-                .status(delivery.getStatus().name())
+                .status(delivery.getStatus())
                 .startedAt(delivery.getStartedAt())
                 .address(flatAddress)
                 .addressDetail(flatAddressDetail)
@@ -503,16 +530,26 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#trackingNumber")
-    public DeliveryStatusResponse completeDelivery(String trackingNumber) {
+    public DeliveryStatusResponse completeDelivery(String trackingNumber, UUID userId) {
 
         Delivery delivery = deliveryRepository.findByTrackingNumber(trackingNumber)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 운송장 번호입니다. 운송장: " + trackingNumber));
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        if (!(securityUtils.isMaster() || securityUtils.getUserId().equals(delivery.getDeliveryManagerId()))) {
+            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
+        }
 
         delivery.completeDelivery(trackingNumber);
+        DeliveryOrderCompleteRequest request = DeliveryOrderCompleteRequest.builder()
+                .deliveredStatus("DELIVERED")
+                .orderStatus("COMPLETED")
+                .build();
+
+        deliveryOrderServiceClient.companyOrderDelivered(delivery.getCompanyOrderId(), userId, request);
 
         DeliveryAddress addressObj = delivery.getDeliveryAddress();
-        String flatAddress = (addressObj != null) ? addressObj.getAddress() : null;
-        String flatAddressDetail = (addressObj != null) ? addressObj.getAddressDetail() : null;
+        String flatAddress =addressObj.getAddress();
+        String flatAddressDetail = addressObj.getAddressDetail();
 
         return DeliveryStatusResponse.builder()
                 .deliveryManagerId(delivery.getDeliveryManagerId())
@@ -520,7 +557,7 @@ public class DeliveryService {
                 .deliveryManagerPhone(delivery.getPhone())
                 .deliveryManagerSlackId(delivery.getDeliverySlackId())
                 .trackingNumber(delivery.getTrackingNumber())
-                .status(delivery.getStatus().name())
+                .status(delivery.getStatus())
                 .startedAt(delivery.getStartedAt())
                 .address(flatAddress)
                 .addressDetail(flatAddressDetail)
@@ -528,8 +565,39 @@ public class DeliveryService {
     }
 
     @Transactional
+    public DeliveryStatusResponse deleteDelivery(UUID deliveryId, UUID userId) {
+        Delivery delivery = deliveryRepository.findById(deliveryId)
+                .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
+
+        if (!securityUtils.canDelete()) {
+            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
+        }
+
+        if (delivery.getStatus() == DeliveryStatus.CANCELLED) {
+            throw new BusinessException(DeliveryErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        delivery.deleteDelivery(delivery.getTrackingNumber());
+        deliveryRepository.save(delivery);
+
+        DeliveryAddress addressObj = delivery.getDeliveryAddress();
+
+        return DeliveryStatusResponse.builder()
+                .deliveryManagerId(delivery.getDeliveryManagerId())
+                .deliveryManagerName(delivery.getManagerName())
+                .deliveryManagerPhone(delivery.getPhone())
+                .deliveryManagerSlackId(delivery.getDeliverySlackId())
+                .trackingNumber(delivery.getTrackingNumber())
+                .status(delivery.getStatus())
+                .startedAt(delivery.getStartedAt())
+                .address(addressObj.getAddress())
+                .addressDetail(addressObj.getAddressDetail())
+                .build();
+    }
+
+    @Transactional
     @CacheEvict(value = "deliveryTracking", allEntries = true)
-    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(List<DeliveryOrderCancelRequest> requests) {
+    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(List<DeliveryOrderCancelRequest> requests, UUID userId) {
 
         List<UUID> orderIds = requests.stream()
                 .map(DeliveryOrderCancelRequest::getOrderId)
@@ -559,7 +627,7 @@ public class DeliveryService {
                 List<DeliveryRoute> deliveryRoutes = deliveryRouteRepository.findByDeliveryId(delivery.getDeliveryId());
 
                 for (DeliveryRoute route : deliveryRoutes) {
-                    String routePreviousStatus = route.getStatus().name(); // 경로의 이전 상태 저장
+                    String routePreviousStatus = route.getStatus().name();
                     route.updateStatus(DeliveryRouteStatus.CANCELLED, null, null);
 
                     String routePrevJson = "";
@@ -599,4 +667,6 @@ public class DeliveryService {
                 .cancelledDeliveries(cancelledDeliveries)
                 .build();
     }
+
+
 }
