@@ -2,16 +2,17 @@ package com.sparta.orderservice.order.application.service;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.orderservice.global.exception.OrderErrorCode;
-import com.sparta.orderservice.order.application.dto.CompanyOrderDeliveredResult;
+import com.sparta.orderservice.order.application.dto.ClaimCancelResult;
 import com.sparta.orderservice.order.application.dto.CompanyOrderResult;
-import com.sparta.orderservice.order.application.port.HubStockPort;
 import com.sparta.orderservice.order.domain.core.CompanyOrder;
 import com.sparta.orderservice.order.domain.core.CompanyOrderStatus;
+import com.sparta.orderservice.order.domain.core.OrderStatus;
+import com.sparta.orderservice.order.domain.event.OrderCancelledEvent;
 import com.sparta.orderservice.order.domain.repository.CompanyOrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
@@ -24,8 +25,8 @@ import java.util.UUID;
 public class CompanyOrderStatusService {
 
     private final CompanyOrderRepository companyOrderRepository;
-    private final HubStockPort hubStockPort;
     private final CompanyOrderWriter companyOrderWriter;
+    private final ApplicationEventPublisher eventPublisher;
 
     // 출고 준비 확인: ORDERED → PREPARING
     @Transactional
@@ -40,43 +41,49 @@ public class CompanyOrderStatusService {
 
     /**
      * 출고 완료: PREPARING → SHIPPED, Order → DELIVERING
-     *
-     * Saga 흐름:
-     * (1) DB 상태를 SHIPPED로 먼저 커밋 (CompanyOrderWriter 독립 TX)
-     * (2) TX 커밋 완료 후 재고 차감 외부 호출 (TX 외부)
-     * (3) 외부 호출 실패 시 보상: DB를 PREPARING으로 복원
      */
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    @Transactional
     public CompanyOrderResult shipCompanyOrder(UUID companyOrderId) {
-        // (1) SHIPPED + DELIVERING 상태를 독립 TX로 먼저 커밋
-        CompanyOrder shippedOrder = companyOrderWriter.persistShip(companyOrderId);
-
-        // (2) TX 커밋 완료 후 재고 차감
-        try {
-            hubStockPort.deductStock(shippedOrder);
-        } catch (Exception e) {
-            log.error("[Saga] 재고 차감 실패, PREPARING 복원 보상 실행: companyOrderId={}", companyOrderId, e);
-            try {
-                companyOrderWriter.revertShip(companyOrderId);
-            } catch (Exception compensationEx) {
-                log.error("[Saga] PREPARING 복원 실패 - 수동 복구 필요: companyOrderId={}", companyOrderId, compensationEx);
-            }
-            throw e;
-        }
-
-        return CompanyOrderResult.from(shippedOrder);
+        return CompanyOrderResult.from(companyOrderWriter.persistShip(companyOrderId));
     }
 
     // 업체 주문 수령 완료: SHIPPED → DELIVERED
+    // 모든 CompanyOrder가 DELIVERED이면 Order → COMPLETED 자동 전환
     @Transactional
-    public CompanyOrderDeliveredResult confirmDelivery(UUID companyOrderId, UUID requesterId) {
+    public void confirmDelivery(UUID companyOrderId, UUID requesterId) {
         CompanyOrder companyOrder = findWithOrderAndSiblingsOrThrow(companyOrderId);
         if (companyOrder.getStatus() != CompanyOrderStatus.SHIPPED) {
             throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
         }
         companyOrder.deliver();
         companyOrder.getOrder().updateStatus(requesterId);
-        return CompanyOrderDeliveredResult.from(companyOrder);
+    }
+
+    /**
+     * 클레임 처리에 의한 서브 주문 취소 (SHIPPED 또는 DELIVERED → CANCELLED)
+     * operations-service 내부 호출 전용 — 재고/배송 보상 없이 상태 변경만 수행
+     * 모든 CompanyOrder가 CANCELLED이면 Order → CANCELLED & 결제 취소 이벤트 발행
+     */
+    @Transactional
+    public ClaimCancelResult cancelCompanyOrderByClaim(UUID companyOrderId, UUID requesterId) {
+        CompanyOrder companyOrder = findWithOrderAndSiblingsOrThrow(companyOrderId);
+        CompanyOrderStatus status = companyOrder.getStatus();
+        if (status != CompanyOrderStatus.SHIPPED && status != CompanyOrderStatus.DELIVERED) {
+            throw new BusinessException(OrderErrorCode.INVALID_STATUS_TRANSITION);
+        }
+
+        // 서브 주문 취소
+        companyOrder.cancel(requesterId);
+
+        // 상위 주문 상태 업데이트 (모든 서브 주문이 취소되면 상위 주문도 취소됨)
+        companyOrder.getOrder().updateStatus(requesterId);
+
+        // 상위 주문이 최종 취소 상태가 되면 결제 취소 이벤트 발행
+        if (companyOrder.getOrder().getStatus() == OrderStatus.CANCELLED) {
+            eventPublisher.publishEvent(new OrderCancelledEvent(companyOrder.getOrder().getOrderId(), requesterId));
+        }
+
+        return ClaimCancelResult.from(companyOrder);
     }
 
     private CompanyOrder findWithItemsAndOrderOrThrow(UUID companyOrderId) {

@@ -94,8 +94,4 @@ public class CompanyOrder extends BaseEntity implements Persistable<UUID> {
         this.softDelete(deletedBy);
     }
 
-    // deductStock 외부 호출 실패 시 SHIPPED → PREPARING 복원 (Saga 보상 전용)
-    public void revertShip() {
-        this.status = CompanyOrderStatus.PREPARING;
-    }
 }

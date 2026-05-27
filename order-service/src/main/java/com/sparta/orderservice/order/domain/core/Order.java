@@ -128,13 +128,6 @@ public class Order extends BaseEntity implements Persistable<UUID> {
         this.status = OrderStatus.DELIVERING;
     }
 
-    /**
-     * SHIPPED → PREPARING 복원 시, 출고 중인 CompanyOrder가 없어지면 호출 (Saga 보상 전용)
-     */
-    public void revertDelivery() {
-        this.status = OrderStatus.PENDING;
-    }
-
     public void complete() {
         this.status = OrderStatus.COMPLETED;
     }
@@ -148,8 +141,14 @@ public class Order extends BaseEntity implements Persistable<UUID> {
      * 모든 CompanyOrder가 terminal(DELIVERED 또는 CANCELLED) 상태이면 Order 상태 업데이트
      * - 하나라도 DELIVERED가 있으면 -> COMPLETED
      * - 전체가 CANCELLED이면 -> CANCELLED & Soft Delete
+     *
+     * COMPLETED/CANCELLED는 재전환 방지: COMPLETED 상태에서 claim-cancel이 들어와도 결제 재취소 이벤트 발행하지 않음
      */
     public void updateStatus(UUID deletedBy) {
+        if (this.status == OrderStatus.COMPLETED || this.status == OrderStatus.CANCELLED) {
+            return;
+        }
+
         boolean hasActive = this.companyOrders.stream()
                 .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
                         && co.getStatus() != CompanyOrderStatus.CANCELLED);
