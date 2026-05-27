@@ -19,6 +19,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -43,6 +44,14 @@ import java.util.UUID;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
+
+    @GetMapping("/deliveries/{delivery_id}")
+    public ResponseEntity<ApiResponse<Page<DeliverySearchResponse.DeliveryResponseDto>>> getDelivery(
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
+            @RequestHeader("X-User-Id") UUID userId) {
+        Page<DeliverySearchResponse.DeliveryResponseDto> response = deliveryService.searchDeliveries(pageable, userId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 
     @GetMapping("/deliveries/{delivery_id}")
     public ResponseEntity<ApiResponse<DeliveryDetailResponse>> getDeliveryDetail(
