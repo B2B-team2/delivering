@@ -27,11 +27,10 @@ public class DeliveryLogController {
     @GetMapping("/deliveries/{delivery_id}/logs")
     public ResponseEntity<ApiResponse<PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto>>> getDeliveryLogs(
             @PathVariable("delivery_id") UUID deliveryId,
-            @RequestHeader("X-User-Id")  UUID userId,
             @PageableDefault(size = 20, sort = "createdAt") Pageable pageable) {
 
         Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> logPage =
-                deliveryLogService.getDeliveryLogs(deliveryId, userId, pageable);
+                deliveryLogService.getDeliveryLogs(deliveryId, pageable);
 
         PageResponse<DeliveryLogSearchResponse.DeliveryLogResponseDto> response =
                 DeliveryLogSearchResponse.of(logPage);

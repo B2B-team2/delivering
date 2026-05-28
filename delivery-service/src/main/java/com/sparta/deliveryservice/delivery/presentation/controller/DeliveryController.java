@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -46,72 +47,71 @@ public class DeliveryController {
     private final DeliveryService deliveryService;
 
     @GetMapping("/deliveries")
+    @PreAuthorize("hasAnyRole('MASTER')")
     public ResponseEntity<ApiResponse<Page<DeliverySearchResponse.DeliveryResponseDto>>> getDelivery(
-            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
-            @RequestHeader("X-User-Id") UUID userId) {
-        Page<DeliverySearchResponse.DeliveryResponseDto> response = deliveryService.searchDeliveries(pageable, userId);
+            @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        Page<DeliverySearchResponse.DeliveryResponseDto> response = deliveryService.searchDeliveries(pageable);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/deliveries/{delivery_id}")
     public ResponseEntity<ApiResponse<DeliveryDetailResponse>> getDeliveryDetail(
-            @PathVariable("delivery_id") UUID deliveryId,
-            @RequestHeader("X-User-Id")  UUID userId) {
-        DeliveryDetailResponse response = deliveryService.getDeliveryDetail(deliveryId, userId);
+            @PathVariable("delivery_id") UUID deliveryId) {
+        DeliveryDetailResponse response = deliveryService.getDeliveryDetail(deliveryId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/delivery-addresses/{delivery_id}/{address_id}")
     public ResponseEntity<ApiResponse<DeliveryAddressResponse>> getDeliveryAddress(
             @PathVariable("delivery_id") UUID deliveryId,
-            @PathVariable("address_id") UUID addressId,
-            @RequestHeader("X-User-Id")  UUID userId) {
-        DeliveryAddressResponse response = deliveryService.getDeliveryAddress(deliveryId, addressId, userId);
+            @PathVariable("address_id") UUID addressId) {
+        DeliveryAddressResponse response = deliveryService.getDeliveryAddress(deliveryId, addressId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @GetMapping("/deliveries/tracking/{tracking_number}")
     public ResponseEntity<ApiResponse<DeliveryTrackingResponse>> getDeliveryTracking(
-            @PathVariable("tracking_number") String trackingNumber, @RequestHeader("X-User-Id")  UUID userId) {
-        DeliveryTrackingResponse response = deliveryService.trackDelivery(trackingNumber, userId);
+            @PathVariable("tracking_number") String trackingNumber) {
+        DeliveryTrackingResponse response = deliveryService.trackDelivery(trackingNumber);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/deliveries/{delivery_id}/status")
     public ResponseEntity<ApiResponse<DeliveryStatusUpdateResponse>> getDeliveryStatus(
-            @PathVariable("delivery_id") UUID deliveryId, @RequestHeader("X-User-Id")  UUID userId,
+            @PathVariable("delivery_id") UUID deliveryId,
             @RequestBody DeliveryStatusUpdateRequest request) throws JsonProcessingException {
-        DeliveryStatusUpdateResponse response = deliveryService.updateDeliveryStatus(deliveryId, userId, request);
+        DeliveryStatusUpdateResponse response = deliveryService.updateDeliveryStatus(deliveryId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PutMapping("/deliveries/{delivery_id}/cancel")
     public ResponseEntity<ApiResponse<DeliveryCancelResponse>> cancelDelivery(
-            @PathVariable("delivery_id") UUID deliveryId, @RequestHeader("X-User-Id")  UUID userId,
+            @PathVariable("delivery_id") UUID deliveryId,
             @Valid @RequestBody DeliveryCancelRequest request) {
-        DeliveryCancelResponse response = deliveryService.cancelDelivery(deliveryId, userId, request);
+        DeliveryCancelResponse response = deliveryService.cancelDelivery(deliveryId, request);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/deliveries/start/{trackingNumber}")
     public ResponseEntity<ApiResponse<DeliveryStatusResponse>> startDelivery(
-            @PathVariable("trackingNumber") String trackingNumber, @RequestHeader("X-User-Id")  UUID userId) {
-        DeliveryStatusResponse response = deliveryService.startDelivery(trackingNumber, userId);
+            @PathVariable("trackingNumber") String trackingNumber) {
+        DeliveryStatusResponse response = deliveryService.startDelivery(trackingNumber);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PatchMapping("/deliveries/complete/{trackingNumber}")
     public ResponseEntity<ApiResponse<DeliveryStatusResponse>> completeDelivery(
-            @PathVariable("trackingNumber") String trackingNumber, @RequestHeader("X-User-Id")  UUID userId) {
+            @PathVariable("trackingNumber") String trackingNumber, @RequestHeader("X-User-Id") UUID userId) {
         DeliveryStatusResponse response = deliveryService.completeDelivery(trackingNumber, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @DeleteMapping("/deliveries/{deliveryId}")
+    @PreAuthorize("hasAnyRole('MASTER', 'HUB_MANAGER', 'COMPANY_DELIVERY_MANAGER')")
     public ResponseEntity<ApiResponse<DeliveryStatusResponse>> cancelDelivery(
-            @PathVariable("deliveryId") UUID deliveryId, @RequestHeader("X-User-Id")  UUID userId) {
+            @PathVariable("deliveryId") UUID deliveryId) {
 
-        DeliveryStatusResponse response = deliveryService.deleteDelivery(deliveryId, userId);
+        DeliveryStatusResponse response = deliveryService.deleteDelivery(deliveryId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

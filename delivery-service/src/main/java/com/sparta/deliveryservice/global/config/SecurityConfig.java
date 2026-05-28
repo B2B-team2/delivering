@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.global;
+package com.sparta.deliveryservice.global.config;
 
 
 import com.sparta.common.security.CustomPreAuthFilter;
