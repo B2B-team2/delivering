@@ -93,14 +93,14 @@ public class DeliveryController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PatchMapping("/start/{trackingNumber}")
+    @PatchMapping("/deliveries/start/{trackingNumber}")
     public ResponseEntity<ApiResponse<DeliveryStatusResponse>> startDelivery(
             @PathVariable("trackingNumber") String trackingNumber, @RequestHeader("X-User-Id")  UUID userId) {
         DeliveryStatusResponse response = deliveryService.startDelivery(trackingNumber, userId);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @PatchMapping("/complete/{trackingNumber}")
+    @PatchMapping("/deliveries/complete/{trackingNumber}")
     public ResponseEntity<ApiResponse<DeliveryStatusResponse>> completeDelivery(
             @PathVariable("trackingNumber") String trackingNumber, @RequestHeader("X-User-Id")  UUID userId) {
         DeliveryStatusResponse response = deliveryService.completeDelivery(trackingNumber, userId);
