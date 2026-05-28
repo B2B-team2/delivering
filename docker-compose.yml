@@ -127,6 +127,21 @@ services:
       kafka:
         condition: service_started
 
+  delivery-service:
+    build: ./delivery-service
+    container_name: delivery-service
+    ports:
+      - "19095:19095"
+    env_file:
+      - .env
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+
   operations-service:
     build: ./operations-service
     container_name: operations-service
