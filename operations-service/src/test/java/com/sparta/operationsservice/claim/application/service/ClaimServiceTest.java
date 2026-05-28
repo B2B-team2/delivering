@@ -47,7 +47,7 @@ class ClaimServiceTest {
     void createClaimSuccessTest() {
         // given
         ClaimCreateCommand command = ClaimCreateCommand.builder()
-                .orderItemId(UUID.randomUUID())
+                .companyOrderId(UUID.randomUUID())
                 .claimType("RETURN")
                 .reason("Test reason")
                 .refundAmount(BigDecimal.valueOf(10000))
@@ -55,14 +55,14 @@ class ClaimServiceTest {
 
         OrderClaim savedClaim = OrderClaim.builder()
                 .claimId(UUID.randomUUID())
-                .orderItemId(command.getOrderItemId())
+                .companyOrderId(command.getCompanyOrderId())
                 .claimType(ClaimType.RETURN)
                 .reason(command.getReason())
                 .refundAmount(command.getRefundAmount())
                 .status(ClaimStatus.REQUESTED)
                 .build();
 
-        when(orderClaimRepository.existsByOrderItemId(command.getOrderItemId())).thenReturn(false);
+        when(orderClaimRepository.existsByCompanyOrderId(command.getCompanyOrderId())).thenReturn(false);
         when(orderClaimRepository.save(any(OrderClaim.class))).thenReturn(savedClaim);
 
         // when
@@ -71,29 +71,29 @@ class ClaimServiceTest {
         // then
         assertThat(result).isNotNull();
         assertThat(result.getReason()).isEqualTo(command.getReason());
-        verify(orderClaimRepository, times(1)).existsByOrderItemId(command.getOrderItemId());
+        verify(orderClaimRepository, times(1)).existsByCompanyOrderId(command.getCompanyOrderId());
         verify(orderClaimRepository, times(1)).save(any(OrderClaim.class));
     }
 
     @Test
-    @DisplayName("클레임 생성 실패: 이미 존재하는 orderItemId로 요청 시 DUPLICATE_CLAIM 예외가 발생하는가?")
-    void createClaimDuplicateOrderItemTest() {
+    @DisplayName("클레임 생성 실패: 이미 존재하는 companyOrderId로 요청 시 DUPLICATE_CLAIM 예외가 발생하는가?")
+    void createClaimDuplicateCompanyOrderTest() {
         // given
         UUID duplicateId = UUID.randomUUID();
         ClaimCreateCommand command = ClaimCreateCommand.builder()
-                .orderItemId(duplicateId)
+                .companyOrderId(duplicateId)
                 .claimType("RETURN")
                 .reason("Test reason")
                 .build();
 
-        when(orderClaimRepository.existsByOrderItemId(duplicateId)).thenReturn(true);
+        when(orderClaimRepository.existsByCompanyOrderId(duplicateId)).thenReturn(true);
 
         // when & then
         assertThatThrownBy(() -> claimService.createClaim(command))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", OperationErrorCode.DUPLICATE_CLAIM);
 
-        verify(orderClaimRepository, times(1)).existsByOrderItemId(duplicateId);
+        verify(orderClaimRepository, times(1)).existsByCompanyOrderId(duplicateId);
         verify(orderClaimRepository, never()).save(any(OrderClaim.class));
     }
 
@@ -104,7 +104,7 @@ class ClaimServiceTest {
         Pageable pageable = PageRequest.of(0, 10);
         OrderClaim claim = OrderClaim.builder()
                 .claimId(UUID.randomUUID())
-                .orderItemId(UUID.randomUUID())
+                .companyOrderId(UUID.randomUUID())
                 .claimType(ClaimType.RETURN)
                 .status(ClaimStatus.REQUESTED)
                 .reason("reason")
@@ -129,7 +129,7 @@ class ClaimServiceTest {
         UUID claimId = UUID.randomUUID();
         OrderClaim claim = OrderClaim.builder()
                 .claimId(claimId)
-                .orderItemId(UUID.randomUUID())
+                .companyOrderId(UUID.randomUUID())
                 .claimType(ClaimType.RETURN)
                 .status(ClaimStatus.REQUESTED)
                 .reason("reason")
@@ -166,7 +166,7 @@ class ClaimServiceTest {
         UUID claimId = UUID.randomUUID();
         OrderClaim claim = OrderClaim.builder()
                 .claimId(claimId)
-                .orderItemId(UUID.randomUUID())
+                .companyOrderId(UUID.randomUUID())
                 .claimType(ClaimType.RETURN)
                 .status(ClaimStatus.REQUESTED)
                 .reason("reason")
@@ -179,7 +179,7 @@ class ClaimServiceTest {
         when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
 
         // when
-        ClaimDto result = claimService.updateClaimStatus(claimId, command);
+        ClaimDto result = claimService.updateClaimStatus(claimId, command, UUID.randomUUID());
 
         // then
         assertThat(result.getStatus()).isEqualTo("COMPLETED");
@@ -193,7 +193,7 @@ class ClaimServiceTest {
         UUID claimId = UUID.randomUUID();
         OrderClaim claim = OrderClaim.builder()
                 .claimId(claimId)
-                .orderItemId(UUID.randomUUID())
+                .companyOrderId(UUID.randomUUID())
                 .claimType(ClaimType.RETURN)
                 .status(ClaimStatus.REQUESTED)
                 .reason("reason")
@@ -208,7 +208,7 @@ class ClaimServiceTest {
         when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
 
         // when
-        ClaimDto result = claimService.updateClaimStatus(claimId, command);
+        ClaimDto result = claimService.updateClaimStatus(claimId, command, UUID.randomUUID());
 
         // then
         assertThat(result.getStatus()).isEqualTo("COMPLETED");
@@ -230,7 +230,8 @@ class ClaimServiceTest {
         when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
 
         // when & then
-        assertThatThrownBy(() -> claimService.updateClaimStatus(claimId, command))
+        UUID adminId = UUID.randomUUID();
+        assertThatThrownBy(() -> claimService.updateClaimStatus(claimId, command, adminId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", OperationErrorCode.INVALID_CLAIM_STATUS);
     }

@@ -14,12 +14,12 @@ class OrderClaimEntityTest {
     @DisplayName("엔티티 생성 시 기본값 검증: status는 REQUESTED, refundAmount는 0이어야 하는가?")
     void entityCreationDefaultValueTest() {
         // given
-        UUID orderItemId = UUID.randomUUID();
+        UUID companyOrderId = UUID.randomUUID();
         String reason = "Damaged product";
 
         // when
         OrderClaim claim = OrderClaim.builder()
-                .orderItemId(orderItemId)
+                .companyOrderId(companyOrderId)
                 .claimType(ClaimType.RETURN)
                 .reason(reason)
                 .build();

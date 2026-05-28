@@ -14,7 +14,7 @@ import java.util.UUID;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class ClaimCreateCommand {
-    private UUID orderItemId;
+    private UUID companyOrderId;
     private String claimType;
     private String reason;
     private BigDecimal refundAmount;

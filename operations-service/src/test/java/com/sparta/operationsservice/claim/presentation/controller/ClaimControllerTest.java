@@ -57,7 +57,7 @@ class ClaimControllerTest {
     void createClaimApiResponseFormatTest() throws Exception {
         // given
         ClaimCreateRequest request = ClaimCreateRequest.builder()
-                .orderItemId(UUID.randomUUID())
+                .companyOrderId(UUID.randomUUID())
                 .claimType("RETURN")
                 .reason("Test reason")
                 .refundAmount(BigDecimal.valueOf(10000))
@@ -83,11 +83,11 @@ class ClaimControllerTest {
 
     @Test
     @WithMockUser
-    @DisplayName("API 응답 규격 검증: 중복된 orderItemId로 생성 요청 시 409 Conflict 응답이 반환되는가?")
+    @DisplayName("API 응답 규격 검증: 중복된 companyOrderId로 생성 요청 시 409 Conflict 응답이 반환되는가?")
     void createClaimDuplicateErrorResponseTest() throws Exception {
         // given
         ClaimCreateRequest request = ClaimCreateRequest.builder()
-                .orderItemId(UUID.randomUUID())
+                .companyOrderId(UUID.randomUUID())
                 .claimType("RETURN")
                 .reason("Duplicate reason")
                 .build();
@@ -157,11 +157,12 @@ class ClaimControllerTest {
                 .refundAmount(refundAmount)
                 .build();
 
-        when(claimService.updateClaimStatus(eq(claimId), any(ClaimStatusUpdateCommand.class))).thenReturn(responseDto);
+        when(claimService.updateClaimStatus(eq(claimId), any(ClaimStatusUpdateCommand.class), any(UUID.class))).thenReturn(responseDto);
 
         // when & then
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", claimId)
                         .with(csrf())
+                        .header("X-User-Id", UUID.randomUUID().toString())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())

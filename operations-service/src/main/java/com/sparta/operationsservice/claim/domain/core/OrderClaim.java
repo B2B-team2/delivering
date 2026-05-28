@@ -31,7 +31,7 @@ public class OrderClaim extends BaseEntity {
     private UUID claimId;
 
     @Column(nullable = false)
-    private UUID orderItemId;
+    private UUID companyOrderId;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)
