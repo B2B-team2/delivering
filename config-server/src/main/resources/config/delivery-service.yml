@@ -24,10 +24,15 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
-        default_schema: hub-db
+        default_schema: delivery-db
     show-sql: true
+
   flyway:
-    schemas: hub-db
+    enabled: true
+    schemas: delivery-db
+    default-schema: delivery-db
+    create-schemas: true
+    locations: classpath:db/migration
   data:
     redis:
       host: ${REDIS_HOST}
