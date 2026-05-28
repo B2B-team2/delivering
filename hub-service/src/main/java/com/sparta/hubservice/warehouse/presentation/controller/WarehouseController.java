@@ -44,8 +44,10 @@ public class WarehouseController {
             @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @Valid @RequestBody WarehouseCreateRequest request) {
         requireMasterOrHubManager(role);
-        if ("HUB_MANAGER".equals(role) && hubId != null && !hubId.equals(request.getHubId())) {
-            throw new BusinessException(ErrorCode.FORBIDDEN);
+        if ("HUB_MANAGER".equals(role)) {
+            if (hubId == null || !hubId.equals(request.getHubId())) {
+                throw new BusinessException(ErrorCode.FORBIDDEN);
+            }
         }
         WarehouseDto dto = warehouseService.createWarehouse(request.toCommand());
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -89,6 +91,9 @@ public class WarehouseController {
             @PathVariable UUID warehouse_id,
             @RequestBody WarehouseUpdateRequest request) {
         requireMasterOrHubManager(role);
+        if ("HUB_MANAGER".equals(role) && hubId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
         WarehouseDto dto = warehouseService.updateWarehouse(warehouse_id, request.toCommand(), requesterHubId);
         return ResponseEntity.ok(ApiResponse.success(WarehouseResponse.from(dto)));
@@ -101,6 +106,9 @@ public class WarehouseController {
             @PathVariable UUID warehouse_id,
             @RequestHeader("X-User-Id") UUID userId) {
         requireMasterOrHubManager(role);
+        if ("HUB_MANAGER".equals(role) && hubId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
         warehouseService.deleteWarehouse(warehouse_id, userId, requesterHubId);
         return ResponseEntity.ok(ApiResponse.success());
