@@ -45,7 +45,7 @@ public class DeliveryController {
 
     private final DeliveryService deliveryService;
 
-    @GetMapping("/deliveries/{delivery_id}")
+    @GetMapping("/deliveries")
     public ResponseEntity<ApiResponse<Page<DeliverySearchResponse.DeliveryResponseDto>>> getDelivery(
             @PageableDefault(size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable,
             @RequestHeader("X-User-Id") UUID userId) {
