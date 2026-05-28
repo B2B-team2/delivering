@@ -29,4 +29,19 @@ public class HubAdapter implements HubPort {
         
         hubClient.returnStock(request);
     }
+
+    @Override
+    public void deductStock(UUID orderId, List<InventoryItem> items) {
+        InventoryBulkRequest request = InventoryBulkRequest.builder()
+                .orderId(orderId)
+                .items(items.stream()
+                        .map(item -> InventoryBulkRequest.InventoryItemRequest.builder()
+                                .productOptionId(item.productOptionId())
+                                .quantity(item.quantity())
+                                .build())
+                        .collect(Collectors.toList()))
+                .build();
+
+        hubClient.deductStock(request);
+    }
 }
