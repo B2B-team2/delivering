@@ -34,7 +34,7 @@ spring:
         - id: delivery-service-route
           uri: lb://DELIVERY-SERVICE
           predicates:
-            - Path=/api/v1/deliveries/**, /api/v1/delivery-addresses/**, /delivery/v3/api-docs
+            - Path=/api/v1/deliveries/**, /api/v1/delivery-addresses/**, /delivery/v3/api-docs, /api/v1/internal/deliveries/**
           filters:
             - RewritePath=/delivery/v3/api-docs, /v3/api-docs
 
