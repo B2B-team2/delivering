@@ -1,0 +1,43 @@
+spring:
+  # Config Server 임포트 비활성화 (로컬 통합테스트에서 Config Server 불필요)
+  config:
+    import: ""
+  # scanBasePackages="com.sparta"로 common.GlobalExceptionHandler와 orderservice.GlobalExceptionHandler가 모두 스캔되어
+  # 빈 이름 충돌 발생 → orderservice 핸들러가 덮어쓰도록 허용 (프로덕션 Config Server도 동일 설정 필요)
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+    hikari:
+      maximum-pool-size: 50   # 동시성 테스트(30 스레드)에서 각 @Transactional 메서드가 커넥션을 점유하므로 풀 확장
+  jpa:
+    hibernate:
+      ddl-auto: none        # WireMock 테스트는 @MockBean으로 DB 접근 우회 → 스키마 생성 불필요
+    database-platform: org.hibernate.dialect.H2Dialect
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100
+  flyway:
+    enabled: false
+  cloud:
+    openfeign:
+      client:
+        config:
+          # Feign 클라이언트별 URL을 WireMock 포트로 직접 지정 → Eureka 조회 및 로드밸런서 우회
+          hub-service:
+            url: http://localhost:${wiremock.server.port}
+          company-service:
+            url: http://localhost:${wiremock.server.port}
+          delivery-service:
+            url: http://localhost:${wiremock.server.port}
+          product-service:
+            url: http://localhost:${wiremock.server.port}
+
+eureka:
+  client:
+    enabled: false
+    register-with-eureka: false
+    fetch-registry: false
