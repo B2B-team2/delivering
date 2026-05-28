@@ -9,6 +9,8 @@ import com.sparta.operationsservice.claim.domain.core.ClaimType;
 import com.sparta.operationsservice.claim.domain.core.OrderClaim;
 import com.sparta.operationsservice.claim.domain.repository.OrderClaimRepository;
 import com.sparta.operationsservice.global.exception.OperationErrorCode;
+import com.sparta.operationsservice.claim.application.port.HubPort;
+import com.sparta.operationsservice.claim.application.port.OrderPort;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -28,6 +30,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -38,6 +42,15 @@ class ClaimServiceTest {
 
     @Mock
     private OrderClaimRepository orderClaimRepository;
+
+    @Mock
+    private OrderPort orderPort;
+
+    @Mock
+    private HubPort hubPort;
+
+    @Mock
+    private ClaimWriter claimWriter;
 
     @InjectMocks
     private ClaimService claimService;
@@ -177,6 +190,11 @@ class ClaimServiceTest {
                 .build();
 
         when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
+        doAnswer(invocation -> {
+            ClaimStatus status = invocation.getArgument(1);
+            claim.updateStatus(status);
+            return null;
+        }).when(claimWriter).commitClaimStatus(any(), any(), any());
 
         // when
         ClaimDto result = claimService.updateClaimStatus(claimId, command, UUID.randomUUID());
@@ -184,6 +202,7 @@ class ClaimServiceTest {
         // then
         assertThat(result.getStatus()).isEqualTo("COMPLETED");
         assertThat(claim.getStatus()).isEqualTo(ClaimStatus.COMPLETED);
+        verify(claimWriter, times(1)).commitClaimStatus(eq(claim), eq(ClaimStatus.COMPLETED), any());
     }
 
     @Test
@@ -206,6 +225,12 @@ class ClaimServiceTest {
                 .build();
 
         when(orderClaimRepository.findById(claimId)).thenReturn(Optional.of(claim));
+        doAnswer(invocation -> {
+            ClaimStatus status = invocation.getArgument(1);
+            BigDecimal amount = invocation.getArgument(2);
+            claim.updateStatusAndAmount(status, amount);
+            return null;
+        }).when(claimWriter).commitClaimStatus(any(), any(), any());
 
         // when
         ClaimDto result = claimService.updateClaimStatus(claimId, command, UUID.randomUUID());
@@ -215,6 +240,7 @@ class ClaimServiceTest {
         assertThat(result.getRefundAmount()).isEqualByComparingTo(updateAmount);
         assertThat(claim.getStatus()).isEqualTo(ClaimStatus.COMPLETED);
         assertThat(claim.getRefundAmount()).isEqualByComparingTo(updateAmount);
+        verify(claimWriter, times(1)).commitClaimStatus(eq(claim), eq(ClaimStatus.COMPLETED), eq(updateAmount));
     }
 
     @Test
