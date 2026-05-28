@@ -10,4 +10,7 @@ public interface HubClient {
 
     @PostMapping("/api/v1/internal/inventory/return")
     void returnStock(@RequestBody InventoryBulkRequest request);
+
+    @PostMapping("/api/v1/internal/inventory/deduct")
+    void deductStock(@RequestBody InventoryBulkRequest request);
 }

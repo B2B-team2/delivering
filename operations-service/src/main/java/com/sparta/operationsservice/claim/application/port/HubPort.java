@@ -5,6 +5,7 @@ import java.util.UUID;
 
 public interface HubPort {
     void returnStock(UUID orderId, List<InventoryItem> items);
+    void deductStock(UUID orderId, List<InventoryItem> items);
 
     record InventoryItem(
             UUID productOptionId,
