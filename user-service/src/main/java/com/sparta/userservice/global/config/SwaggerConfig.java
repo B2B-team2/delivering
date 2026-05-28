@@ -7,6 +7,8 @@ import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import io.swagger.v3.oas.models.servers.Server;
+import java.util.List;
 
 @Configuration
 public class SwaggerConfig {
@@ -28,6 +30,7 @@ public class SwaggerConfig {
                         .title("User Service API")
                         .description("스파르타 물류 - 사용자 및 배송담당자 관리 API")
                         .version("v1.0"))
+                .servers(List.of(new Server().url("http://localhost:8080").description("Gateway")))
                 .addSecurityItem(securityRequirement)
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth", securityScheme));

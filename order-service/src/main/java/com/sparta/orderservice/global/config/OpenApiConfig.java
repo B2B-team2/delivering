@@ -31,7 +31,7 @@ public class OpenApiConfig {
                         .title("Order Service API 명세서")
                         .description("Order Service API documentation")
                         .version("v1.0.0"))
-                .servers(List.of(new Server().url("/order").description("Default Server URL through Gateway")))
+                .servers(List.of(new Server().url("http://localhost:8080").description("Gateway")))
                 .addSecurityItem(securityRequirement)
                 .components(new Components()
                         .addSecuritySchemes("bearerAuth", securityScheme));
