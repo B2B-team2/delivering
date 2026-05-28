@@ -33,6 +33,7 @@ spring:
     default-schema: delivery-db
     create-schemas: true
     locations: classpath:db/migration
+
   data:
     redis:
       host: ${REDIS_HOST}
