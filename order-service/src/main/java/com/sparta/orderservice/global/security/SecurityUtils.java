@@ -1,47 +1,34 @@
 package com.sparta.orderservice.global.security;
 
-import jakarta.servlet.http.HttpServletRequest;
+import com.sparta.common.security.CustomUserDetails;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.UUID;
 
-// 게이트웨이가 주입한 인증 헤더를 읽어 AuthContext를 구현 — HTTP 세부사항을 application 계층에서 격리
 @Component
 public class SecurityUtils implements AuthContext {
 
-    private HttpServletRequest getRequest() {
-        ServletRequestAttributes attributes =
-                (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) throw new IllegalStateException("HTTP 요청 컨텍스트가 없습니다.");
-        return attributes.getRequest();
+    private CustomUserDetails getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof CustomUserDetails)) return null;
+        return (CustomUserDetails) auth.getPrincipal();
     }
 
-    public UUID getUserId() {
-        String value = getRequest().getHeader("X-User-Id");
-        if (value == null || value.isBlank()) throw new IllegalStateException("X-User-Id 헤더가 없습니다.");
-        return UUID.fromString(value);
-    }
-
-    // X-User-Role: MASTER, HUB_MANAGER | HUB_DELIVERY_MANAGER, COMPANY_DELIVERY_MANAGER | COMPANY_MANAGER
-    public String getRole() {
-        String value = getRequest().getHeader("X-User-Role");
-        return value != null ? value : "";
-    }
-
-    // X-Company-Id: COMPANY_MANAGER에게만 게이트웨이가 주입 (그 외 역할은 null)
     public UUID getCompanyId() {
-        String value = getRequest().getHeader("X-Company-Id");
-        if (value == null || value.isBlank()) return null;
-        return UUID.fromString(value);
+        CustomUserDetails user = getCurrentUser();
+        if (user == null || user.getCompanyId() == null) return null;
+        return UUID.fromString(user.getCompanyId());
     }
 
     public boolean isMaster() {
-        return "MASTER".equals(getRole());
+        CustomUserDetails user = getCurrentUser();
+        return user != null && "MASTER".equals(user.getRole());
     }
 
     public boolean isCompanyManager() {
-        return "COMPANY_MANAGER".equals(getRole());
+        CustomUserDetails user = getCurrentUser();
+        return user != null && "COMPANY_MANAGER".equals(user.getRole());
     }
 }
