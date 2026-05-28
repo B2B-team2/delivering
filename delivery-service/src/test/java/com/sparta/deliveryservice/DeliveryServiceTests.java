@@ -547,8 +547,8 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
 
+        given(securityUtils.isMaster()).willReturn(true);
 
-        // 3. 기대하는 에러 코드를 서비스 코드의 INVALID_STATUS_TRANSITION으로 수정
         assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.INVALID_STATUS_TRANSITION);
