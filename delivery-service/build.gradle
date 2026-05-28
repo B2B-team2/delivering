@@ -19,11 +19,3 @@ dependencies {
     implementation 'org.flywaydb:flyway-core'
     runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 }
-
-
-openApi {
-    apiDocsUrl.set("http://localhost:19095/v3/api-docs")
-    outputDir.set(file("$buildDir/docs"))
-    outputFileName.set("openapi.json")
-    waitTimeInSeconds.set(30)
-}
