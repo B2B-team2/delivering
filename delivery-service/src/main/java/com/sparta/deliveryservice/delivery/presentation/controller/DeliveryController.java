@@ -107,7 +107,7 @@ public class DeliveryController {
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
-    @DeleteMapping("/{deliveryId}")
+    @DeleteMapping("/deliveries/{deliveryId}")
     public ResponseEntity<ApiResponse<DeliveryStatusResponse>> cancelDelivery(
             @PathVariable("deliveryId") UUID deliveryId, @RequestHeader("X-User-Id")  UUID userId) {
 
