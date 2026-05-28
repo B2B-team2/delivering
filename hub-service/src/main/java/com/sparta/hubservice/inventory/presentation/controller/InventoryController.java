@@ -54,6 +54,9 @@ public class InventoryController {
         if ("HUB_MANAGER".equals(role) && hubId == null) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
+        if ("COMPANY_MANAGER".equals(role) && companyId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         UUID resolvedCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : request.getCompanyId();
         UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
         WarehouseInventoryDto dto = inventoryService.createInventory(request.toCommand(resolvedCompanyId), requesterHubId);
@@ -98,6 +101,9 @@ public class InventoryController {
             @Valid @RequestBody WarehouseInventoryAdjustRequest request) {
         requireInventoryWriteAccess(role);
         if ("HUB_MANAGER".equals(role) && hubId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if ("COMPANY_MANAGER".equals(role) && companyId == null) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
         UUID requesterCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : null;
