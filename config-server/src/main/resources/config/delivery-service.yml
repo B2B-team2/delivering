@@ -14,9 +14,9 @@ management:
 
 spring:
   datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    url: ${DELIVERY_DB_URL}
+    username: ${DELIVERY_DB_USERNAME}
+    password: ${DELIVERY_DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
