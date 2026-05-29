@@ -1,0 +1,64 @@
+spring:
+  application:
+    name: operations-service
+  datasource:
+    url: jdbc:h2:mem:operationsdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE SCHEMA IF NOT EXISTS "operation-db"
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        default_schema: operation-db
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        use_sql_comments: true
+  flyway:
+    enabled: false
+  cloud:
+    config:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
+
+GEMINI_API_KEY: dummy-key
+GEMINI_URL: http://dummy-url.com
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 2
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+    instances:
+      claimCircuitBreaker:
+        baseConfig: default
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+    instances:
+      claimTimeLimiter:
+        baseConfig: default
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 2
+        waitDuration: 100ms
+    instances:
+      claimRetry:
+        baseConfig: default
+

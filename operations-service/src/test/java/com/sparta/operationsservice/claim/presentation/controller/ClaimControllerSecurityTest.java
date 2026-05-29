@@ -4,6 +4,8 @@ import com.sparta.operationsservice.claim.application.dto.ClaimDto;
 import com.sparta.operationsservice.claim.application.service.ClaimService;
 import com.sparta.operationsservice.global.application.service.AuthService;
 import com.sparta.operationsservice.global.config.SecurityConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import io.github.resilience4j.timelimiter.TimeLimiterRegistry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,6 +35,12 @@ class ClaimControllerSecurityTest {
 
     @MockBean(name = "authService")
     private AuthService authService;
+
+    @MockBean
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
+    @MockBean
+    private TimeLimiterRegistry timeLimiterRegistry;
 
     @Test
     @DisplayName("클레임 목록 조회 - MASTER 권한 성공")
