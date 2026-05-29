@@ -85,6 +85,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/v1/companies")
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -118,6 +119,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/v1/companies/{companyId}", companyId)
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -140,6 +142,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(patch("/api/v1/companies/{companyId}", companyId)
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -159,6 +162,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/v1/companies")
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -176,6 +180,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/v1/companies")
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(jsonRequest))
@@ -202,6 +207,7 @@ class CompanyControllerTest {
                         .param("page", "0")
                         .param("size", "10")
                         .param("sort", "createdAt,DESC")
+                        .header("X-Gateway-Secret", "local-secret")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
@@ -224,6 +230,7 @@ class CompanyControllerTest {
         // when & then
         mockMvc.perform(get("/api/v1/companies")
                         .param("size", "20")
+                        .header("X-Gateway-Secret", "local-secret")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk());
 
@@ -247,6 +254,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/v1/companies/{companyId}", companyId)
+                        .header("X-Gateway-Secret", "local-secret")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))
@@ -266,6 +274,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(get("/api/v1/companies/{companyId}", companyId)
+                        .header("X-Gateway-Secret", "local-secret")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
@@ -290,6 +299,7 @@ class CompanyControllerTest {
         mockMvc.perform(delete("/api/v1/companies/{companyId}", companyId)
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -305,6 +315,7 @@ class CompanyControllerTest {
     void pathVariableTypeMismatchTest() throws Exception {
         // when & then
         mockMvc.perform(get("/api/v1/companies/invalid-uuid")
+                        .header("X-Gateway-Secret", "local-secret")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
@@ -337,6 +348,7 @@ class CompanyControllerTest {
         when(companyAddressService.registerAddress(eq(companyId), any())).thenReturn(responseDto);
 
         mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -358,6 +370,7 @@ class CompanyControllerTest {
 
         // when & then
         mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
+                        .header("X-Gateway-Secret", "local-secret")
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
@@ -382,7 +395,7 @@ class CompanyControllerTest {
                 Sort.Order.desc("isDefault"),
                 Sort.Order.desc("createdAt")
         ));
-        
+
         when(companyAddressService.getAddresses(eq(companyId), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(addressDto), pageable, 1));
 
@@ -390,6 +403,7 @@ class CompanyControllerTest {
         mockMvc.perform(get("/api/v1/companies/{companyId}/addresses", companyId)
                         .param("page", "0")
                         .param("size", "10")
+                        .header("X-Gateway-Secret", "local-secret")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value(200))

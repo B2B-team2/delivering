@@ -45,6 +45,7 @@ class CompanyControllerSecurityTest {
         when(companyService.createCompany(any())).thenReturn(CompanyDto.builder().companyId(UUID.randomUUID()).build());
 
         mockMvc.perform(post("/api/v1/companies")
+                        .header("X-Gateway-Secret", "local-secret")
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType("application/json")
@@ -56,6 +57,7 @@ class CompanyControllerSecurityTest {
     @DisplayName("업체 등록 - 일반 사용자 실패 (403)")
     void createCompany_User_Forbidden() throws Exception {
         mockMvc.perform(post("/api/v1/companies")
+                        .header("X-Gateway-Secret", "local-secret")
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "USER")
                         .contentType("application/json")
@@ -70,6 +72,7 @@ class CompanyControllerSecurityTest {
         when(companyService.deleteCompany(any(), any())).thenReturn(CompanyDto.builder().companyId(companyId).build());
 
         mockMvc.perform(delete("/api/v1/companies/" + companyId)
+                        .header("X-Gateway-Secret", "local-secret")
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "HUB_MANAGER"))
                 .andExpect(status().isOk());
