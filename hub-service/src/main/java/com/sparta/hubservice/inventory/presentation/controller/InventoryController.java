@@ -51,6 +51,12 @@ public class InventoryController {
             @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @Valid @RequestBody WarehouseInventoryCreateRequest request) {
         requireInventoryWriteAccess(role);
+        if ("HUB_MANAGER".equals(role) && hubId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if ("COMPANY_MANAGER".equals(role) && companyId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         UUID resolvedCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : request.getCompanyId();
         UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
         WarehouseInventoryDto dto = inventoryService.createInventory(request.toCommand(resolvedCompanyId), requesterHubId);
@@ -94,6 +100,12 @@ public class InventoryController {
             @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId,
             @Valid @RequestBody WarehouseInventoryAdjustRequest request) {
         requireInventoryWriteAccess(role);
+        if ("HUB_MANAGER".equals(role) && hubId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if ("COMPANY_MANAGER".equals(role) && companyId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         UUID requesterCompanyId = "COMPANY_MANAGER".equals(role) ? companyId : null;
         UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
         WarehouseInventoryAdjustDto dto = inventoryService.adjustInventory(inventory_id, request.toCommand(), requesterCompanyId, requesterHubId);
@@ -107,6 +119,9 @@ public class InventoryController {
             @RequestHeader("X-User-Role") String role,
             @RequestHeader(value = "X-Hub-Id", required = false) UUID hubId) {
         requireMasterOrHubManager(role);
+        if ("HUB_MANAGER".equals(role) && hubId == null) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         UUID requesterHubId = "HUB_MANAGER".equals(role) ? hubId : null;
         inventoryService.deleteInventory(inventory_id, userId, requesterHubId);
         return ResponseEntity.ok(ApiResponse.success());
