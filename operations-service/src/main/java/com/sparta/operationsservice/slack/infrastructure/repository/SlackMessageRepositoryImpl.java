@@ -15,14 +15,14 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SlackMessageRepositoryImpl implements SlackMessageRepository {
 
-    private final SlackMessageRepository slackMessageRepository;
+    private final SlackMessageJpaRepository slackMessageJpaRepository;
 
     @Override
-    public Optional<SlackMessage> findById(UUID slackMessageId) { return slackMessageRepository.findById(slackMessageId);}
+    public Optional<SlackMessage> findById(UUID slackMessageId) { return slackMessageJpaRepository.findById(slackMessageId);}
 
     @Override
-    public SlackMessage save(SlackMessage slackMessage) { return slackMessageRepository.save(slackMessage);}
+    public SlackMessage save(SlackMessage slackMessage) { return slackMessageJpaRepository.save(slackMessage);}
 
     @Override
-    public Page<SlackMessage> findAll(Pageable pageable) {return slackMessageRepository.findAll(pageable);}
+    public Page<SlackMessage> findAll(Pageable pageable) {return slackMessageJpaRepository.findAll(pageable);}
 }
