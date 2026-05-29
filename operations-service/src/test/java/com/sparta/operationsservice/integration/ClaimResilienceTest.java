@@ -73,7 +73,7 @@ public class ClaimResilienceTest extends IntegrationTestSupport {
         );
 
         String response = mockMvc.perform(post("/api/v1/claims")
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -98,7 +98,7 @@ public class ClaimResilienceTest extends IntegrationTestSupport {
         ClaimStatusUpdateRequest updateRequest = new ClaimStatusUpdateRequest("PROCESSING", new BigDecimal("10000"));
 
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", claimId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -123,7 +123,7 @@ public class ClaimResilienceTest extends IntegrationTestSupport {
             ClaimStatusUpdateRequest updateRequest = new ClaimStatusUpdateRequest("PROCESSING", new BigDecimal("10000"));
 
             mockMvc.perform(patch("/api/v1/claims/{claimId}/status", claimId)
-                            .header("X-User-Id", UUID.randomUUID().toString())
+                            .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                             .header("X-User-Role", "MASTER")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(objectMapper.writeValueAsString(updateRequest)))
@@ -138,7 +138,7 @@ public class ClaimResilienceTest extends IntegrationTestSupport {
         // [3] 차단 확인 (다음 호출)
         UUID nextClaimId = createTestClaim(UUID.randomUUID());
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", nextClaimId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new ClaimStatusUpdateRequest("PROCESSING", BigDecimal.ZERO))))

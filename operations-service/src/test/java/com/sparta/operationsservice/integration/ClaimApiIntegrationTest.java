@@ -73,7 +73,7 @@ public class ClaimApiIntegrationTest extends IntegrationTestSupport {
 
         // when
         mockMvc.perform(post("/api/v1/claims")
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
@@ -100,7 +100,7 @@ public class ClaimApiIntegrationTest extends IntegrationTestSupport {
 
         // when & then
         mockMvc.perform(get("/api/v1/claims/{claimId}", saved.getClaimId())
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.claimId").value(saved.getClaimId().toString()))
@@ -133,7 +133,7 @@ public class ClaimApiIntegrationTest extends IntegrationTestSupport {
 
         // when
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", saved.getClaimId())
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))

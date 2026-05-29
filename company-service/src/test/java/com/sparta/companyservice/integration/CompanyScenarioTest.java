@@ -46,7 +46,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .build();
 
         String response = mockMvc.perform(post("/api/v1/companies")
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -73,7 +73,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .build();
 
         mockMvc.perform(patch("/api/v1/companies/{companyId}", companyId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "HUB_MANAGER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -81,7 +81,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
 
         // [3] 최종 정보 조회
         mockMvc.perform(get("/api/v1/companies/{companyId}", companyId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "CUSTOMER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.companyName").value("수정된 통합테스트 업체"))
@@ -102,7 +102,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .build();
 
         String createResponse = mockMvc.perform(post("/api/v1/products")
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -113,7 +113,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
 
         // [2] 상품 상세 조회
         mockMvc.perform(get("/api/v1/products/{productId}", productId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "CUSTOMER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.name").value("시나리오 상품"));
@@ -122,7 +122,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
         String statusJson = "{\"status\":\"DISCONTINUED\"}";
 
         mockMvc.perform(patch("/api/v1/products/{productId}/status", productId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(statusJson))
@@ -130,7 +130,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
 
         // [4] 상태 변경 후 조회
         mockMvc.perform(get("/api/v1/products/{productId}", productId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "CUSTOMER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("DISCONTINUED"));
@@ -148,7 +148,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .price(new BigDecimal("5000"))
                 .build();
         String pResponse = mockMvc.perform(post("/api/v1/products")
-                .header("X-User-Id", UUID.randomUUID().toString())
+                .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                 .header("X-User-Role", "MASTER")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(pRequest))).andReturn().getResponse().getContentAsString();
@@ -163,7 +163,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .build();
 
         String oResponse = mockMvc.perform(post("/api/v1/product-options")
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(optionRequest)))
@@ -174,7 +174,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
 
         // [2] 옵션 상세 조회
         mockMvc.perform(get("/api/v1/product-options/{optionId}", optionId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "CUSTOMER"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.optionsName").value("빨간색"));
@@ -187,13 +187,13 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
 
         // [2] 업체 삭제
         mockMvc.perform(delete("/api/v1/companies/{companyId}", companyId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER"))
                 .andExpect(status().isOk());
 
         // [3] 삭제된 업체 조회 (404 기대)
         mockMvc.perform(get("/api/v1/companies/{companyId}", companyId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "CUSTOMER"))
                 .andExpect(status().isNotFound());
     }
@@ -217,7 +217,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .build();
 
         mockMvc.perform(patch("/api/v1/companies/{companyId}", companyId)
-                        .header("X-User-Id", managerId.toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", managerId.toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .header("X-Company-Id", companyId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -227,7 +227,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
         // [3] 타 업체 수정 (실패 - 403)
         UUID otherCompanyId = UUID.randomUUID();
         mockMvc.perform(patch("/api/v1/companies/{companyId}", otherCompanyId)
-                        .header("X-User-Id", managerId.toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", managerId.toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .header("X-Company-Id", companyId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -251,7 +251,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .build();
 
         String res1 = mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
-                        .header("X-User-Id", managerId.toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", managerId.toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .header("X-Company-Id", companyId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -269,7 +269,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
                 .build();
 
         String res2 = mockMvc.perform(post("/api/v1/companies/{companyId}/addresses", companyId)
-                        .header("X-User-Id", managerId.toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", managerId.toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .header("X-Company-Id", companyId.toString())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -279,7 +279,7 @@ public class CompanyScenarioTest extends IntegrationTestSupport {
 
         // [3] 배송지 목록 조회하여 기본 배송지 설정 확인
         mockMvc.perform(get("/api/v1/companies/{companyId}/addresses", companyId)
-                        .header("X-User-Id", managerId.toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", managerId.toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .header("X-Company-Id", companyId.toString()))
                 .andExpect(status().isOk())

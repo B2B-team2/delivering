@@ -73,7 +73,7 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
         );
 
         String response = mockMvc.perform(post("/api/v1/claims")
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -96,7 +96,7 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
         ClaimStatusUpdateRequest updateRequest = new ClaimStatusUpdateRequest("PROCESSING", new BigDecimal("30000"));
 
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", claimId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -125,7 +125,7 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
         ClaimStatusUpdateRequest updateRequest = new ClaimStatusUpdateRequest("PROCESSING", new BigDecimal("50000"));
 
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", claimId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
@@ -149,7 +149,7 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
         ClaimStatusUpdateRequest rejectRequest = new ClaimStatusUpdateRequest("REJECTED", BigDecimal.ZERO);
 
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", claimId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(rejectRequest)))
@@ -183,7 +183,7 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
         );
 
         mockMvc.perform(patch("/api/v1/claims/{claimId}/status", claimId)
-                        .header("X-User-Id", UUID.randomUUID().toString())
+                        .header("X-Gateway-Secret", "local-secret").header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
