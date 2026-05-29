@@ -1,10 +1,6 @@
 package com.sparta.orderservice.global.exception;
 
 import com.sparta.common.dto.BusinessException;
-import com.sparta.orderservice.order.infrastructure.client.CompanyClient;
-import com.sparta.orderservice.order.infrastructure.client.DeliveryClient;
-import com.sparta.orderservice.order.infrastructure.client.HubClient;
-import com.sparta.orderservice.order.infrastructure.client.ProductClient;
 import feign.Response;
 import feign.codec.ErrorDecoder;
 import lombok.extern.slf4j.Slf4j;
@@ -16,18 +12,16 @@ import org.springframework.stereotype.Component;
  * methodKey 형식: "ClassName#methodName(ParamTypes)" — Feign이 자동 생성
  *
  * [클라이언트 식별 방식]
- * 문자열 리터럴 대신 .class.getSimpleName() 상수로 참조하여
- * 클라이언트 클래스명 변경 시 컴파일 에러로 즉시 탐지되도록 보완.
+ * .class.getSimpleName() 참조 시 ArchUnit rule 위반(global → infra)이 발생 -> 문자열 상수로 선언
  */
 @Slf4j
 @Component
 public class FeignErrorDecoder implements ErrorDecoder {
 
-    // 클래스 참조로 선언 → 클라이언트 클래스명 변경 시 컴파일 에러로 즉시 탐지
-    private static final String HUB_CLIENT      = HubClient.class.getSimpleName();
-    private static final String COMPANY_CLIENT  = CompanyClient.class.getSimpleName();
-    private static final String DELIVERY_CLIENT = DeliveryClient.class.getSimpleName();
-    private static final String PRODUCT_CLIENT  = ProductClient.class.getSimpleName();
+    private static final String HUB_CLIENT      = "HubClient";
+    private static final String COMPANY_CLIENT  = "CompanyClient";
+    private static final String DELIVERY_CLIENT = "DeliveryClient";
+    private static final String PRODUCT_CLIENT  = "ProductClient";
 
     @Override
     public Exception decode(String methodKey, Response response) {

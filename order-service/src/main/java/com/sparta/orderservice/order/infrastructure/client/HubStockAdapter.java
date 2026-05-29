@@ -92,22 +92,29 @@ public class HubStockAdapter implements HubStockPort {
         }
     }
 
+    // BusinessException -> FeignErrorDecoder에서 도메인 의미가 부여된 예외(예: STOCK_INSUFFICIENT)
+    // fallback에서 HUB_SERVICE_UNAVAILABLE로 덮어쓰지 않고 그대로 전파
+    // fallback은 circuit OPEN이나 타임아웃 같은 인프라 장애에만 대체 응답을 반환
     private void reserveStockFallback(Order order, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Hub][CB] reserveStock circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 
     private void cancelStockFallback(UUID orderId, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Hub][CB] cancelStock circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 
     private void cancelCompanyStockFallback(UUID companyOrderId, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Hub][CB] cancelCompanyStock circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 
     private void reserveCompanyStockFallback(CompanyOrder companyOrder, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Hub][CB] reserveCompanyStock circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }

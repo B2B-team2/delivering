@@ -42,11 +42,21 @@ eureka:
     register-with-eureka: false
     fetch-registry: false
 
-# 서킷브레이커: BusinessException은 비즈니스 오류이므로 실패율 집계에서 제외
-# (프로덕션 config-server 설정과 동일하게 맞춤)
+# 서킷브레이커: BusinessException은 비즈니스 오류이므로 실패율 집계 및 fallback 호출에서 제외
+# ignoreExceptions에 포함된 예외는 fallback 없이 그대로 전파됨 (Resilience4j 동작)
+# configs.default 단독 선언으로는 적용 안 됨 → instances에서 baseConfig로 반드시 참조해야 함
 resilience4j:
   circuitbreaker:
     configs:
       default:
         ignoreExceptions:
           - com.sparta.common.dto.BusinessException
+    instances:
+      companyClient:
+        baseConfig: default
+      hubClient:
+        baseConfig: default
+      deliveryClient:
+        baseConfig: default
+      productClient:
+        baseConfig: default

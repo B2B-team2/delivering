@@ -50,6 +50,7 @@ public class ProductAdapter implements ProductPort {
     }
 
     private Map<UUID, ProductOptionInfo> getProductOptionInfosFallback(List<UUID> productOptionIds, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Product][CB] getProductOptionInfos circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.EXTERNAL_SERVICE_ERROR);
     }

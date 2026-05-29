@@ -70,11 +70,13 @@ public class DeliveryAdapter implements DeliveryPort {
     }
 
     private Map<UUID, UUID> createDeliveriesFallback(Order order, Map<UUID, UUID> hubIdMap, UUID destinationHubId, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Delivery][CB] createDeliveries circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
     }
 
     private void cancelDeliveriesFallback(List<UUID> companyOrderIds, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Delivery][CB] cancelDeliveries circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.DELIVERY_SERVICE_UNAVAILABLE);
     }

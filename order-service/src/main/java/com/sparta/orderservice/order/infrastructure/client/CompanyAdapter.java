@@ -67,11 +67,13 @@ public class CompanyAdapter implements CompanyPort {
     }
 
     private Map<UUID, UUID> getHubIdsFallback(List<UUID> companyIds, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Company][CB] getHubIds circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
     }
 
     private DeliveryAddressInfo getDefaultDeliveryAddressFallback(UUID receiverCompanyId, Throwable t) {
+        if (t instanceof BusinessException be) throw be;
         log.error("[Company][CB] getDefaultDeliveryAddress circuit open or timeout: {}", t.getMessage());
         throw new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
     }
