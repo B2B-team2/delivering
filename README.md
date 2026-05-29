@@ -511,4 +511,5 @@ docker compose -f docker-compose.infra.yml down
 | API Gateway          | http://localhost:8080                 |
 | Eureka Dashboard     | http://localhost:8761                 |
 | Zipkin               | http://localhost:9411                 |
+| Keycloak             | http://localhost:18080                |
 | Swagger (Gateway 통합) | http://localhost:8080/swagger-ui.html |
