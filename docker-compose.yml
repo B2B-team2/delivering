@@ -5,26 +5,6 @@ services:
     ports:
       - "9411:9411"
 
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-    ports:
-      - "2181:2181"
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
-    depends_on: [zookeeper]
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    ports:
-      - "9092:9092"
-
   config-server:
     build: ./config-server
     container_name: config-server
@@ -77,8 +57,6 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   company-service:
     build: ./company-service
@@ -90,8 +68,6 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   hub-service:
     build: ./hub-service
@@ -103,8 +79,6 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   order-service:
     build: ./order-service
@@ -116,8 +90,6 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   delivery-service:
     build: ./delivery-service
@@ -129,8 +101,6 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-      kafka:
-        condition: service_started
 
   operations-service:
     build: ./operations-service
@@ -142,5 +112,3 @@ services:
         condition: service_healthy
       eureka-server:
         condition: service_healthy
-      kafka:
-        condition: service_started
