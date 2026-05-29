@@ -41,3 +41,12 @@ eureka:
     enabled: false
     register-with-eureka: false
     fetch-registry: false
+
+# 서킷브레이커: BusinessException은 비즈니스 오류이므로 실패율 집계에서 제외
+# (프로덕션 config-server 설정과 동일하게 맞춤)
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        ignoreExceptions:
+          - com.sparta.common.dto.BusinessException
