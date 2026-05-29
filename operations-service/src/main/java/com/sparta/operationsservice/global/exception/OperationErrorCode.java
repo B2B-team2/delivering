@@ -14,7 +14,9 @@ public enum OperationErrorCode implements ErrorCode {
     DUPLICATE_CLAIM(HttpStatus.CONFLICT, "CL003", "이미 해당 업체 주문에 대한 클레임이 존재합니다.", "companyOrderId"),
 
     SLACK_NOT_FOUND(HttpStatus.NOT_FOUND, "SL001", "클레임 정보를 찾을 수 없습니다.", "SlackMessageId"),
-    UNAUTHORIZED_ACCESS(HttpStatus.UNAUTHORIZED, "SL001", "인가되지 않은 접근입니다.", "User");
+    UNAUTHORIZED_ACCESS(HttpStatus.UNAUTHORIZED, "SL001", "인가되지 않은 접근입니다.", "User"),
+
+    REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "AI-001", "요청하신 AI 기록을 찾을 수 없습니다.", "AiHistory");
 
     private final HttpStatus httpStatus;
     private final String code;
