@@ -70,8 +70,6 @@ services:
   user-service:
     build: ./user-service
     container_name: user-service
-    ports:
-      - "19091:19091"
     env_file:
       - .env
     depends_on:
@@ -85,8 +83,6 @@ services:
   company-service:
     build: ./company-service
     container_name: company-service
-    ports:
-      - "19092:19092"
     env_file:
       - .env
     depends_on:
@@ -100,8 +96,6 @@ services:
   hub-service:
     build: ./hub-service
     container_name: hub-service
-    ports:
-      - "19093:19093"
     env_file:
       - .env
     depends_on:
@@ -115,8 +109,6 @@ services:
   order-service:
     build: ./order-service
     container_name: order-service
-    ports:
-      - "19094:19094"
     env_file:
       - .env
     depends_on:
@@ -130,8 +122,6 @@ services:
   delivery-service:
     build: ./delivery-service
     container_name: delivery-service
-    ports:
-      - "19095:19095"
     env_file:
       - .env
     depends_on:
@@ -145,8 +135,6 @@ services:
   operations-service:
     build: ./operations-service
     container_name: operations-service
-    ports:
-      - "19096:19096"
     env_file:
       - .env
     depends_on:

@@ -75,6 +75,7 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 public HttpHeaders getHeaders() {
                     HttpHeaders headers = new HttpHeaders();
                     headers.putAll(super.getHeaders());
+                    headers.set("X-Gateway-Secret", System.getenv().getOrDefault("GATEWAY_SECRET", "local-secret"));
                     headers.set("X-User-Id", userId);
                     headers.set("X-User-Email", email);
                     headers.set("X-User-Role", finalRole);

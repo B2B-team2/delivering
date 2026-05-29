@@ -4,6 +4,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,15 +17,31 @@ import java.util.List;
 public class CustomPreAuthFilter extends OncePerRequestFilter {
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/v1/auth/")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/actuator");
+    }
+
+    @Override
+    protected void doFilterInternal(HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
+
+        String gatewaySecret = request.getHeader("X-Gateway-Secret");
+        String expectedSecret = System.getenv().getOrDefault("GATEWAY_SECRET", "local-secret");
+
+        if (!expectedSecret.equals(gatewaySecret)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Direct access not allowed");
+            return;
+        }
 
         String userId = request.getHeader("X-User-Id");
         String userRole = request.getHeader("X-User-Role");
         String companyId = request.getHeader("X-Company-Id");
 
         if (userId != null && userRole != null) {
-            // "ROLE_" 접두사 자동 추가 (hasRole 지원용)
             SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + userRole);
             List<SimpleGrantedAuthority> authorities = Collections.singletonList(authority);
 
