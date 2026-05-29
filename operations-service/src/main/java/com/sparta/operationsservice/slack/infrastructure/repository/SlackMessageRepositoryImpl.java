@@ -15,7 +15,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class SlackMessageRepositoryImpl implements SlackMessageRepository {
 
-    private final SlackMessageRepository slackMessageRepository;
+    private final SlackMessageJpaRepository slackMessageRepository;
 
     @Override
     public Optional<SlackMessage> findById(UUID slackMessageId) { return slackMessageRepository.findById(slackMessageId);}
