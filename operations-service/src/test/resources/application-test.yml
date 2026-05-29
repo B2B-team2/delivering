@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: operations-service
+  datasource:
+    url: jdbc:h2:mem:operationsdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: create-drop
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+        format_sql: true
+        use_sql_comments: true
+  flyway:
+    enabled: false
+  cloud:
+    config:
+      enabled: false
+
+eureka:
+  client:
+    enabled: false
