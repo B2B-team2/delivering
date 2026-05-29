@@ -83,7 +83,7 @@
 | Infra    | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=flat&logo=docker&logoColor=white) ![Vultr](https://img.shields.io/badge/Vultr-007BFC?style=flat&logo=vultr&logoColor=white) ![Zipkin](https://img.shields.io/badge/Zipkin-FE5F50?style=flat)                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Tools    | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black) ![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat&logo=slack&logoColor=white) ![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | CI/CD    | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat&logo=githubactions&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-
+| Quality  | ![Flyway](https://img.shields.io/badge/Flyway-CC0200?style=flat&logo=flyway&logoColor=white) ![ArchUnit](https://img.shields.io/badge/ArchUnit-0A0A0A?style=flat&logoColor=white) ![Checkstyle](https://img.shields.io/badge/Checkstyle-0A0A0A?style=flat&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 ---
 
 ## 마이크로서비스 구성
@@ -337,9 +337,14 @@ Gemini API에 아래 정보를 전달해 `final_deadline_at`을 산출합니다.
 > - 페이지네이션: size는 10 / 30 / 50만 허용, 그 외 기본 10건
 > - 정렬: 기본 `createdAt,DESC`
 
-yaml 정적 추가 후 수정 예정
-[<img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black" height="25">](https://editor.swagger.io/)
-
+| 서비스                | API 명세                                                                                                                                                                                                                                            |
+|:-------------------|:--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| User Service       | [<img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black" height="20">](https://editor.swagger.io/?url=https://raw.githubusercontent.com/B2B-team2/delivering/develop/docs/swagger/user-service.json)       |
+| Company Service    | [<img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black" height="20">](https://editor.swagger.io/?url=https://raw.githubusercontent.com/B2B-team2/delivering/develop/docs/swagger/company-service.json)    |
+| Hub Service        | [<img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black" height="20">](https://editor.swagger.io/?url=https://raw.githubusercontent.com/B2B-team2/delivering/develop/docs/swagger/hub-service.json)        |
+| Order Service      | [<img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black" height="20">](https://editor.swagger.io/?url=https://raw.githubusercontent.com/B2B-team2/delivering/develop/docs/swagger/order-service.json)      |
+| Delivery Service   | [<img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black" height="20">](https://editor.swagger.io/?url=https://raw.githubusercontent.com/B2B-team2/delivering/develop/docs/swagger/delivery-service.json)   |
+| Operations Service | [<img src="https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black" height="20">](https://editor.swagger.io/?url=https://raw.githubusercontent.com/B2B-team2/delivering/develop/docs/swagger/operations-service.json) |
 ---
 
 ## 인프라 아키텍처
@@ -463,9 +468,9 @@ GATEWAY_SECRET=your_gateway_secret
 앱 재배포나 핫픽스 적용 시 인프라(DB·Redis·Keycloak)를 재시작하지 않고
 앱 서비스만 독립적으로 올리고 내릴 수 있도록 하기 위함입니다.
 
-| 명령어 | 영향 범위 |
-|:------|:--------|
-| `docker compose down` | 앱 서비스만 종료, DB 유지 |
+| 명령어                                               | 영향 범위                |
+|:--------------------------------------------------|:---------------------|
+| `docker compose down`                             | 앱 서비스만 종료, DB 유지     |
 | `docker compose -f docker-compose.infra.yml down` | DB·Redis·Keycloak 종료 |
 
 ### 실행 순서
