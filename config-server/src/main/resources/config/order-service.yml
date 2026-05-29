@@ -26,6 +26,34 @@ spring:
     locations: classpath:db/migration # 마이그레이션 파일 위치
     validate-on-migrate: true
 
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 3000   # 연결 타임아웃 3초
+        readTimeout: 5000      # 읽기 타임아웃 5초
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        slidingWindowSize: 10                    # 최근 10회 호출 기준으로 실패율 계산
+        failureRateThreshold: 50                 # 실패율 50% 초과 시 OPEN
+        waitDurationInOpenState: 10s             # OPEN 상태 10초 유지 후 HALF-OPEN 시도
+        permittedNumberOfCallsInHalfOpenState: 3 # HALF-OPEN 상태에서 3회 테스트 호출
+        registerHealthIndicator: true
+        ignoreExceptions:
+          - com.sparta.common.dto.BusinessException  # 비즈니스 예외는 회로 실패율에 미포함
+    instances:
+      companyClient:
+        baseConfig: default
+      hubClient:
+        baseConfig: default
+      deliveryClient:
+        baseConfig: default
+      productClient:
+        baseConfig: default
+
 logging:
   level:
     org.hibernate.SQL: DEBUG                        # SQL 쿼리 (debug 모드에서만 출력)
