@@ -11,10 +11,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.Collections;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +40,7 @@ class ClaimControllerSecurityTest {
         when(claimService.getClaims(any())).thenReturn(Page.empty());
 
         mockMvc.perform(get("/api/v1/claims")
+                        .header("X-Gateway-Secret", "local-secret")
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "MASTER"))
                 .andExpect(status().isOk());
@@ -51,6 +50,7 @@ class ClaimControllerSecurityTest {
     @DisplayName("클레임 목록 조회 - 업체 담당자 실패 (403)")
     void getClaims_CompanyManager_Forbidden() throws Exception {
         mockMvc.perform(get("/api/v1/claims")
+                        .header("X-Gateway-Secret", "local-secret")
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "COMPANY_MANAGER"))
                 .andExpect(status().isForbidden());
@@ -62,6 +62,7 @@ class ClaimControllerSecurityTest {
         when(claimService.createClaim(any())).thenReturn(ClaimDto.builder().claimId(UUID.randomUUID()).build());
 
         mockMvc.perform(post("/api/v1/claims")
+                        .header("X-Gateway-Secret", "local-secret")
                         .header("X-User-Id", UUID.randomUUID().toString())
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .contentType("application/json")
