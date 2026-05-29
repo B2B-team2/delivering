@@ -86,9 +86,8 @@ public class ClaimService {
         // 상태가 PROCESSING으로 변경되는 경우에만 SAGA 로직 수행
         if (newStatus == ClaimStatus.PROCESSING && claim.getStatus() != ClaimStatus.PROCESSING) {
             try {
-                // CircuitBreaker 수동 적용 (동기 방식)
+                // CircuitBreaker 수동 적용
                 CircuitBreaker circuitBreaker = circuitBreakerRegistry.circuitBreaker("claimCircuitBreaker");
-                
                 circuitBreaker.executeRunnable(() -> 
                     runClaimApprovalSaga(claim, adminId, newStatus, command.getRefundAmount())
                 );
