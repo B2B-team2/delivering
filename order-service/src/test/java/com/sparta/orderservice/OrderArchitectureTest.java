@@ -1,11 +1,12 @@
 package com.sparta.orderservice;
 
 import com.sparta.common.architecture.BaseArchitectureTest;
+import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
 
-@AnalyzeClasses(packages = "com.sparta.orderservice")
+@AnalyzeClasses(packages = "com.sparta.orderservice", importOptions = ImportOption.DoNotIncludeTests.class)
 public class OrderArchitectureTest extends BaseArchitectureTest {
 
     @ArchTest

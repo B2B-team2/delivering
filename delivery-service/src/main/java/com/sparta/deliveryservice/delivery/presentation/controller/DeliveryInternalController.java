@@ -27,17 +27,15 @@ public class DeliveryInternalController {
 
     @PostMapping("/deliveries")
     public ResponseEntity<ApiResponse<List<DeliveryCreateResponse>>> createInternalDelivery(
-            @RequestBody List<DeliveryCreateClientRequest> requests,
-            @RequestHeader("X-User-Id") UUID userId) {
-        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests, userId);
+            @RequestBody List<DeliveryCreateClientRequest> requests) {
+        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 
     @PostMapping("/deliveries/cancel")
     public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(
-            @RequestBody List<DeliveryOrderCancelRequest> request,
-            @RequestHeader("X-User-Id")  UUID userId) {
-        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request, userId);
+            @RequestBody List<DeliveryOrderCancelRequest> request) {
+        DeliveryOrderCancelResponse response = deliveryService.cancelDeliveriesByOrderId(request);
         return response;
     }
 }

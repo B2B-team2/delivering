@@ -113,7 +113,7 @@ class DeliveryRouteServiceTest {
 
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(List.of(route));
 
-        DeliveryRouteDetailResponse result = deliveryRouteService.getDeliveryDetailRoutes(deliveryId, userId);
+        DeliveryRouteDetailResponse result = deliveryRouteService.getDeliveryDetailRoutes(deliveryId);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -189,7 +189,7 @@ class DeliveryRouteServiceTest {
         given(deliveryRouteRepository.save(any(DeliveryRoute.class))).willReturn(route);
         given(deliveryLogRepository.save(any(DeliveryLog.class))).willReturn(mockLog);
 
-        DeliveryRouteStatusUpdateResponse result = deliveryRouteService.updateRouteStatus(deliveryId, routeId, userId, requestDto);
+        DeliveryRouteStatusUpdateResponse result = deliveryRouteService.updateRouteStatus(deliveryId, routeId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getRouteId()).isEqualTo(routeId);
@@ -215,7 +215,7 @@ class DeliveryRouteServiceTest {
         given(deliveryRouteRepository.findById(routeId)).willReturn(java.util.Optional.empty());
 
 
-        assertThatThrownBy(() -> deliveryRouteService.updateRouteStatus(deliveryId, routeId, userId, requestDto))
+        assertThatThrownBy(() -> deliveryRouteService.updateRouteStatus(deliveryId, routeId, requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryRouteErrorCode.DELIVERY_ROUTE_NOT_FOUND);
     }
@@ -283,7 +283,7 @@ class DeliveryRouteServiceTest {
         given(deliveryLogRepository.save(any(DeliveryLog.class))).willReturn(mockLog);
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(List.of(remainingRoute));
 
-        DeliveryRouteDeleteResponse result = deliveryRouteService.deleteRoute(deliveryId, routeId, userId, requestDto);
+        DeliveryRouteDeleteResponse result = deliveryRouteService.deleteRoute(deliveryId, routeId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);

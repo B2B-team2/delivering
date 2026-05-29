@@ -36,11 +36,10 @@ public class DeliveryRouteService {
     private final DeliveryRouteRepository deliveryRouteRepository;
     private final DeliveryLogRepository deliveryLogRepository;
     private final DeliveryRepository deliveryRepository;
-    private final SecurityUtils securityUtil;
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
 
-    public DeliveryRouteDetailResponse getDeliveryDetailRoutes(UUID deliveryId ,UUID userId) {
+    public DeliveryRouteDetailResponse getDeliveryDetailRoutes(UUID deliveryId) {
 
         List<DeliveryRoute> routes = deliveryRouteRepository.findByDeliveryId(deliveryId);
 
@@ -76,14 +75,7 @@ public class DeliveryRouteService {
     }
 
     @Transactional
-    public DeliveryRouteStatusUpdateResponse updateRouteStatus(
-            UUID deliveryId,
-            UUID routeId,
-            UUID userId,
-            DeliveryRouteStatusUpdateRequest request
-          ) throws JsonProcessingException {
-
-
+    public DeliveryRouteStatusUpdateResponse updateRouteStatus(UUID deliveryId, UUID routeId, DeliveryRouteStatusUpdateRequest request) throws JsonProcessingException {
         DeliveryRoute route = deliveryRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(DeliveryRouteErrorCode.DELIVERY_ROUTE_NOT_FOUND));
 
@@ -150,7 +142,7 @@ public class DeliveryRouteService {
                 .build();
     }
     @Transactional
-    public DeliveryRouteDeleteResponse deleteRoute(UUID deliveryId, UUID routeId, UUID userId, DeliveryRouteDeleteRequest request) throws JsonProcessingException {
+    public DeliveryRouteDeleteResponse deleteRoute(UUID deliveryId, UUID routeId, DeliveryRouteDeleteRequest request) throws JsonProcessingException {
 
         DeliveryRoute route = deliveryRouteRepository.findById(routeId)
                 .orElseThrow(() -> new BusinessException(DeliveryRouteErrorCode.DELIVERY_ROUTE_NOT_FOUND));
