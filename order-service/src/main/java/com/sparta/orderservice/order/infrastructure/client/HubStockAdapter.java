@@ -9,6 +9,7 @@ import com.sparta.orderservice.order.infrastructure.client.dto.InventoryBulkRequ
 import com.sparta.orderservice.order.infrastructure.client.dto.InventoryItem;
 import com.sparta.orderservice.order.infrastructure.client.dto.StockCancelRequest;
 import com.sparta.orderservice.order.infrastructure.client.dto.StockPartialCancelRequest;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -24,6 +25,7 @@ public class HubStockAdapter implements HubStockPort {
     private final HubClient hubClient;
 
     // CompanyOrder별로 각각 재고 예약 호출
+    @CircuitBreaker(name = "hubClient", fallbackMethod = "reserveStockFallback")
     @Override
     public void reserveStock(Order order) {
         try {
@@ -45,6 +47,7 @@ public class HubStockAdapter implements HubStockPort {
     }
 
     // 주문 전체 재고 예약 취소 (보상 트랜잭션)
+    @CircuitBreaker(name = "hubClient", fallbackMethod = "cancelStockFallback")
     @Override
     public void cancelStock(UUID orderId) {
         try {
@@ -57,6 +60,7 @@ public class HubStockAdapter implements HubStockPort {
     }
 
     // 업체 주문 부분 재고 예약 취소 (보상 트랜잭션)
+    @CircuitBreaker(name = "hubClient", fallbackMethod = "cancelCompanyStockFallback")
     @Override
     public void cancelCompanyStock(UUID companyOrderId) {
         try {
@@ -69,6 +73,7 @@ public class HubStockAdapter implements HubStockPort {
     }
 
     // cancelCompanyOrder Saga 보상 전용: 특정 CompanyOrder의 재고 재예약
+    @CircuitBreaker(name = "hubClient", fallbackMethod = "reserveCompanyStockFallback")
     @Override
     public void reserveCompanyStock(CompanyOrder companyOrder) {
         try {
@@ -85,6 +90,26 @@ public class HubStockAdapter implements HubStockPort {
         } catch (Exception e) {
             throw handleUnexpectedException("reserveCompanyStock", e);
         }
+    }
+
+    private void reserveStockFallback(Order order, Throwable t) {
+        log.error("[Hub][CB] reserveStock circuit open or timeout: {}", t.getMessage());
+        throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
+    }
+
+    private void cancelStockFallback(UUID orderId, Throwable t) {
+        log.error("[Hub][CB] cancelStock circuit open or timeout: {}", t.getMessage());
+        throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
+    }
+
+    private void cancelCompanyStockFallback(UUID companyOrderId, Throwable t) {
+        log.error("[Hub][CB] cancelCompanyStock circuit open or timeout: {}", t.getMessage());
+        throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
+    }
+
+    private void reserveCompanyStockFallback(CompanyOrder companyOrder, Throwable t) {
+        log.error("[Hub][CB] reserveCompanyStock circuit open or timeout: {}", t.getMessage());
+        throw new BusinessException(OrderErrorCode.HUB_SERVICE_UNAVAILABLE);
     }
 
     private RuntimeException handleUnexpectedException(String operation, Exception e) {

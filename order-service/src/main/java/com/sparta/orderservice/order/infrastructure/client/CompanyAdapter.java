@@ -9,6 +9,7 @@ import com.sparta.orderservice.global.dto.DeliveryAddressInfo;
 import com.sparta.orderservice.order.infrastructure.client.dto.DefaultDeliveryAddressResponse;
 import com.sparta.orderservice.order.infrastructure.client.dto.HubMappingRequest;
 import com.sparta.orderservice.order.infrastructure.client.dto.HubMappingResponse;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,7 @@ public class CompanyAdapter implements CompanyPort {
     private final ObjectMapper objectMapper;
 
     // companyId 목록을 일괄 조회하여 { companyId → hubId } Map으로 반환
+    @CircuitBreaker(name = "companyClient", fallbackMethod = "getHubIdsFallback")
     @Override
     public Map<UUID, UUID> getHubIds(List<UUID> companyIds) {
         try {
@@ -45,6 +47,7 @@ public class CompanyAdapter implements CompanyPort {
 
     // 수령업체의 기본 배송지(is_default=true) 조회
     // address + addressDetail → p_orders.address(jsonb) 형식 JSON으로 조립 후 DeliveryAddressInfo로 반환
+    @CircuitBreaker(name = "companyClient", fallbackMethod = "getDefaultDeliveryAddressFallback")
     @Override
     public DeliveryAddressInfo getDefaultDeliveryAddress(UUID receiverCompanyId) {
         try {
@@ -61,6 +64,16 @@ public class CompanyAdapter implements CompanyPort {
         } catch (Exception e) {
             throw handleUnexpectedException("getDefaultDeliveryAddress", e);
         }
+    }
+
+    private Map<UUID, UUID> getHubIdsFallback(List<UUID> companyIds, Throwable t) {
+        log.error("[Company][CB] getHubIds circuit open or timeout: {}", t.getMessage());
+        throw new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
+    }
+
+    private DeliveryAddressInfo getDefaultDeliveryAddressFallback(UUID receiverCompanyId, Throwable t) {
+        log.error("[Company][CB] getDefaultDeliveryAddress circuit open or timeout: {}", t.getMessage());
+        throw new BusinessException(OrderErrorCode.COMPANY_SERVICE_UNAVAILABLE);
     }
 
     private RuntimeException handleUnexpectedException(String operation, Exception e) {
