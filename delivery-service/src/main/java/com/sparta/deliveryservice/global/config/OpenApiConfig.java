@@ -1,4 +1,4 @@
-package com.sparta.deliveryservice.global;
+package com.sparta.deliveryservice.global.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;

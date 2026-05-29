@@ -79,7 +79,7 @@ class DeliveryLogServiceTest {
 
         given(securityUtils.isMaster()).willReturn(true);
 
-        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, userId, pageable);
+        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, pageable);
 
         assertThat(result).isNotNull();
         assertThat(result.getTotalElements()).isEqualTo(1);
@@ -121,7 +121,7 @@ class DeliveryLogServiceTest {
 
         given(securityUtils.isMaster()).willReturn(true);
 
-        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, userId, pageable);
+        Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> result = deliveryLogService.getDeliveryLogs(deliveryId, pageable);
 
         assertThat(result).isNotNull();
         DeliveryLogSearchResponse.DeliveryLogResponseDto dto = result.getContent().get(0);

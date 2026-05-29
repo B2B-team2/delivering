@@ -24,7 +24,7 @@ public class DeliveryLogService {
     private final SecurityUtils securityUtils;
 
     @Transactional(readOnly = true)
-    public Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> getDeliveryLogs(UUID deliveryId, UUID userId, Pageable pageable) {
+    public Page<DeliveryLogSearchResponse.DeliveryLogResponseDto> getDeliveryLogs(UUID deliveryId, Pageable pageable) {
 
         if (!securityUtils.isMaster()) {
             throw new BusinessException(DeliveryLogErrorCode.LOG_ACCESS_DENIED);
