@@ -28,7 +28,7 @@ subprojects {
     dependencyManagement {
         imports {
             mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.3"
-            mavenBom "org.testcontainers:testcontainers-bom:1.20.1"
+            mavenBom "org.testcontainers:testcontainers-bom:1.20.4"
         }
     }
 
@@ -72,11 +72,5 @@ subprojects {
 
     tasks.named('test') {
         useJUnitPlatform()
-가        // macOS에서 Docker Desktop의 소켓 경로 설정
-        if (System.getProperty("os.name").toLowerCase().contains("mac")) {
-            String socketPath = "unix://" + System.getProperty("user.home") + "/.docker/run/docker.sock"
-            environment "DOCKER_HOST", socketPath
-            systemProperty "docker.host", socketPath
-        }
     }
 }

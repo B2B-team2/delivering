@@ -2,7 +2,7 @@ spring:
   application:
     name: operations-service
   datasource:
-    url: jdbc:h2:mem:operationsdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH
+    url: jdbc:h2:mem:operationsdb;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;INIT=CREATE SCHEMA IF NOT EXISTS "operation-db"
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -12,6 +12,7 @@ spring:
       ddl-auto: create-drop
     properties:
       hibernate:
+        default_schema: operation-db
         dialect: org.hibernate.dialect.H2Dialect
         format_sql: true
         use_sql_comments: true
