@@ -6,9 +6,11 @@ import com.sparta.operationsservice.claim.application.port.OrderPort;
 import com.sparta.operationsservice.claim.domain.core.ClaimStatus;
 import com.sparta.operationsservice.claim.domain.core.OrderClaim;
 import com.sparta.operationsservice.claim.domain.repository.OrderClaimRepository;
+import com.sparta.operationsservice.claim.infrastructure.repository.OrderClaimJpaRepository;
 import com.sparta.operationsservice.claim.presentation.dto.ClaimCreateRequest;
 import com.sparta.operationsservice.claim.presentation.dto.ClaimStatusUpdateRequest;
 import com.sparta.operationsservice.integration.support.IntegrationTestSupport;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +25,10 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
@@ -40,14 +45,22 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
     @Autowired
     private OrderClaimRepository orderClaimRepository;
 
+    @Autowired
+    private OrderClaimJpaRepository orderClaimJpaRepository;
+
     @MockBean
     private OrderPort orderPort;
 
     @MockBean
     private HubPort hubPort;
 
+    @BeforeEach
+    void setUp() {
+        orderClaimJpaRepository.deleteAll();
+    }
+
     @Test
-    @DisplayName("SAGA 보상 트랜잭션 시나리오: 주문 상태 변경 실패 시 이미 수행된 재고 복원을 취소(재차감)한다")
+    @DisplayName("SAGA 보상 트랜잭션 시나리오: 주문 상태 변경 실패 시 이미 수행된 재고 복원을 취소(재차 감)한다")
     void sagaCompensationScenario() throws Exception {
         // [1] 사전 준비: 클레임 생성
         UUID companyOrderId = UUID.randomUUID();
@@ -63,7 +76,6 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
-                .andDo(print())
                 .andExpect(status().isCreated());
 
         OrderClaim claim = orderClaimRepository.findAll(Pageable.unpaged()).getContent().stream()
@@ -90,7 +102,6 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andDo(print())
                 .andExpect(status().isInternalServerError());
 
         // [4] 검증
@@ -117,7 +128,6 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
                         .header("X-User-Role", "COMPANY_MANAGER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
-                .andDo(print())
                 .andExpect(status().isCreated());
 
         OrderClaim claim = orderClaimRepository.findAll(Pageable.unpaged()).getContent().stream()
@@ -136,7 +146,6 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
                         .header("X-User-Role", "MASTER")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateRequest)))
-                .andDo(print())
                 .andExpect(status().isOk());
 
         OrderClaim finalClaim = orderClaimRepository.findById(claimId).orElseThrow();
