@@ -10,6 +10,7 @@ import com.sparta.operationsservice.claim.infrastructure.repository.OrderClaimJp
 import com.sparta.operationsservice.claim.presentation.dto.ClaimCreateRequest;
 import com.sparta.operationsservice.claim.presentation.dto.ClaimStatusUpdateRequest;
 import com.sparta.operationsservice.integration.support.IntegrationTestSupport;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,9 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
     @Autowired
     private OrderClaimJpaRepository orderClaimJpaRepository;
 
+    @Autowired
+    private CircuitBreakerRegistry circuitBreakerRegistry;
+
     @MockBean
     private OrderPort orderPort;
 
@@ -57,6 +61,7 @@ public class ClaimScenarioTest extends IntegrationTestSupport {
     @BeforeEach
     void setUp() {
         orderClaimJpaRepository.deleteAll();
+        circuitBreakerRegistry.circuitBreaker("claimCircuitBreaker").reset();
     }
 
     private UUID createTestClaim(UUID companyOrderId, String reason, BigDecimal amount) throws Exception {

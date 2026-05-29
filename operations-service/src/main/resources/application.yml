@@ -3,3 +3,39 @@ spring:
     name: operations-service
   config:
     import: optional:configserver:http://config-server:8888
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        eventConsumerBufferSize: 10
+    instances:
+      claimCircuitBreaker:
+        baseConfig: default
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 5s
+        cancelRunningFuture: true
+    instances:
+      claimTimeLimiter:
+        baseConfig: default
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 3
+        waitDuration: 500ms
+        enableExponentialBackoff: true
+        exponentialBackoffMultiplier: 2
+    instances:
+      claimRetry:
+        baseConfig: default

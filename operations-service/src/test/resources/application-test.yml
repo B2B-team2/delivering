@@ -25,3 +25,37 @@ spring:
 eureka:
   client:
     enabled: false
+
+resilience4j:
+  circuitbreaker:
+    configs:
+      default:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        minimumNumberOfCalls: 2
+        permittedNumberOfCallsInHalfOpenState: 2
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+    instances:
+      claimCircuitBreaker:
+        baseConfig: default
+
+  timelimiter:
+    configs:
+      default:
+        timeoutDuration: 3s
+        cancelRunningFuture: true
+    instances:
+      claimTimeLimiter:
+        baseConfig: default
+
+  retry:
+    configs:
+      default:
+        maxAttempts: 2
+        waitDuration: 100ms
+    instances:
+      claimRetry:
+        baseConfig: default
+
