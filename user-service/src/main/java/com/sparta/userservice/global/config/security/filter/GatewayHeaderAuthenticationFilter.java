@@ -16,10 +16,27 @@ import java.util.List;
 public class GatewayHeaderAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        return path.startsWith("/api/v1/auth/")
+                || path.startsWith("/swagger-ui")
+                || path.startsWith("/v3/api-docs")
+                || path.startsWith("/actuator");
+    }
+
+    @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     @NonNull HttpServletResponse response,
                                     @NonNull FilterChain filterChain)
             throws ServletException, IOException {
+
+        String gatewaySecret = request.getHeader("X-Gateway-Secret");
+        String expectedSecret = System.getenv().getOrDefault("GATEWAY_SECRET", "local-secret");
+
+        if (!expectedSecret.equals(gatewaySecret)) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Direct access not allowed");
+            return;
+        }
 
         String userId = request.getHeader("X-User-Id");
         String email = request.getHeader("X-User-Email");
