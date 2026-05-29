@@ -26,6 +26,9 @@ eureka:
   client:
     enabled: false
 
+GEMINI_API_KEY: dummy-key
+GEMINI_URL: http://dummy-url.com
+
 resilience4j:
   circuitbreaker:
     configs:
