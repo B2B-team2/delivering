@@ -58,30 +58,31 @@
 
 - **API Gateway** : `http://:8080`(수정예정)
 - **Swagger** : `http://:8080/swagger-ui.html`(수정예정)
+
 ---
 
 ## 팀원 소개
 
-|                         **도경민**                         |                       **노동완**                        |                          **김민우**                           |                          **서동원**                          |                         **이선진**                          |
+|                     **도경민(Leader)**                     |                       **노동완**                        |                          **김민우**                           |                          **서동원**                          |                         **이선진**                          |
 |:-------------------------------------------------------:|:----------------------------------------------------:|:----------------------------------------------------------:|:---------------------------------------------------------:|:--------------------------------------------------------:|
 | <img src="https://github.com/mindyhere.png" width="80"> | <img src="https://github.com/Wansix.png" width="80"> | <img src="https://github.com/rlaalsdn0421.png" width="80"> | <img src="https://github.com/won2dev-lab.png" width="80"> | <img src="https://github.com/Seonjin-13.png" width="80"> |
 |       [@mindyhere](https://github.com/mindyhere)        |         [@Wansix](https://github.com/Wansix)         |      [@rlaalsdn0421](https://github.com/rlaalsdn0421)      |      [@won2dev-lab](https://github.com/won2dev-lab)       |       [@Seonjin-13](https://github.com/Seonjin-13)       |
-|                    Delivery Service                     |        Operations Service<br>Company Service         |       Order Service<br>Operations Service (AI/Slack)       |                       User Service                        |                       Hub Service                        |
+|                      Order Service                      |        Operations Service<br>Company Service         |     Delivery Service<br>Operations Service (AI/Slack)      |                       User Service                        |                       Hub Service                        |
 
 ---
 
 ## 기술 스택
 
-| 분류       | 기술                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
-|:---------|:-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Backend  | ![Java](https://img.shields.io/badge/Java_17-ED8B00?style=flat&logo=openjdk&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.3.5-6DB33F?style=flat&logo=springboot&logoColor=white) ![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?style=flat&logo=springsecurity&logoColor=white) ![Spring Cloud Gateway](https://img.shields.io/badge/Spring_Cloud_Gateway-6DB33F?style=flat&logo=spring&logoColor=white) ![Netflix Eureka](https://img.shields.io/badge/Netflix_Eureka-6DB33F?style=flat&logo=spring&logoColor=white) ![FeignClient](https://img.shields.io/badge/FeignClient-6DB33F?style=flat&logo=spring&logoColor=white) ![Spring Data JPA](https://img.shields.io/badge/Spring_Data_JPA-6DB33F?style=flat&logo=spring&logoColor=white) |
-| Auth     | ![Keycloak](https://img.shields.io/badge/Keycloak-4D4D4D?style=flat&logo=keycloak&logoColor=white) ![JWT](https://img.shields.io/badge/JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Database | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white) ![PostGIS](https://img.shields.io/badge/PostGIS-4169E1?style=flat&logo=postgresql&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-FF4438?style=flat&logo=redis&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
-| Message  | ![Kafka](https://img.shields.io/badge/Apache_Kafka-231F20?style=flat&logo=apachekafka&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| AI       | ![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat&logo=googlegemini&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Infra    | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=flat&logo=docker&logoColor=white) ![Vultr](https://img.shields.io/badge/Vultr-007BFC?style=flat&logo=vultr&logoColor=white) ![Zipkin](https://img.shields.io/badge/Zipkin-FE5F50?style=flat)                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Tools    | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black) ![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat&logo=slack&logoColor=white) ![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| CI/CD    | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat&logo=githubactions&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| 분류       | 기술                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+|:---------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Backend  | ![Java](https://img.shields.io/badge/Java_17-ED8B00?style=flat&logo=openjdk&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.3.5-6DB33F?style=flat&logo=springboot&logoColor=white) ![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?style=flat&logo=springsecurity&logoColor=white) ![Spring Cloud Gateway](https://img.shields.io/badge/Spring_Cloud_Gateway-6DB33F?style=flat&logo=spring&logoColor=white) ![Netflix Eureka](https://img.shields.io/badge/Netflix_Eureka-6DB33F?style=flat&logo=spring&logoColor=white) ![OpenFeign](https://img.shields.io/badge/OpenFeign-6DB33F?style=flat&logo=spring&logoColor=white) ![Spring Data JPA](https://img.shields.io/badge/Spring_Data_JPA-6DB33F?style=flat&logo=spring&logoColor=white) |
+| Auth     | ![Keycloak](https://img.shields.io/badge/Keycloak-4D4D4D?style=flat&logo=keycloak&logoColor=white) ![JWT](https://img.shields.io/badge/JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Database | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white) ![PostGIS](https://img.shields.io/badge/PostGIS-4169E1?style=flat&logo=postgresql&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-FF4438?style=flat&logo=redis&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| Message  | ![Kafka](https://img.shields.io/badge/Apache_Kafka-231F20?style=flat&logo=apachekafka&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| AI       | ![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat&logo=googlegemini&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Infra    | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=flat&logo=docker&logoColor=white) ![Vultr](https://img.shields.io/badge/Vultr-007BFC?style=flat&logo=vultr&logoColor=white) ![Zipkin](https://img.shields.io/badge/Zipkin-FE5F50?style=flat)                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Tools    | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black) ![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat&logo=slack&logoColor=white) ![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| CI/CD    | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat&logo=githubactions&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 
 ---
 
@@ -99,18 +100,21 @@
 | delivery-service   | 19095 |     delivery_service_db      | 배송 추적, 경로 관리, 이벤트 로그             |
 | operations-service | 19096 |    operations_service_db     | AI 발송 시한 산출, 슬랙 알림, 클레임 관리       |
 
+> 마이크로서비스 포트(19091~19096)는 내부 네트워크로만 통신하며 외부에 노출되지 않습니다.
+> 모든 외부 요청은 API Gateway(8080)를 통해서만 접근 가능합니다.
+
 ### DB 물리적 분리
 
 서비스별로 독립된 PostgreSQL 컨테이너를 사용합니다.
 company-service와 hub-service는 지리 데이터 처리를 위해 PostGIS 이미지를 사용합니다.
 
 ```
-[my-postgres      :25432] ← user-service
-[order_service_db :25433] ← order-service
-[hub_service_db   :25434] ← hub-service (PostGIS 16-3.4)
-[company_service_db:25435]← company-service (PostGIS 16-3.4)
-[delivery_service_db:25436]← delivery-service
-[operations_service_db:25437]← operations-service
+[my-postgres        :25432] ← user-service
+[order_service_db   :25433] ← order-service
+[hub_service_db     :25434] ← hub-service (PostGIS 16-3.4)
+[company_service_db :25435] ← company-service (PostGIS 16-3.4)
+[delivery_service_db:25436] ← delivery-service
+[operations_service_db:25437] ← operations-service
 
 [msa-redis    :26379] ← Redis
 [my-keycloak  :18080] ← Keycloak
@@ -302,17 +306,22 @@ Gemini API에 아래 정보를 전달해 `final_deadline_at`을 산출합니다.
 <details>
 <summary>V2</summary>
 
-user-erd
+### User
 ![ERD](docs/images/v2-user-erd.png)
-orders-erd
+
+### Order
 ![ERD](docs/images/v2-orders-erd.png)
-hub-erd
+
+### Hub
 ![ERD](docs/images/v2-hub-erd.png)
-companies-erd
+
+### Company
 ![ERD](docs/images/v2-companies-erd.png)
-delivery-erd
+
+### Delivery
 ![ERD](docs/images/v2-delivery-erd.png)
-operations-erd(추가예정)
+
+### Operations
 ![ERD](docs/images/v2-operations-erd.png)
 
 </details>
@@ -398,9 +407,9 @@ GitHub Actions (ubuntu-latest)
 - Java 17
 - Docker & Docker Compose
 
-### 환경 변수 설정 (.env)
+### 환경 변수 설정
 
-프로젝트 루트 디렉토리에 `.env` 파일을 생성하고 아래 내용을 환경에 맞게 입력합니다.
+프로젝트 루트 디렉토리에 `.env` 파일을 생성합니다. `.env.example`을 참고하세요.
 
 ```env
 # User DB
@@ -443,7 +452,21 @@ KEYCLOAK_ADMIN_PASSWORD=your_keycloak_admin_password
 REDIS_HOST={HOST}
 REDIS_PORT=26379
 REDIS_PASSWORD=your_redis_password
+
+# Gateway
+GATEWAY_SECRET=your_gateway_secret
 ```
+
+### Compose 파일 분리 구조
+
+인프라(`docker-compose.infra.yml`)와 앱 서비스(`docker-compose.yml`)를 분리하여 관리합니다.
+앱 재배포나 핫픽스 적용 시 인프라(DB·Redis·Keycloak)를 재시작하지 않고
+앱 서비스만 독립적으로 올리고 내릴 수 있도록 하기 위함입니다.
+
+| 명령어 | 영향 범위 |
+|:------|:--------|
+| `docker compose down` | 앱 서비스만 종료, DB 유지 |
+| `docker compose -f docker-compose.infra.yml down` | DB·Redis·Keycloak 종료 |
 
 ### 실행 순서
 
@@ -454,20 +477,24 @@ cd delivering
 
 # 2. .env 파일 생성 (위 내용 참고)
 
-# 3. Gradle 빌드 (Docker 이미지 생성 전 필수)
+# 3. 인프라 먼저 실행 (DB / Redis / Keycloak)
+docker compose -f docker-compose.infra.yml up -d
+
+# 4. Gradle 빌드 (Docker 이미지 생성 전 필수)
 ./gradlew clean build -x test
 
-# 4. 전체 서비스 실행 (이미지 재빌드 포함)
+# 5. 앱 서비스 실행
 docker compose up -d --build
 
-# 5. 기동 순서 (healthcheck 기반 자동 관리)
-# 1단계: zookeeper, kafka, zipkin, DB 컨테이너들, Keycloak, Redis
+# 6. 기동 순서 (healthcheck 기반 자동 관리)
+# 1단계: zookeeper, kafka, zipkin
 # 2단계: config-server (healthcheck 통과 후)
 # 3단계: eureka-server (healthcheck 통과 후)
 # 4단계: api-gateway + 마이크로서비스 6개
 
-# 6. 종료
+# 7. 종료
 docker compose down
+docker compose -f docker-compose.infra.yml down
 ```
 
 ### 서비스별 접속 주소
