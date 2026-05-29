@@ -69,13 +69,12 @@ public class DeliveryService {
     private final SecurityUtils securityUtils;
 
     @Transactional
-    public DeliveryCreateResponse createSingleDelivery(DeliveryCreateClientRequest request, UUID userId) {
+    public DeliveryCreateResponse createSingleDelivery(DeliveryCreateClientRequest request) {
 
         if (deliveryRepository.existsByCompanyOrderId(request.getCompanyOrderId())) {
             throw new BusinessException(DeliveryErrorCode.DUPLICATE_DELIVERY);
         }
 
-        // 2. 배송 생성
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyMMddHHmmss");
         String trackingNumber = "SL" + formatter.format(LocalDateTime.now()) + (int) (Math.random() * 9000 + 1000);
 
@@ -163,17 +162,15 @@ public class DeliveryService {
     }
 
     @Transactional
-    public List<DeliveryCreateResponse> createDelivery(List<DeliveryCreateClientRequest> requests, UUID userId) {
-        if (!securityUtils.isMaster()) {
-            throw new BusinessException(DeliveryErrorCode.ACCESS_DENIED);
-        }
+    public List<DeliveryCreateResponse> createDelivery(List<DeliveryCreateClientRequest> requests) {
+
         return requests.stream()
-                .map(request -> createSingleDelivery(request, userId))
+                .map(request -> createSingleDelivery(request))
                 .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)
-    public Page<DeliverySearchResponse.DeliveryResponseDto> searchDeliveries(Pageable pageable, UUID userId) {
+    public Page<DeliverySearchResponse.DeliveryResponseDto> searchDeliveries(Pageable pageable) {
 
         Page<Delivery> deliveryPage = deliveryRepository.findAll(pageable);
 
@@ -194,7 +191,7 @@ public class DeliveryService {
     }
 
     @Transactional(readOnly = true)
-    public DeliveryDetailResponse getDeliveryDetail(UUID deliveryId, UUID userId) {
+    public DeliveryDetailResponse getDeliveryDetail(UUID deliveryId) {
 
         Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
@@ -244,7 +241,7 @@ public class DeliveryService {
     }
 
     @Transactional(readOnly = true)
-    public DeliveryAddressResponse getDeliveryAddress(UUID deliveryId, UUID addressId, UUID userId) {
+    public DeliveryAddressResponse getDeliveryAddress(UUID deliveryId, UUID addressId) {
         Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
@@ -261,7 +258,7 @@ public class DeliveryService {
 
     @Transactional(readOnly = true)
     @Cacheable(value = "deliveryTracking", key = "#trackingNumber", unless = "#result == null")
-    public DeliveryTrackingResponse trackDelivery(String trackingNumber, UUID userId) {
+    public DeliveryTrackingResponse trackDelivery(String trackingNumber) {
 
         Delivery delivery = deliveryRepository.findByTrackingNumber(trackingNumber)
                 .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
@@ -312,7 +309,7 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#result.trackingNumber")
-    public DeliveryCancelResponse cancelDelivery(UUID deliveryId, UUID userId, DeliveryCancelRequest request) {
+    public DeliveryCancelResponse cancelDelivery(UUID deliveryId, DeliveryCancelRequest request) {
 
         Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
@@ -378,7 +375,7 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#result.trackingNumber")
-    public DeliveryStatusUpdateResponse updateDeliveryStatus(UUID deliveryId, UUID userId, DeliveryStatusUpdateRequest request) {
+    public DeliveryStatusUpdateResponse updateDeliveryStatus(UUID deliveryId, DeliveryStatusUpdateRequest request) {
 
         Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
@@ -426,7 +423,7 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#result.trackingNumber")
-    public DeliveryManagerUpdateResponse updateDeliveryManager(UUID deliveryId, UUID userId, DeliveryManagerUpdateRequest request) {
+    public DeliveryManagerUpdateResponse updateDeliveryManager(UUID deliveryId, DeliveryManagerUpdateRequest request) {
 
         Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
@@ -500,7 +497,7 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", key = "#trackingNumber")
-    public DeliveryStatusResponse startDelivery(String trackingNumber, UUID userId) {
+    public DeliveryStatusResponse startDelivery(String trackingNumber) {
 
 
         Delivery delivery = deliveryRepository.findByTrackingNumber(trackingNumber)
@@ -565,7 +562,7 @@ public class DeliveryService {
     }
 
     @Transactional
-    public DeliveryStatusResponse deleteDelivery(UUID deliveryId, UUID userId) {
+    public DeliveryStatusResponse deleteDelivery(UUID deliveryId) {
         Delivery delivery = deliveryRepository.findById(deliveryId)
                 .orElseThrow(() -> new BusinessException(DeliveryErrorCode.DELIVERY_NOT_FOUND));
 
@@ -597,7 +594,7 @@ public class DeliveryService {
 
     @Transactional
     @CacheEvict(value = "deliveryTracking", allEntries = true)
-    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(List<DeliveryOrderCancelRequest> requests, UUID userId) {
+    public DeliveryOrderCancelResponse cancelDeliveriesByOrderId(List<DeliveryOrderCancelRequest> requests) {
 
         List<UUID> orderIds = requests.stream()
                 .map(DeliveryOrderCancelRequest::getOrderId)

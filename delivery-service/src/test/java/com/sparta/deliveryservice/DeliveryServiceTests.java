@@ -87,7 +87,7 @@ class DeliveryServiceTests {
     void createSingleDelivery_Success() {
         // Given
         UUID companyOrderId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
         UUID departureHubId = UUID.randomUUID();
         UUID destinationHubId = UUID.randomUUID();
 
@@ -138,7 +138,7 @@ class DeliveryServiceTests {
 
         given(deliveryUserServiceClient.getManagerInfo(departureHubId))
                 .willReturn(DeliveryManagerResponse.builder().deliveryManagerId(UUID.randomUUID()).build());
-        DeliveryCreateResponse actualResponse = deliveryService.createSingleDelivery(requestDto, userId);
+        DeliveryCreateResponse actualResponse = deliveryService.createSingleDelivery(requestDto);
 
         // Then
         assertThat(actualResponse).isNotNull();
@@ -153,7 +153,7 @@ class DeliveryServiceTests {
     void createInternalDeliveries_DuplicateOrder_ThrowsException() {
         // Given
         UUID companyOrderId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID(); // String에서 UUID로 변경
+         // String에서 UUID로 변경
         DeliveryCreateClientRequest requestDto = DeliveryCreateClientRequest.builder()
                 .companyOrderId(companyOrderId)
                 .build();
@@ -161,7 +161,7 @@ class DeliveryServiceTests {
         given(deliveryRepository.existsByCompanyOrderId(companyOrderId)).willReturn(true);
 
         // When & Then
-        assertThatThrownBy(() -> deliveryService.createSingleDelivery(requestDto, userId))
+        assertThatThrownBy(() -> deliveryService.createSingleDelivery(requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DUPLICATE_DELIVERY);
     }
@@ -173,7 +173,7 @@ class DeliveryServiceTests {
 
         UUID deliveryId1 = UUID.randomUUID();
         UUID deliveryId2 = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
 
         Delivery delivery1 = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -212,7 +212,7 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findAll(pageable)).willReturn(mockPage);
 
-        org.springframework.data.domain.Page<DeliverySearchResponse.DeliveryResponseDto> result = deliveryService.searchDeliveries(pageable, userId);
+        org.springframework.data.domain.Page<DeliverySearchResponse.DeliveryResponseDto> result = deliveryService.searchDeliveries(pageable);
 
         assertThat(result).isNotNull();
         assertThat(result.getTotalElements()).isEqualTo(2);
@@ -240,7 +240,7 @@ class DeliveryServiceTests {
         String managerSlackId = "SlackId";
         UUID departureHubId = UUID.randomUUID();
         UUID destinationHubId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
 
         Delivery delivery = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -284,7 +284,7 @@ class DeliveryServiceTests {
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(List.of(route));
 
-        DeliveryDetailResponse result = deliveryService.getDeliveryDetail(deliveryId, userId);
+        DeliveryDetailResponse result = deliveryService.getDeliveryDetail(deliveryId);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -303,14 +303,14 @@ class DeliveryServiceTests {
     void getDeliveryDetail_NotFound_ThrowsException() {
         // Given
         UUID nonExistentId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
 
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> deliveryService.getDeliveryDetail(nonExistentId, userId))
+        assertThatThrownBy(() -> deliveryService.getDeliveryDetail(nonExistentId))
                 .isInstanceOf(BusinessException.class)
-                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND); // 에러 코드로 검증
+                .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);// 에러 코드로 검증
     }
 
     @Test
@@ -319,7 +319,7 @@ class DeliveryServiceTests {
         UUID deliveryId = UUID.randomUUID();
         UUID addressId = UUID.randomUUID();
         UUID companyReceiveId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
 
         Delivery delivery = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -343,7 +343,7 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
 
-        DeliveryAddressResponse result = deliveryService.getDeliveryAddress(deliveryId, addressId, userId);
+        DeliveryAddressResponse result = deliveryService.getDeliveryAddress(deliveryId, addressId);
 
         assertThat(result).isNotNull();
         assertThat(result.getAddressId()).isEqualTo(addressId);
@@ -360,10 +360,10 @@ class DeliveryServiceTests {
     void getDeliveryAddress_NotFound_ThrowsException() {
         UUID nonExistentId = UUID.randomUUID();
         UUID addressId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.getDeliveryAddress(nonExistentId, addressId, userId))
+        assertThatThrownBy(() -> deliveryService.getDeliveryAddress(nonExistentId, addressId))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
@@ -376,7 +376,7 @@ class DeliveryServiceTests {
         UUID departureHubId = UUID.randomUUID();
         UUID destinationHubId = UUID.randomUUID();
         UUID managerId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
 
         Delivery delivery = Delivery.builder()
                 .companyOrderId(UUID.randomUUID())
@@ -421,7 +421,7 @@ class DeliveryServiceTests {
         given(deliveryRepository.findByTrackingNumber(trackingNumber)).willReturn(java.util.Optional.of(delivery));
         given(deliveryRouteRepository.findByDeliveryId(deliveryId)).willReturn(routes);
 
-        DeliveryTrackingResponse result = deliveryService.trackDelivery(trackingNumber, userId);
+        DeliveryTrackingResponse result = deliveryService.trackDelivery(trackingNumber);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -440,12 +440,12 @@ class DeliveryServiceTests {
     @Test
     @DisplayName("배송 추적 실패 - 존재하지 않는 운송장 번호")
     void trackDelivery_NotFound_ThrowsException() {
-        UUID userId = UUID.randomUUID();
+        
         String invalidTrackingNumber = "INVALID12345";
 
         given(deliveryRepository.findByTrackingNumber(invalidTrackingNumber)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.trackDelivery(invalidTrackingNumber, userId))
+        assertThatThrownBy(() -> deliveryService.trackDelivery(invalidTrackingNumber))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
@@ -456,7 +456,7 @@ class DeliveryServiceTests {
         UUID deliveryId = UUID.randomUUID();
         UUID routeId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
         DeliveryCancelRequest requestDto = DeliveryCancelRequest.builder()
                 .reason("고객 요청으로 인한 취소")
                 .build();
@@ -517,7 +517,7 @@ class DeliveryServiceTests {
         given(securityUtils.isMaster()).willReturn(true);
 
 
-        DeliveryCancelResponse result = deliveryService.cancelDelivery(deliveryId, userId, requestDto);
+        DeliveryCancelResponse result = deliveryService.cancelDelivery(deliveryId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -534,23 +534,22 @@ class DeliveryServiceTests {
     @DisplayName("배송 취소 실패 - 이미 취소 완료된 상태인 경우")
     void cancelDelivery_AlreadyCancelled_ThrowsException() {
         UUID deliveryId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        UUID managerId = UUID.randomUUID();
+        
         DeliveryCancelRequest requestDto = DeliveryCancelRequest.builder()
                 .reason("고객 요청으로 인한 취소")
                 .build();
 
         Delivery delivery = Delivery.builder()
                 .status(DeliveryStatus.CANCELLED)
-                .deliveryManagerId(userId)
+                .deliveryManagerId(managerId)
                 .build();
 
         given(deliveryRepository.findById(deliveryId)).willReturn(java.util.Optional.of(delivery));
 
-        given(securityUtils.isMaster()).willReturn(false);
-        given(securityUtils.getUserId()).willReturn(userId);
+        given(securityUtils.isMaster()).willReturn(true);
 
-        // 3. 기대하는 에러 코드를 서비스 코드의 INVALID_STATUS_TRANSITION으로 수정
-        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, userId, requestDto))
+        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.INVALID_STATUS_TRANSITION);
     }
@@ -559,7 +558,7 @@ class DeliveryServiceTests {
     @DisplayName("배송 취소 실패 - 배송이 이미 대기 상태(PENDING)를 벗어난 경우")
     void cancelDelivery_NotPendingStatus_ThrowsException() {
         UUID deliveryId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
         DeliveryCancelRequest requestDto = DeliveryCancelRequest.builder()
                 .reason("주소 오 입력")
                 .build();
@@ -572,7 +571,7 @@ class DeliveryServiceTests {
 
         given(securityUtils.isMaster()).willReturn(true);
 
-        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, userId, requestDto))
+        assertThatThrownBy(() -> deliveryService.cancelDelivery(deliveryId, requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.INVALID_STATUS_TRANSITION);
     }
@@ -582,7 +581,7 @@ class DeliveryServiceTests {
     void updateDeliveryStatus_Success() throws Exception {
         UUID deliveryId = UUID.randomUUID();
         UUID logId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
         DeliveryStatusUpdateRequest requestDto = DeliveryStatusUpdateRequest.builder()
                 .status(DeliveryStatus.DELIVERED)
                 .reason("배송 완료 처리")
@@ -627,7 +626,7 @@ class DeliveryServiceTests {
 
         given(securityUtils.isMaster()).willReturn(true);
 
-        DeliveryStatusUpdateResponse result = deliveryService.updateDeliveryStatus(deliveryId, userId, requestDto);
+        DeliveryStatusUpdateResponse result = deliveryService.updateDeliveryStatus(deliveryId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -640,7 +639,7 @@ class DeliveryServiceTests {
     @DisplayName("배송 상태 변경 실패 - 존재하지 않는 배송 ID")
     void updateDeliveryStatus_NotFound_ThrowsException() {
         UUID nonExistentId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
         DeliveryStatusUpdateRequest requestDto = DeliveryStatusUpdateRequest.builder()
                 .status(DeliveryStatus.DELIVERED)
                 .reason("테스트")
@@ -648,7 +647,7 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.updateDeliveryStatus(nonExistentId, userId, requestDto))
+        assertThatThrownBy(() -> deliveryService.updateDeliveryStatus(nonExistentId, requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
@@ -661,7 +660,7 @@ class DeliveryServiceTests {
         String previousManagerSlackId = "SlackId12";
         UUID newManagerId = UUID.randomUUID();
         String managerSlackId = "SlackId";
-        UUID userId = UUID.randomUUID();
+        
         UUID logId = UUID.randomUUID();
 
         DeliveryManagerUpdateRequest requestDto = DeliveryManagerUpdateRequest.builder()
@@ -713,7 +712,7 @@ class DeliveryServiceTests {
 
         given(securityUtils.isMaster()).willReturn(true);
 
-        DeliveryManagerUpdateResponse result = deliveryService.updateDeliveryManager(deliveryId, userId, requestDto);
+        DeliveryManagerUpdateResponse result = deliveryService.updateDeliveryManager(deliveryId, requestDto);
 
         assertThat(result).isNotNull();
         assertThat(result.getDeliveryId()).isEqualTo(deliveryId);
@@ -736,7 +735,7 @@ class DeliveryServiceTests {
     @DisplayName("배송 담당자 변경 실패 - 존재하지 않는 배송 ID")
     void updateDeliveryManager_NotFound_ThrowsException() {
         UUID nonExistentId = UUID.randomUUID();
-        UUID userId = UUID.randomUUID();
+        
         DeliveryManagerUpdateRequest requestDto = DeliveryManagerUpdateRequest.builder()
                 .deliveryManagerId(UUID.randomUUID())
                 .name("신임매니저")
@@ -746,7 +745,7 @@ class DeliveryServiceTests {
 
         given(deliveryRepository.findById(nonExistentId)).willReturn(java.util.Optional.empty());
 
-        assertThatThrownBy(() -> deliveryService.updateDeliveryManager(nonExistentId, userId, requestDto))
+        assertThatThrownBy(() -> deliveryService.updateDeliveryManager(nonExistentId, requestDto))
                 .isInstanceOf(BusinessException.class)
                 .hasFieldOrPropertyWithValue("errorCode", DeliveryErrorCode.DELIVERY_NOT_FOUND);
     }
@@ -758,6 +757,7 @@ class DeliveryServiceTests {
         UUID deliveryId = UUID.randomUUID();
         UUID managerId = UUID.randomUUID();
         UUID userId = UUID.randomUUID();
+        
         String managerSlackId = "SlackId";
 
         Delivery delivery = Delivery.builder()

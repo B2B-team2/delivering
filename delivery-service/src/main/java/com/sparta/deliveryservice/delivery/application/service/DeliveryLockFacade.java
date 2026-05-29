@@ -21,7 +21,7 @@ public class DeliveryLockFacade {
     private final RedissonClient redissonClient;
     private final DeliveryService deliveryService;
 
-    public List<DeliveryCreateResponse> createDeliveriesWithLock(List<DeliveryCreateClientRequest> requests, UUID userId) {
+    public List<DeliveryCreateResponse> createDeliveriesWithLock(List<DeliveryCreateClientRequest> requests) {
         List<DeliveryCreateResponse> totalResponses = new ArrayList<>();
 
         for (DeliveryCreateClientRequest request : requests) {
@@ -36,7 +36,7 @@ public class DeliveryLockFacade {
                     throw new IllegalStateException("현재 처리 중인 주문입니다. 잠시 후 다시 시도해 주세요.");
                 }
 
-                DeliveryCreateResponse response = deliveryService.createSingleDelivery(request, userId);
+                DeliveryCreateResponse response = deliveryService.createSingleDelivery(request);
                 totalResponses.add(response);
 
             } catch (InterruptedException e) {
