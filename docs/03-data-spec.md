@@ -13,25 +13,24 @@
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `created_at` | TIMESTAMP | Not Null, Default now() | 데이터 최초 생성 일시 |
-| `created_by` | VARCHAR(36) | - | 생성 주체 (user_id) |
+| `created_by` | UUID | - | 생성 주체 (user_id) |
 | `updated_at` | TIMESTAMP | Not Null, Default now() | 데이터 최근 수정 일시 |
-| `updated_by` | VARCHAR(36) | - | 최근 수정 주체 |
+| `updated_by` | UUID | - | 최근 수정 주체 |
 | `deleted_at` | TIMESTAMP | - | 삭제 일시 (Soft Delete) |
-| `deleted_by` | VARCHAR(36) | - | 삭제 처리 주체 |
+| `deleted_by` | UUID | - | 삭제 처리 주체 |
 
-> `p_delivery_log`는 append-only 테이블로 `created_at`, `created_by`만 존재한다.
+> `p_inventory_histories`는 append-only 테이블로 `updated_at`, `updated_by`, `deleted_at`, `deleted_by`가 존재하지 않는다.
 
 ### 1.2 ID 규칙
 - 모든 PK는 **UUID** 타입 사용
-- `p_delivery_addresses.address_id`는 예외적으로 `VARCHAR(36)`
 
 ### 1.3 논리적 삭제
 - 조회 시 `deleted_at IS NULL` 조건 필수 적용
 - 물리적 삭제 금지
 
-### 1.4 스키마 분리
-- 서비스별 독립 스키마로 논리적 데이터 격리
-- 스키마: `USER`, `COMPANY`, `HUB`, `ORDER`, `DELIVERY`, `OPS`
+### 1.4 DB 분리
+- 서비스별 **독립 PostgreSQL 컨테이너**로 물리적 데이터 격리
+- 서비스: `user-service`, `company-service`, `hub-service`, `order-service`, `delivery-service`, `operations-service`
 
 ---
 
@@ -224,7 +223,7 @@ erDiagram
     %% ── OPS Domain ──
     p_order_claims {
         UUID claim_id PK
-        UUID order_item_id FK
+        UUID company_order_id FK
         VARCHAR claim_type
         VARCHAR status
         NUMERIC refund_amount
@@ -298,7 +297,7 @@ erDiagram
     p_delivery_routes ||--o{ p_delivery_log : "route logs"
 
     %% ── Relations: OPS ──
-    p_order_items ||--o{ p_order_claims : "claimed"
+    p_company_orders ||--o{ p_order_claims : "claimed"
     p_users ||--o{ p_slack_messages : "receives message"
     p_users ||--o{ p_ai_requests : "requests AI"
     p_deliveries ||--o{ p_ai_requests : "AI analyzed"
@@ -358,8 +357,7 @@ erDiagram
 | `description` | TEXT | - | 업체 설명 |
 | `business_number` | VARCHAR(20) | Not Null | 사업자 등록 번호 |
 | `hub_id` | UUID | FK, Not Null | 소속 허브 |
-| `latitude` | GEOMETRY(Point,4326) | Not Null | 위도 |
-| `longitude` | GEOMETRY(Point,4326) | Not Null | 경도 |
+| `location` | GEOMETRY(Point,4326) | Not Null | 위치 좌표 (위도/경도) |
 | `address` | TEXT | - | 소재지 |
 | `logo_url` | VARCHAR(500) | - | 로고 URL |
 
@@ -401,7 +399,7 @@ erDiagram
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
-| `address_id` | VARCHAR(36) | PK, Not Null | 배송지 고유 식별자 |
+| `address_id` | UUID | PK, Not Null | 배송지 고유 식별자 |
 | `company_id` | UUID | FK, Not Null | 업체 참조 |
 | `address_name` | VARCHAR(100) | Not Null | 배송지 별칭 |
 | `recipient_name` | VARCHAR(100) | Not Null | 수령인 실명 |
@@ -423,8 +421,7 @@ erDiagram
 | `name` | VARCHAR(100) | Not Null | 허브명 |
 | `hub_type` | VARCHAR(30) | - | REGIONAL / CENTRAL |
 | `address` | TEXT | Not Null | 주소 |
-| `latitude` | GEOMETRY(Point,4326) | Not Null | 위도 |
-| `longitude` | GEOMETRY(Point,4326) | Not Null | 경도 |
+| `location` | GEOMETRY(Point,4326) | Not Null | 위치 좌표 (위도/경도) |
 | `contact_phone` | VARCHAR(20) | - | 연락처 |
 | `status` | VARCHAR(30) | Default 'ACTIVE' | ACTIVE / INACTIVE / MAINTENANCE |
 
@@ -490,7 +487,7 @@ erDiagram
 | `from_hub_id` | UUID | FK, Not Null | 출발 허브 |
 | `to_hub_id` | UUID | FK, Not Null | 도착 허브 |
 | `duration` | INTEGER | Not Null | 소요 시간(분) |
-| `distance` | NUMERIC(8,2) | Not Null | 이동 거리(km) |
+| `distance` | NUMERIC(10,2) | Not Null | 이동 거리(km) |
 
 #### p_warehouses (물류 창고)
 
@@ -514,6 +511,7 @@ erDiagram
 | `quantity` | INTEGER | Default 0, Not Null | 실제 출고 가능한 가용 재고 |
 | `reserved_quantity` | INTEGER | Default 0, Not Null | 결제 대기 중인 예약 재고 |
 | `safety_stock` | INTEGER | Default 0, Not Null | 최소 안전 재고 (발주 기준점) |
+| `company_id` | UUID | - | 소속 업체 ID |
 | `version` | BIGINT | Default 0 | 낙관적 락용 버전 |
 
 #### p_inventory_histories (재고 변동 이력 — append-only)
@@ -523,6 +521,9 @@ erDiagram
 | `history_id` | UUID | PK, Not Null | 이력 식별자 |
 | `inventory_id` | UUID | FK, Not Null | 대상 재고 참조 |
 | `change_quantity` | INTEGER | Not Null | 수량 변동 (+/-) |
+| `order_id` | UUID | - | 연관 주문 ID |
+| `reason` | VARCHAR(255) | - | 변동 사유 |
+| `company_order_id` | UUID | - | 연관 업체별 주문 ID |
 | `change_type` | VARCHAR(30) | Default 'INBOUND' | INBOUND / OUTBOUND / RESERVED / CANCELLED / ADJUSTED / RETURNED |
 
 ---
@@ -534,12 +535,11 @@ erDiagram
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `order_id` | UUID | PK, Not Null | 주문 식별자 |
-| `requester_company_id` | UUID | FK, Not Null | 요청(공급업체) |
 | `receiver_company_id` | UUID | FK, Not Null | 수령업체 |
 | `recipient_name` | VARCHAR(100) | Not Null | 수령인 실명 (스냅샷) |
 | `phone` | VARCHAR(20) | Not Null | 수령인 연락처 (스냅샷) |
 | `slack_id` | VARCHAR(36) | nullable | 수령인 슬랙 ID |
-| `address` | JSON | Not Null | 배송 주소 스냅샷 {address, address_detail} |
+| `address` | JSONB | Not Null | 배송 주소 스냅샷 {address, address_detail} |
 | `due_date` | TIMESTAMP | Not Null | 납품 기한 |
 | `request_memo` | TEXT | nullable | 요청 사항 |
 | `total_price` | NUMERIC(12,2) | Not Null | 상품 합계 금액 |
@@ -589,6 +589,7 @@ erDiagram
 | `amount` | NUMERIC(12,2) | - | 결제 금액 |
 | `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / COMPLETED / CANCELLED |
 | `pg_transaction_id` | VARCHAR(255) | - | PG사 거래 고유번호 |
+| `receiver_company_id` | UUID | Not Null | 수령업체 ID (반정규화) |
 
 ---
 
@@ -602,16 +603,22 @@ erDiagram
 | `company_order_id` | UUID | FK, Not Null | 업체별 주문 참조 |
 | `tracking_number` | VARCHAR(100) | - | 송장 번호 |
 | `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / SHIPPING / COMPLETED / CANCELLED |
+| `postal_code` | VARCHAR(5) | Not Null | 우편번호 |
 | `memo` | TEXT | - | 배송 메모 |
 | `departure_hub_id` | UUID | FK, Not Null | 출발 허브 |
 | `destination_hub_id` | UUID | FK, Not Null | 도착 허브 |
 | `delivery_address` | VARCHAR(255) | Not Null | 최종 도착지 주소 |
 | `recipient_name` | VARCHAR(100) | Not Null | 수령인 |
 | `recipient_slack_id` | VARCHAR(100) | - | 수령인 슬랙 ID |
+| `company_receive_id` | UUID | - | 수령업체 ID |
 | `delivery_manager_id` | UUID | FK, Not Null | 배송 담당자 |
+| `manager_name` | VARCHAR(100) | - | 배송담당자명 (스냅샷) |
+| `manager_phone` | VARCHAR(20) | - | 배송담당자 연락처 (스냅샷) |
+| `delivery_slack_id` | VARCHAR(100) | - | 배송담당자 Slack ID |
 | `final_dispatch_deadline_at` | TIMESTAMP | - | AI 응답 기반 최종 발송 시한 |
 | `started_at` | TIMESTAMP | - | 배송 시작 시간 |
 | `completed_at` | TIMESTAMP | - | 배송 완료 시간 |
+| `is_deleted` | BOOLEAN | Not Null, Default false | 삭제 플래그 (Soft Delete) |
 
 #### p_delivery_routes (배송 경로)
 
@@ -623,9 +630,11 @@ erDiagram
 | `from_hub_id` | UUID | FK, Not Null | 출발 허브 |
 | `to_hub_id` | UUID | FK, Not Null | 도착 허브 |
 | `estimated_distance` | NUMERIC(8,2) | - | 예상 거리 (km) |
-| `estimated_duration` | TIMESTAMP | - | 예상 소요시간 |
+| `estimated_duration` | TIME | - | 예상 소요시간 |
+| `from_hub_name` | VARCHAR(100) | - | 출발 허브명 (캐시용 스냅샷) |
+| `to_hub_name` | VARCHAR(100) | - | 도착 허브명 (캐시용 스냅샷) |
 | `actual_distance` | NUMERIC(8,2) | - | 실제 거리 |
-| `actual_duration` | TIMESTAMP | - | 실제 소요시간 |
+| `actual_duration` | TIME | - | 실제 소요시간 |
 | `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / MOVING / ARRIVED / CANCELLED |
 
 #### p_delivery_log (이벤트 발생 로그 — append-only)
@@ -649,7 +658,7 @@ erDiagram
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `claim_id` | UUID | PK, Not Null | 클레임 고유 식별자 |
-| `order_item_id` | UUID | FK, Not Null | 대상 주문 상품 참조 |
+| `company_order_id` | UUID | FK, Not Null | 대상 업체별 주문 참조 |
 | `claim_type` | VARCHAR(30) | Not Null | RETURN / EXCHANGE |
 | `status` | VARCHAR(30) | Not Null, Default 'REQUESTED' | REQUESTED / PROCESSING / REJECTED / COMPLETED / CANCELLED |
 | `reason` | TEXT | Not Null | 요청 사유 |

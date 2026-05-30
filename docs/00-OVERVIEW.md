@@ -71,7 +71,7 @@
 ### 서비스 간 통신
 - FeignClient 기반 REST 동기 호출
 - 실패 시 재시도 로직 적용
-- 비동기 이벤트: Apache Kafka
+- 서비스 간 내부 호출 시 `X-Gateway-Secret` 헤더로 신뢰 검증
 
 ### 동시성 제어
 - 재고 처리 시 낙관적 락 (`version` 컬럼) 적용
