@@ -9,12 +9,17 @@ import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.delivery.global.exception.DeliveryErrorCode;
 import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryAiServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryOrderServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliverySlackServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryAiCreateRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCancelRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCompleteRequest;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.SlackMessageSendRequest;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryAiResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryHubRouteSearchResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryManagerResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryOrderCancelResponse;
@@ -42,6 +47,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,9 +70,11 @@ public class DeliveryService {
     private final CachedHubServiceClient cachedHubServiceClient;
     private final DeliveryUserServiceClient deliveryUserServiceClient;
     private final DeliveryOrderServiceClient deliveryOrderServiceClient;
+    private final DeliveryAiServiceClient deliveryAiServiceClient;
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
     private final SecurityUtils securityUtils;
+    private final DeliverySlackNotificationService deliverySlackNotificationService;
 
     @Transactional
     public DeliveryCreateResponse createSingleDelivery(DeliveryCreateClientRequest request) {
@@ -104,23 +112,36 @@ public class DeliveryService {
         DeliveryHubRouteSearchResponse hubClientResponse = cachedHubServiceClient.getHubRouteWithCache(hubRequest);
         DeliveryManagerResponse managerInfo = deliveryUserServiceClient.getManagerInfo(hubClientResponse.getFromHubId());
 
+        DeliveryAiCreateRequest aiRequest = DeliveryAiCreateRequest.builder()
+                .userId(managerInfo.getDeliveryManagerId())
+                .deliveryId(savedDelivery.getDeliveryId())
+                .fromHubName(hubClientResponse.getRoutes().get(0).getFromHubName())
+                .deliveryAddress(savedDelivery.getDeliveryAddress().toString())
+                .aiModelName("gemini-2.5-flash")
+                .promptText("배송 마감 시한 계산 요청")
+                .build();
+
+        DeliveryAiResponse aiResponse = deliveryAiServiceClient.generateAiDescription(aiRequest);
+
+        if ("SUCCESS".equals(aiResponse.getStatus())) {
+            savedDelivery.updateFinalDeadline(aiResponse.getFinalDeadlineAt());
+        }
         savedDelivery.assignDeliveryManager(managerInfo.getDeliveryManagerId(), managerInfo.getDeliverySlackId(), managerInfo.getManagerName(), managerInfo.getManagerPhone());
 
-        // 4. 경로 저장
+        deliverySlackNotificationService.sendSlackNotificationAsync(savedDelivery, request);
+
         List<DeliveryCreateResponse.DeliveryRouteResponseDto> routeResponse = new ArrayList<>();
-        String departureHubName = "출발 센터";
-        String destinationHubName = "도착 센터";
 
         if (hubClientResponse != null && hubClientResponse.getRoutes() != null) {
             for (DeliveryHubRouteSearchResponse.HubRouteDto dto : hubClientResponse.getRoutes()) {
-                if (dto.getSequence() == 1) departureHubName = dto.getFromHubName();
-                if (dto.getSequence() == hubClientResponse.getRoutes().size()) destinationHubName = dto.getToHubName();
 
                 DeliveryRoute route = DeliveryRoute.builder()
                         .deliveryId(savedDelivery.getDeliveryId())
                         .sequence(dto.getSequence())
                         .fromHubId(dto.getFromHubId())
                         .toHubId(dto.getToHubId())
+                        .fromHubName(dto.getFromHubName())
+                        .toHubName(dto.getToHubName())
                         .estimatedDistance(dto.getDistance())
                         .estimatedDuration(dto.getDuration())
                         .status(DeliveryRouteStatus.PENDING)
@@ -133,6 +154,8 @@ public class DeliveryService {
                         .sequence(route.getSequence())
                         .fromHubId(route.getFromHubId())
                         .toHubId(route.getToHubId())
+                        .departureHubName(dto.getFromHubName())
+                        .destinationHubName(dto.getToHubName())
                         .estimatedDistance(route.getEstimatedDistance())
                         .estimatedDuration(route.getEstimatedDuration())
                         .status(route.getStatus().name())
@@ -146,9 +169,7 @@ public class DeliveryService {
                 .trackingNumber(savedDelivery.getTrackingNumber())
                 .status(savedDelivery.getStatus().name())
                 .departureHubId(savedDelivery.getDepartureHubId())
-                .departureHubName(departureHubName)
                 .destinationHubId(savedDelivery.getDestinationHubId())
-                .destinationHubName(destinationHubName)
                 .deliveryAddress(savedDelivery.getDeliveryAddress())
                 .recipientName(savedDelivery.getRecipientName())
                 .recipientSlackId(savedDelivery.getRecipientSlackId())
@@ -545,7 +566,7 @@ public class DeliveryService {
         deliveryOrderServiceClient.companyOrderDelivered(delivery.getCompanyOrderId(), userId, request);
 
         DeliveryAddress addressObj = delivery.getDeliveryAddress();
-        String flatAddress =addressObj.getAddress();
+        String flatAddress = addressObj.getAddress();
         String flatAddressDetail = addressObj.getAddressDetail();
 
         return DeliveryStatusResponse.builder()

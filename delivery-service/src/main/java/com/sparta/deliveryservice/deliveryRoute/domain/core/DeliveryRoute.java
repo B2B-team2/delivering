@@ -43,6 +43,12 @@ public class DeliveryRoute extends BaseEntity {
     @Column(name = "to_hub_id", nullable = false)
     private UUID toHubId;
 
+    @Column(name = "from_hub_name")
+    private String fromHubName;
+
+    @Column(name = "to_hub_name")
+    private String toHubName;
+
     @Column(name = "estimated_distance", precision = 8, scale = 2)
     private BigDecimal estimatedDistance;
 
@@ -61,16 +67,17 @@ public class DeliveryRoute extends BaseEntity {
 
     @Builder
     public DeliveryRoute(UUID deliveryId, Integer sequence, UUID fromHubId, UUID toHubId,
+                         String fromHubName, String toHubName, // 추가
                          BigDecimal estimatedDistance, Time estimatedDuration,
-                         BigDecimal actualDistance, Time actualDuration, DeliveryRouteStatus status) {
+                         DeliveryRouteStatus status) {
         this.deliveryId = deliveryId;
         this.sequence = sequence;
         this.fromHubId = fromHubId;
         this.toHubId = toHubId;
+        this.fromHubName = fromHubName; // 추가
+        this.toHubName = toHubName;     // 추가
         this.estimatedDistance = estimatedDistance;
         this.estimatedDuration = estimatedDuration;
-        this.actualDistance = actualDistance;
-        this.actualDuration = actualDuration;
         this.status = (status != null) ? status : DeliveryRouteStatus.PENDING;
     }
 

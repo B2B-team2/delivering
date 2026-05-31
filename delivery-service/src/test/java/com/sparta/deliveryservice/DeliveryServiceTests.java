@@ -2,6 +2,7 @@ package com.sparta.deliveryservice;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.delivery.application.service.DeliveryService;
+import com.sparta.deliveryservice.delivery.application.service.DeliverySlackNotificationService;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
@@ -9,10 +10,13 @@ import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.delivery.global.exception.DeliveryErrorCode;
 import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryAiServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryOrderServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryAiCreateRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryAiResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryHubRouteSearchResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryManagerResponse;
 import com.sparta.deliveryservice.delivery.presentation.dto.request.DeliveryCancelRequest;
@@ -42,6 +46,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,8 +54,11 @@ import static com.sparta.common.architecture.BaseArchitectureTest.domain_prefix_
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
 class DeliveryServiceTests {
@@ -80,6 +88,12 @@ class DeliveryServiceTests {
     private DeliveryOrderServiceClient deliveryOrderServiceClient;
 
     @Mock
+    private DeliveryAiServiceClient deliveryAiServiceClient;
+
+    @Mock
+    private DeliverySlackNotificationService deliverySlackNotificationService;
+
+    @Mock
     private SecurityUtils securityUtils;
 
     @Test
@@ -87,65 +101,85 @@ class DeliveryServiceTests {
     void createSingleDelivery_Success() {
         // Given
         UUID companyOrderId = UUID.randomUUID();
-        
+        UUID companyReceiveId = UUID.randomUUID();
         UUID departureHubId = UUID.randomUUID();
         UUID destinationHubId = UUID.randomUUID();
 
+        // 1. 서비스 필수 필드 반영 (Request 객체 보완)
         DeliveryCreateClientRequest requestDto = DeliveryCreateClientRequest.builder()
                 .companyOrderId(companyOrderId)
+                .companyReceiveId(companyReceiveId)
                 .departureHubId(departureHubId)
                 .destinationHubId(destinationHubId)
                 .deliveryAddress(new DeliveryAddress("강원도 원주시", "102호"))
                 .recipientName("홍길동")
                 .recipientSlackId("slack_hong")
+                .phone("010-1234-5678")
+                .postalCode("12345")
                 .build();
 
-        // 저장될 Mock Delivery 설정
         Delivery mockDelivery = Delivery.builder()
                 .companyOrderId(companyOrderId)
                 .departureHubId(departureHubId)
                 .destinationHubId(destinationHubId)
                 .status(DeliveryStatus.PENDING)
+                .deliveryAddress(new DeliveryAddress("강원도 원주시", "102호")) // 추가!
                 .build();
 
-        // Reflection으로 deliveryId 주입
         try {
             java.lang.reflect.Field idField = Delivery.class.getDeclaredField("deliveryId");
             idField.setAccessible(true);
             idField.set(mockDelivery, UUID.randomUUID());
         } catch (Exception e) { }
 
+        // 2. Mock 설정
         given(deliveryRepository.existsByCompanyOrderId(companyOrderId)).willReturn(false);
         given(deliveryRepository.save(any(Delivery.class))).willReturn(mockDelivery);
 
-        // Hub 및 Manager API Mocking
+        // 허브 경로 Mocking
         DeliveryHubRouteSearchResponse.HubRouteDto routeDto = DeliveryHubRouteSearchResponse.HubRouteDto.builder()
                 .sequence(1)
-                .fromHubId(departureHubId) // 이 값이 전달됨
+                .fromHubId(departureHubId)
                 .toHubId(destinationHubId)
                 .fromHubName("서울 허브")
                 .toHubName("원주 허브")
                 .build();
 
-
         DeliveryHubRouteSearchResponse mockHubResponse = DeliveryHubRouteSearchResponse.builder()
-                .fromHubId(departureHubId) // <--- 이 값이 중요합니다!
+                .fromHubId(departureHubId) // <-- 확실하게 설정
                 .routes(List.of(routeDto))
                 .build();
 
         given(cachedHubServiceClient.getHubRouteWithCache(any(DeliveryHubRouteSearchRequest.class)))
                 .willReturn(mockHubResponse);
 
-        given(deliveryUserServiceClient.getManagerInfo(departureHubId))
-                .willReturn(DeliveryManagerResponse.builder().deliveryManagerId(UUID.randomUUID()).build());
+// 매니저 응답 Mocking
+// any(UUID.class) 대신 정확히 departureHubId가 들어오는지 체크하는 eq() 사용
+        given(deliveryUserServiceClient.getManagerInfo(eq(departureHubId)))
+                .willReturn(DeliveryManagerResponse.builder()
+                        .deliveryManagerId(UUID.randomUUID())
+                        .build());
+        // [중요] AI 서비스 Mocking 추가
+        given(deliveryAiServiceClient.generateAiDescription(any(DeliveryAiCreateRequest.class)))
+                .willReturn(DeliveryAiResponse.builder()
+                        .status("SUCCESS")
+                        .finalDeadlineAt(LocalDateTime.now().plusHours(2))
+                        .build());
+
+        // When
         DeliveryCreateResponse actualResponse = deliveryService.createSingleDelivery(requestDto);
 
         // Then
         assertThat(actualResponse).isNotNull();
         assertThat(actualResponse.getCompanyOrderId()).isEqualTo(companyOrderId);
-        assertThat(actualResponse.getDepartureHubName()).isEqualTo("서울 허브");
-        assertThat(actualResponse.getDestinationHubName()).isEqualTo("원주 허브");
+        assertThat(actualResponse.getRoutes().get(0).getDepartureHubName()).isEqualTo("서울 허브");
         assertThat(actualResponse.getRoutes()).hasSize(1);
+
+        // verify 추가: AI 서비스가 호출되었는지 검증
+        verify(deliveryAiServiceClient, times(1)).generateAiDescription(any(DeliveryAiCreateRequest.class));
+
+        verify(deliverySlackNotificationService, times(1))
+                .sendSlackNotificationAsync(any(Delivery.class), any(DeliveryCreateClientRequest.class));
     }
 
     @Test

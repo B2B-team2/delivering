@@ -1,21 +1,25 @@
-package com.sparta.operationsservice.ai.presentation.dto.requset;
+package com.sparta.deliveryservice.delivery.infrastructure.client.dto.response;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class AiRequest {
+public class DeliveryAiResponse {
+    private UUID requestId;
     private UUID userId;
     private UUID deliveryId;
-    private String fromHubName;
-    private String deliveryAddress;
     private String aiModelName;
     private String promptText;
+    private String responseText;
+    private String status;
+    private String errorMessage;
+    private LocalDateTime finalDeadlineAt;
 }

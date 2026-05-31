@@ -1,17 +1,13 @@
-package com.sparta.operationsservice.ai.presentation.dto.requset;
+package com.sparta.deliveryservice.delivery.infrastructure.client.dto.request;
 
-import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 
 import java.util.UUID;
 
 @Getter
 @Builder
-@NoArgsConstructor
-@AllArgsConstructor
-public class AiRequest {
+public class DeliveryAiCreateRequest {
     private UUID userId;
     private UUID deliveryId;
     private String fromHubName;
