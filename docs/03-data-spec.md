@@ -13,24 +13,34 @@
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `created_at` | TIMESTAMP | Not Null, Default now() | 데이터 최초 생성 일시 |
-| `created_by` | UUID | - | 생성 주체 (user_id) |
+| `created_by` | VARCHAR(36) | - | 생성 주체 (user_id) |
 | `updated_at` | TIMESTAMP | Not Null, Default now() | 데이터 최근 수정 일시 |
-| `updated_by` | UUID | - | 최근 수정 주체 |
+| `updated_by` | VARCHAR(36) | - | 최근 수정 주체 |
 | `deleted_at` | TIMESTAMP | - | 삭제 일시 (Soft Delete) |
-| `deleted_by` | UUID | - | 삭제 처리 주체 |
+| `deleted_by` | VARCHAR(36) | - | 삭제 처리 주체 |
 
-> `p_inventory_histories`는 append-only 테이블로 `updated_at`, `updated_by`, `deleted_at`, `deleted_by`가 존재하지 않는다.
+> `p_delivery_log`는 append-only 테이블로 `created_at`, `created_by`만 존재한다.
 
 ### 1.2 ID 규칙
 - 모든 PK는 **UUID** 타입 사용
+- `p_delivery_addresses.address_id`는 예외적으로 `VARCHAR(36)`
 
 ### 1.3 논리적 삭제
 - 조회 시 `deleted_at IS NULL` 조건 필수 적용
 - 물리적 삭제 금지
 
-### 1.4 DB 분리
-- 서비스별 **독립 PostgreSQL 컨테이너**로 물리적 데이터 격리
-- 서비스: `user-service`, `company-service`, `hub-service`, `order-service`, `delivery-service`, `operations-service`
+### 1.4 데이터베이스 분리
+- 서비스별 **독립 PostgreSQL 인스턴스**로 물리적 데이터 격리 (`docker-compose.infra.yml`)
+- hub-service / company-service는 PostGIS 확장 적용 (지리 데이터 처리)
+
+| 서비스 | DB 컨테이너 | 호스트 포트 | 이미지 |
+|---|---|:---:|---|
+| user-service | my-postgres | 25432 | postgres:16-alpine |
+| order-service | order_service_db | 25433 | postgres:16-alpine |
+| hub-service | hub_service_db | 25434 | postgis/postgis:16-3.4 |
+| company-service | company_service_db | 25435 | postgis/postgis:16-3.4 |
+| delivery-service | delivery_service_db | 25436 | postgres:16-alpine |
+| operations-service | operations_service_db | 25437 | postgres:16-alpine |
 
 ---
 
@@ -40,15 +50,19 @@ ERD 원본: https://dbdiagram.io/d/Copy-of-Untitled-Diagram-6a06dfff9f1f8ec47b1f
 
 ```mermaid
 erDiagram
-    %% ── USER Domain ──
+    %% ── USER Domain (user_service_db) ──
     p_users {
         UUID user_id PK
         VARCHAR email
+        VARCHAR password
         VARCHAR name
         VARCHAR phone
         VARCHAR slack_id
+        VARCHAR role
         VARCHAR approval_status
-        UUID approved_by FK
+        UUID approved_by
+        TIMESTAMP approved_at
+        TEXT rejected_reason
     }
     p_admins {
         UUID user_id PK,FK
@@ -56,47 +70,52 @@ erDiagram
     }
     p_hub_managers {
         UUID user_id PK,FK
-        UUID hub_id FK
+        UUID hub_id
     }
     p_company_managers {
         UUID user_id PK,FK
-        UUID company_id FK
+        UUID company_id
     }
     p_delivery_managers {
         UUID user_id PK,FK
         VARCHAR manager_type
         INTEGER delivery_order
-        UUID hub_id FK
+        UUID hub_id
         VARCHAR status
         TIMESTAMP last_assigned_at
     }
 
-    %% ── HUB Domain ──
+    %% ── HUB Domain (hub_service_db) ──
     p_logistics_hubs {
         UUID hub_id PK
         VARCHAR name
         VARCHAR hub_type
         TEXT address
+        GEOMETRY location
+        VARCHAR contact_phone
         VARCHAR status
     }
     p_hub_routes {
         UUID route_id PK
-        UUID from_hub_id FK
-        UUID to_hub_id FK
+        UUID from_hub_id
+        UUID to_hub_id
         INTEGER duration
         NUMERIC distance
     }
     p_warehouses {
         UUID warehouse_id PK
-        UUID hub_id FK
+        UUID hub_id
         VARCHAR warehouse_name
         TEXT address
+        VARCHAR region
+        VARCHAR contact_phone
         VARCHAR status
     }
     p_warehouse_inventory {
         UUID inventory_id PK
         UUID warehouse_id FK
-        UUID product_option_id FK
+        UUID product_option_id
+        UUID company_id
         INTEGER quantity
         INTEGER reserved_quantity
         INTEGER safety_stock
@@ -105,17 +124,25 @@ erDiagram
     p_inventory_histories {
         UUID history_id PK
         UUID inventory_id FK
+        UUID order_id
+        UUID company_order_id
         INTEGER change_quantity
         VARCHAR change_type
+        VARCHAR reason
     }
 
-    %% ── COMPANY Domain ──
+    %% ── COMPANY Domain (company_service_db) ──
     p_companies {
         UUID company_id PK
         VARCHAR company_name
         VARCHAR company_type
-        UUID hub_id FK
+        VARCHAR phone
+        TEXT description
+        VARCHAR business_number
+        UUID hub_id
+        GEOMETRY location
         TEXT address
+        VARCHAR logo_url
     }
     p_product_categories {
         UUID category_id PK
@@ -128,6 +155,8 @@ erDiagram
         UUID category_id FK
         VARCHAR name
         NUMERIC price
+        TEXT description
+        VARCHAR thumbnail_url
         VARCHAR status
     }
     p_product_options {
@@ -139,75 +168,101 @@ erDiagram
         INTEGER display_order
     }
     p_delivery_addresses {
-        VARCHAR address_id PK
+        UUID address_id PK
         UUID company_id FK
+        VARCHAR address_name
         VARCHAR recipient_name
         VARCHAR phone
         TEXT address
+        VARCHAR address_detail
+        VARCHAR postal_code
         BOOLEAN is_default
     }
 
-    %% ── ORDER Domain ──
+    %% ── ORDER Domain (order_service_db) ──
     p_orders {
         UUID order_id PK
-        UUID requester_company_id FK
-        UUID receiver_company_id FK
+        UUID receiver_company_id
+        VARCHAR recipient_name
+        VARCHAR phone
+        VARCHAR slack_id
+        JSONB address
         TIMESTAMP due_date
-        JSON address
+        TEXT request_memo
         NUMERIC total_price
+        NUMERIC delivery_fee
         NUMERIC final_price
         VARCHAR status
+        BIGINT version
     }
     p_company_orders {
         UUID company_order_id PK
         UUID order_id FK
-        UUID company_id FK
+        UUID company_id
         NUMERIC subtotal_price
+        NUMERIC subtotal_delivery_fee
         VARCHAR status
+        BIGINT version
     }
     p_order_items {
         UUID order_item_id PK
         UUID company_order_id FK
-        UUID delivery_id FK
-        UUID product_option_id FK
+        UUID delivery_id
+        UUID product_option_id
         INTEGER quantity
         NUMERIC unit_price
     }
     p_order_drafts {
         UUID draft_id PK
-        UUID user_id FK
-        UUID product_id FK
-        UUID product_option_id FK
+        UUID user_id
+        UUID product_id
+        UUID product_option_id
         INTEGER quantity
+        BIGINT version
     }
     p_payments {
         UUID payment_id PK
         UUID order_id FK
+        UUID receiver_company_id
         VARCHAR payment_method
         NUMERIC amount
         VARCHAR status
         VARCHAR pg_transaction_id
     }
 
-    %% ── DELIVERY Domain ──
+    %% ── DELIVERY Domain (delivery_service_db) ──
     p_deliveries {
         UUID delivery_id PK
-        UUID company_order_id FK
-        UUID departure_hub_id FK
-        UUID destination_hub_id FK
-        UUID delivery_manager_id FK
+        UUID company_order_id
+        UUID company_receive_id
         VARCHAR tracking_number
         VARCHAR status
+        TEXT memo
+        UUID departure_hub_id
+        UUID destination_hub_id
+        VARCHAR delivery_address
+        VARCHAR recipient_name
+        VARCHAR phone
+        VARCHAR postal_code
+        VARCHAR recipient_slack_id
+        UUID delivery_manager_id
+        VARCHAR manager_name
+        VARCHAR manager_phone
+        VARCHAR delivery_slack_id
         TIMESTAMP final_dispatch_deadline_at
+        TIMESTAMP started_at
+        TIMESTAMP completed_at
     }
     p_delivery_routes {
         UUID route_id PK
         UUID delivery_id FK
         INTEGER sequence
-        UUID from_hub_id FK
-        UUID to_hub_id FK
+        UUID from_hub_id
+        UUID to_hub_id
         NUMERIC estimated_distance
+        TIME estimated_duration
         NUMERIC actual_distance
+        TIME actual_duration
         VARCHAR status
     }
     p_delivery_log {
@@ -220,79 +275,62 @@ erDiagram
         TEXT reason
     }
 
-    %% ── OPS Domain ──
+    %% ── OPS Domain (operations_service_db) ──
     p_order_claims {
         UUID claim_id PK
-        UUID company_order_id FK
+        UUID company_order_id
         VARCHAR claim_type
         VARCHAR status
+        TEXT reason
         NUMERIC refund_amount
     }
     p_slack_messages {
         UUID message_id PK
-        UUID receiver_user_id FK
+        UUID receiver_user_id
         VARCHAR receiver_slack_id
         TEXT message_content
+        VARCHAR reference_type
         VARCHAR status
         TIMESTAMP sent_at
     }
     p_ai_requests {
         UUID request_id PK
-        UUID user_id FK
-        UUID delivery_id FK
+        UUID user_id
+        UUID delivery_id
         VARCHAR ai_model_name
         TEXT prompt_text
         TEXT response_text
         VARCHAR status
+        TEXT error_message
         TIMESTAMP final_deadline_at
     }
 
-    %% ── Relations: USER ──
+    %% ── Relations: USER (물리 FK — 같은 DB) ──
     p_users ||--o| p_admins : "is admin"
     p_users ||--o| p_hub_managers : "is hub manager"
     p_users ||--o| p_company_managers : "is company manager"
     p_users ||--o| p_delivery_managers : "is delivery manager"
-    p_users }o--o| p_users : "approved by"
 
-    %% ── Relations: HUB ──
+    %% ── Relations: HUB (물리 FK — 같은 DB) ──
     p_logistics_hubs ||--|| p_warehouses : "has warehouse"
-    p_logistics_hubs ||--o{ p_hub_managers : "managed by"
-    p_logistics_hubs ||--o{ p_delivery_managers : "home hub"
-    p_logistics_hubs ||--o{ p_companies : "belongs to"
     p_logistics_hubs ||--o{ p_hub_routes : "from hub"
     p_logistics_hubs ||--o{ p_hub_routes : "to hub"
     p_warehouses ||--o{ p_warehouse_inventory : "stores"
-    p_product_options ||--o{ p_warehouse_inventory : "SKU tracked"
     p_warehouse_inventory ||--o{ p_inventory_histories : "history"
 
-    %% ── Relations: COMPANY ──
-    p_companies ||--o{ p_company_managers : "managed by"
+    %% ── Relations: COMPANY (물리 FK — 같은 DB) ──
     p_companies ||--o{ p_products : "produces"
     p_companies ||--o{ p_delivery_addresses : "has address"
     p_product_categories ||--o{ p_products : "categorizes"
     p_products ||--o{ p_product_options : "has options"
-    p_products ||--o{ p_order_drafts : "in draft"
-    p_product_options ||--o{ p_order_drafts : "option selected"
 
-    %% ── Relations: ORDER ──
-    p_companies ||--o{ p_orders : "requests"
-    p_companies ||--o{ p_orders : "receives"
+    %% ── Relations: ORDER (물리 FK — 같은 DB) ──
     p_orders ||--o{ p_company_orders : "split by company"
-    p_companies ||--o{ p_company_orders : "sub order"
     p_company_orders ||--o{ p_order_items : "contains"
-    p_product_options ||--o{ p_order_items : "ordered"
     p_orders ||--o| p_payments : "paid via"
-    p_users ||--o{ p_order_drafts : "drafts"
 
-    %% ── Relations: DELIVERY ──
-    p_company_orders ||--o| p_deliveries : "delivered by"
-    p_logistics_hubs ||--o{ p_deliveries : "departs from"
-    p_logistics_hubs ||--o{ p_deliveries : "arrives at"
-    p_delivery_managers ||--o{ p_deliveries : "handles"
-    p_deliveries ||--o{ p_order_items : "contains items"
+    %% ── Relations: DELIVERY (물리 FK — 같은 DB) ──
     p_deliveries ||--o{ p_delivery_routes : "has routes"
-    p_logistics_hubs ||--o{ p_delivery_routes : "route from"
-    p_logistics_hubs ||--o{ p_delivery_routes : "route to"
     p_deliveries ||--o{ p_delivery_log : "logs"
     p_delivery_routes ||--o{ p_delivery_log : "route logs"
 
@@ -306,18 +344,21 @@ erDiagram
 ---
 ## 3. 테이블 명세
 
-### 3.1 USER 스키마
+> 각 테이블은 해당 서비스의 독립 PostgreSQL 데이터베이스에 속한다. 스키마명은 논리적 구분 목적으로만 표기한다.
+
+### 3.1 USER 스키마 (`user_service_db`)
 
 #### p_users (사용자 공통 정보)
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
-| `user_id` | UUID | PK, Not Null | 사용자 고유 식별자 |
+| `user_id` | UUID | PK, Not Null | 사용자 고유 식별자 (Keycloak ID 사용) |
 | `email` | VARCHAR(255) | Unique, Not Null | 로그인 계정 (이메일) |
 | `password` | VARCHAR(255) | Not Null | 암호화된 비밀번호 |
 | `name` | VARCHAR(100) | Not Null | 사용자 실명 |
 | `phone` | VARCHAR(20) | nullable | 연락처 |
 | `slack_id` | VARCHAR(36) | nullable | 슬랙 ID |
+| `role` | VARCHAR(30) | Not Null | MASTER / HUB_MANAGER / HUB_DELIVERY_MANAGER / COMPANY_DELIVERY_MANAGER / COMPANY_MANAGER |
 | `approval_status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / APPROVED / REJECTED |
 | `approved_by` | UUID | FK(자기참조), nullable | 승인 처리 관리자 ID |
 | `approved_at` | TIMESTAMP | nullable | 승인 일시 |
@@ -327,9 +368,9 @@ erDiagram
 
 | 테이블 | 주요 컬럼 | 설명 |
 |---|---|---|
-| `p_company_managers` | user_id(PK/FK), company_id(FK) | 업체 담당자 |
+| `p_company_managers` | user_id(PK/FK), company_id(FK, nullable) | 업체 담당자 — company_id는 승인 시점에 연결 |
 | `p_admins` | user_id(PK/FK), role(MASTER) | 시스템 운영진 |
-| `p_hub_managers` | user_id(PK/FK), hub_id(FK) | 허브 관리자 |
+| `p_hub_managers` | user_id(PK/FK), hub_id(FK, nullable) | 허브 관리자 — hub_id는 승인 시점에 연결 |
 | `p_delivery_managers` | user_id(PK/FK), manager_type, delivery_order, hub_id, status, last_assigned_at | 배송 담당자 |
 
 **p_delivery_managers 상세**
@@ -339,12 +380,12 @@ erDiagram
 | `manager_type` | VARCHAR(100) | HUB_DELIVERY / COMPANY_DELIVERY |
 | `delivery_order` | INTEGER | 배송 순번 (자동 배정 기준) |
 | `hub_id` | UUID | 담당 허브 ID |
-| `status` | VARCHAR(30) | 근무 상태 (대기/배송중/근무중지) |
+| `status` | VARCHAR(30) | 근무 상태: WAITING / DELIVERING / INACTIVE |
 | `last_assigned_at` | TIMESTAMP | 마지막 배정 일시 |
 
 ---
 
-### 3.2 COMPANY 스키마
+### 3.2 COMPANY 스키마 (`company_service_db`)
 
 #### p_companies (업체)
 
@@ -357,9 +398,11 @@ erDiagram
 | `description` | TEXT | - | 업체 설명 |
 | `business_number` | VARCHAR(20) | Not Null | 사업자 등록 번호 |
 | `hub_id` | UUID | FK, Not Null | 소속 허브 |
-| `location` | GEOMETRY(Point,4326) | Not Null | 위치 좌표 (위도/경도) |
+| `location` | GEOMETRY(Point,4326) | Not Null | 위경도 좌표 (PostGIS Point — longitude=X, latitude=Y) |
 | `address` | TEXT | - | 소재지 |
 | `logo_url` | VARCHAR(500) | - | 로고 URL |
+
+> `location` 컬럼에서 위도는 `location.getY()`, 경도는 `location.getX()`로 접근한다.
 
 #### p_product_categories (상품 분류)
 
@@ -411,7 +454,7 @@ erDiagram
 
 ---
 
-### 3.3 HUB 스키마
+### 3.3 HUB 스키마 (`hub_service_db`)
 
 #### p_logistics_hubs (물류 허브)
 
@@ -495,9 +538,9 @@ erDiagram
 |---|---|---|---|
 | `warehouse_id` | UUID | PK, Not Null | 창고 식별자 |
 | `hub_id` | UUID | FK, Not Null, Unique | 관할 허브 (1:1 제약) |
-| `warehouse_name` | VARCHAR(255) | Not Null | 창고명 |
-| `address` | TEXT | Not Null | 물류창고 주소 |
-| `region` | VARCHAR(255) | Not Null | 관할 권역 |
+| `warehouse_name` | VARCHAR(255) | - | 창고명 |
+| `address` | TEXT | - | 물류창고 주소 |
+| `region` | VARCHAR(255) | - | 관할 권역 |
 | `contact_phone` | VARCHAR(20) | - | 연락처 |
 | `status` | VARCHAR(30) | Default 'ACTIVE' | ACTIVE / INACTIVE / MAINTENANCE |
 
@@ -512,7 +555,7 @@ erDiagram
 | `reserved_quantity` | INTEGER | Default 0, Not Null | 결제 대기 중인 예약 재고 |
 | `safety_stock` | INTEGER | Default 0, Not Null | 최소 안전 재고 (발주 기준점) |
 | `company_id` | UUID | - | 소속 업체 ID |
-| `version` | BIGINT | Default 0 | 낙관적 락용 버전 |
+| `version` | BIGINT | Default 0 | 낙관적 락용 버전 (`@Version`) |
 
 #### p_inventory_histories (재고 변동 이력 — append-only)
 
@@ -528,7 +571,7 @@ erDiagram
 
 ---
 
-### 3.4 ORDER 스키마
+### 3.4 ORDER 스키마 (`order_service_db`)
 
 #### p_orders (주문)
 
@@ -539,24 +582,28 @@ erDiagram
 | `recipient_name` | VARCHAR(100) | Not Null | 수령인 실명 (스냅샷) |
 | `phone` | VARCHAR(20) | Not Null | 수령인 연락처 (스냅샷) |
 | `slack_id` | VARCHAR(36) | nullable | 수령인 슬랙 ID |
-| `address` | JSONB | Not Null | 배송 주소 스냅샷 {address, address_detail} |
+| `address` | JSONB | Not Null | 배송 주소 스냅샷 `{"address": "...", "address_detail": "..."}` |
 | `due_date` | TIMESTAMP | Not Null | 납품 기한 |
 | `request_memo` | TEXT | nullable | 요청 사항 |
 | `total_price` | NUMERIC(12,2) | Not Null | 상품 합계 금액 |
 | `delivery_fee` | NUMERIC(8,2) | Default 0 | 총 배송비 |
 | `final_price` | NUMERIC(12,2) | Not Null | 최종 결제 금액 |
 | `status` | VARCHAR(30) | Default 'PENDING' | PENDING / DELIVERING / COMPLETED / CANCELLED |
+| `version` | BIGINT | Not Null | 낙관적 락용 버전 (`@Version`) |
+
+> `requester_company_id` 컬럼 제거 확정. 공급업체 정보는 `p_company_orders.company_id`로 관리.
 
 #### p_company_orders (업체별 주문)
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
-| `company_order_id` | UUID | PK, Not Null | 업체별 주문 식별자 |
+| `company_order_id` | UUID | PK, Not Null | 업체별 주문 식별자 (미리 생성 후 저장) |
 | `order_id` | UUID | FK, Not Null | 상위 주문 참조 |
 | `company_id` | UUID | FK, Not Null | 업체 참조 |
 | `subtotal_price` | NUMERIC(12,2) | Not Null | 주문 상품 합계 |
-| `subtotal_delivery_fee` | NUMERIC(8,2) | - | 배송비 |
+| `subtotal_delivery_fee` | NUMERIC(8,2) | Default 0 | 배송비 |
 | `status` | VARCHAR(30) | Default 'ORDERED' | ORDERED / PREPARING / SHIPPED / DELIVERED / CANCELLED |
+| `version` | BIGINT | Not Null | 낙관적 락용 버전 (`@Version`) |
 
 #### p_order_items (주문 상품 상세)
 
@@ -574,10 +621,11 @@ erDiagram
 | 컬럼명 | 타입 | 제약 | 설명          |
 |---|---|---|-------------|
 | `draft_id` | UUID | PK, Not Null | 임시주문 상품 식별자 |
-| `user_id` | UUID | FK, Not Null | 사용자 참조      |
-| `product_id` | UUID | FK, Not Null | 상품 참조       |
-| `product_option_id` | UUID | FK, Not Null | 상품옵션 참조     |
-| `quantity` | INTEGER | Not Null, Default 1 | 주문 수량       |
+| `user_id` | UUID | FK, Not Null | 사용자 참조 |
+| `product_id` | UUID | FK, Not Null | 상품 참조 |
+| `product_option_id` | UUID | FK, Not Null | 상품옵션 참조 |
+| `quantity` | INTEGER | Not Null, Default 1 | 주문 수량 (1 ~ 9,999,999) |
+| `version` | BIGINT | Not Null | 낙관적 락용 버전 (`@Version`) |
 
 #### p_payments (결제)
 
@@ -593,22 +641,24 @@ erDiagram
 
 ---
 
-### 3.5 DELIVERY 스키마
+### 3.5 DELIVERY 스키마 (`delivery_service_db`)
 
 #### p_deliveries (배송 정보)
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `delivery_id` | UUID | PK, Not Null | 배송 고유 식별자 |
-| `company_order_id` | UUID | FK, Not Null | 업체별 주문 참조 |
+| `company_order_id` | UUID | Not Null | 업체별 주문 참조 |
+| `company_receive_id` | UUID | Not Null | 수령업체 ID |
 | `tracking_number` | VARCHAR(100) | - | 송장 번호 |
 | `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / SHIPPING / COMPLETED / CANCELLED |
 | `postal_code` | VARCHAR(5) | Not Null | 우편번호 |
 | `memo` | TEXT | - | 배송 메모 |
-| `departure_hub_id` | UUID | FK, Not Null | 출발 허브 |
-| `destination_hub_id` | UUID | FK, Not Null | 도착 허브 |
-| `delivery_address` | VARCHAR(255) | Not Null | 최종 도착지 주소 |
-| `recipient_name` | VARCHAR(100) | Not Null | 수령인 |
+| `departure_hub_id` | UUID | Not Null | 출발 허브 |
+| `destination_hub_id` | UUID | Not Null | 도착 허브 |
+| `delivery_address` | VARCHAR(255) | Not Null | 최종 도착지 주소 (JSON: address + address_detail 등) |
+| `recipient_name` | VARCHAR(100) | Not Null | 수령인 실명 |
+| `phone` | VARCHAR(20) | Not Null | 수령인 연락처 |
 | `recipient_slack_id` | VARCHAR(100) | - | 수령인 슬랙 ID |
 | `company_receive_id` | UUID | - | 수령업체 ID |
 | `delivery_manager_id` | UUID | FK, Not Null | 배송 담당자 |
@@ -637,13 +687,14 @@ erDiagram
 | `actual_duration` | TIME | - | 실제 소요시간 |
 | `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / MOVING / ARRIVED / CANCELLED |
 
-#### p_delivery_log (이벤트 발생 로그 — append-only)
+#### p_delivery_log (이벤트 발생 로그)
+
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
-| `log_id` | UUID | PK | 배송 이력 식별자 |
-| `delivery_id` | UUID | FK, Not Null | 배송 참조 |
-| `route_id` | UUID | FK, Not Null | 배송 경로 참조 |
+| `log_id` | UUID | PK, Not Null | 배송 이력 식별자 |
+| `delivery_id` | UUID | Not Null | 배송 참조 |
+| `route_id` | UUID | Not Null | 배송 경로 참조 |
 | `event_type` | VARCHAR(30) | Not Null | MANAGER_ASSIGNED / MANAGER_CHANGED / STATUS_CHANGED / ROUTE_CHANGED / CANCELLED |
 | `previous_value` | JSON | nullable | 변경 전 값 |
 | `current_value` | JSON | nullable | 변경 후 값 |
@@ -651,14 +702,14 @@ erDiagram
 
 ---
 
-### 3.6 OPS 스키마
+### 3.6 OPS 스키마 (`operations_service_db`)
 
 #### p_order_claims (반품/교환)
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
 | `claim_id` | UUID | PK, Not Null | 클레임 고유 식별자 |
-| `company_order_id` | UUID | FK, Not Null | 대상 업체별 주문 참조 |
+| `company_order_id` | UUID | Not Null | 대상 업체별 주문 참조 |
 | `claim_type` | VARCHAR(30) | Not Null | RETURN / EXCHANGE |
 | `status` | VARCHAR(30) | Not Null, Default 'REQUESTED' | REQUESTED / PROCESSING / REJECTED / COMPLETED / CANCELLED |
 | `reason` | TEXT | Not Null | 요청 사유 |
@@ -701,8 +752,7 @@ erDiagram
 | `p_companies` | `hub_id` | 허브별 업체 조회 |
 | `p_products` | `company_id`, `status` | 업체별 판매 중 상품 조회 |
 | `p_warehouse_inventory` | `warehouse_id`, `product_option_id` | 재고 조회 (복합 Unique) |
-| `p_orders` | `requester_company_id`, `status` | 업체별 주문 필터 |
-| `p_orders` | `receiver_company_id` | 수령업체 주문 조회 |
+| `p_orders` | `receiver_company_id`, `status` | 수령업체별 주문 필터 |
 | `p_company_orders` | `order_id` | 주문별 서브 주문 조회 |
 | `p_deliveries` | `company_order_id` | 주문별 배송 조회 |
 | `p_deliveries` | `tracking_number` | 송장 번호 조회 |

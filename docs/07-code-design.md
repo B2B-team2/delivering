@@ -1,6 +1,6 @@
 # 07 - Code Design
 
-> 패키지 구조, 공통 모듈(global), 도메인별 주요 클래스 시그니처
+> 멀티 모듈 구조, common 모듈, 서비스별 패키지 구조, 도메인별 핵심 엔티티, FeignClient 인터페이스, 주요 설정, ArchUnit 아키텍처 테스트, Checkstyle 코드 컨벤션
 
 ---
 
@@ -8,8 +8,9 @@
 
 ```
 delivering/                         (root project)
+├── common/                         (공유 라이브러리 모듈)
 ├── api-gateway/
-├── config-server/
+├── config-server/ㄴ
 ├── eureka-server/
 ├── user-service/
 ├── company-service/
@@ -17,466 +18,281 @@ delivering/                         (root project)
 ├── order-service/
 ├── delivery-service/
 ├── operations-service/
+├── settings.gradle
 └── build.gradle                    (공통 의존성 정의)
+```
+
+### common 모듈 (`com.sparta.common`)
+
+모든 마이크로서비스가 공통으로 의존하는 공유 라이브러리.
+
+```
+common/src/main/java/com/sparta/common/
+├── dto/
+│   ├── ApiResponse.java         (공통 응답 래퍼)
+│   ├── PageResponse.java        (페이지네이션 응답)
+│   ├── BusinessException.java   (비즈니스 예외)
+│   ├── ErrorCode.java           (에러 코드 인터페이스)
+│   ├── CommonErrorCode.java     (공통 에러 코드 Enum)
+│   └── ErrorResponse.java
+├── entity/
+│   └── BaseEntity.java          (JPA Auditing 공통 엔티티)
+├── handler/
+│   └── GlobalExceptionHandler.java
+├── security/
+│   ├── AuditorAwareImpl.java    (createdBy, updatedBy 자동 주입)
+│   ├── CustomPreAuthFilter.java (Gateway → 서비스 헤더 인증)
+│   ├── CustomUserDetails.java
+│   └── SecurityUtil.java
+├── util/
+│   └── PageableUtil.java
+└── architecture/
+    └── BaseArchitectureTest.java (ArchUnit 아키텍처 테스트 베이스)
 ```
 
 ---
 
 ## 2. 서비스별 패키지 구조
 
-각 서비스는 **Layered Architecture** 를 따른다.
+각 서비스는 **4계층 Layered Architecture** 를 따른다.
 
 ```
 {service-name}/
 └── src/main/java/com/sparta/{servicename}/
     ├── {ServiceName}Application.java
     │
-    ├── global/                         # 공통 모듈
-    │   ├── config/                     # 설정 클래스 (Security, Feign, Redis 등)
-    │   ├── exception/                  # 전역 예외 처리
-    │   │   ├── GlobalExceptionHandler.java
-    │   │   ├── CustomException.java
-    │   │   └── ErrorCode.java
-    │   ├── response/                   # 공통 응답 래퍼
-    │   │   └── ApiResponse.java
-    │   ├── audit/                      # JPA Auditing
-    │   │   └── BaseEntity.java
-    │   └── feign/                      # FeignClient 인터페이스
-    │       ├── HubClient.java
-    │       ├── UserClient.java
-    │       └── ...
+    ├── global/                             # 서비스별 설정 (공통 로직은 common 모듈)
+    │   ├── config/                         # Security, Feign, Redis 등 설정 클래스
+    │   ├── exception/                      # 서비스 전용 ErrorCode enum
+    │   │   └── {Domain}ErrorCode.java
+    │   ├── port/                           # 외부 서비스 호출 추상화 인터페이스 (필요 시)
+    │   │   └── {Target}Port.java
+    │   └── security/                       # SecurityUtil 등 서비스별 인증 유틸
     │
-    └── domain/                         # 도메인 레이어
-        └── {domain}/
-            ├── controller/
-            │   └── {Domain}Controller.java
-            ├── service/
-            │   └── {Domain}Service.java
+    └── {domain}/                           # 도메인 패키지
+        │
+        ├── presentation/                   # 1계층: 외부 요청/응답
+        │   ├── controller/
+        │   │   └── {Domain}Controller.java
+        │   └── dto/
+        │       ├── request/
+        │       └── response/
+        │
+        ├── application/                    # 2계층: 비즈니스 로직
+        │   ├── service/
+        │   │   └── {Domain}Service.java
+        │   ├── port/                       # 외부 서비스 포트 인터페이스 (필요 시)
+        │   └── dto/                        # Command / Result DTO
+        │
+        ├── domain/                         # 3계층: 핵심 도메인
+        │   ├── core/
+        │   │   ├── {Domain}.java           # JPA Entity
+        │   │   └── {Domain}Status.java     # 상태 Enum
+        │   └── repository/                 # 순수 Java Repository 인터페이스 (선택)
+        │       └── {Domain}Repository.java
+        │
+        └── infrastructure/                 # 4계층: 외부 연동
             ├── repository/
-            │   └── {Domain}Repository.java
-            ├── entity/
-            │   └── {Domain}.java
-            └── dto/
-                ├── request/
-                │   └── {Domain}Request.java
-                └── response/
-                    └── {Domain}Response.java
+            │   ├── {Domain}JpaRepository.java    # Spring Data JPA 인터페이스
+            │   └── {Domain}RepositoryImpl.java   # Repository 구현체 (선택)
+            └── client/                     # FeignClient
+                ├── {Target}Client.java
+                └── dto/
 ```
 
 ---
 
-## 3. 공통 모듈 (global)
+## 3. 공통 모듈 (common)
 
-### 3.1 BaseEntity — JPA Audit 공통 엔티티
+> 공통 클래스는 각 서비스의 `global/` 패키지가 아닌 루트의 **`common` 모듈**에 위치한다.  
+> 각 서비스는 `implementation project(':common')`으로 의존.
 
-```java
+### 3.1 BaseEntity — JPA Audit 공통 엔티티 (`com.sparta.common.entity`)
+
+```
 @MappedSuperclass
 @EntityListeners(AuditingEntityListener.class)
 public abstract class BaseEntity {
-    @CreatedDate
-    private LocalDateTime createdAt;
-
-    @CreatedBy
-    private String createdBy;
-
-    @LastModifiedDate
-    private LocalDateTime updatedAt;
-
-    @LastModifiedBy
-    private String updatedBy;
+    @CreatedDate private LocalDateTime createdAt;
+    @CreatedBy   private UUID createdBy;
+    @LastModifiedDate private LocalDateTime updatedAt;
+    @LastModifiedBy   private UUID updatedBy;
 
     private LocalDateTime deletedAt;
-    private String deletedBy;
+    private UUID deletedBy;
 
-    public void softDelete(String deletedBy) { ... }
-    public boolean isDeleted() { ... }
+    public void softDelete(UUID deletedBy) { }
+    public void clearDeleted() { }    // 소프트 삭제 복원
+    public boolean isDeleted() { return deletedAt != null; }
 }
 ```
 
-> `p_delivery_log`는 append-only 이므로 `createdAt`, `createdBy`만 포함하는 별도 `BaseLogEntity` 사용
+> `p_inventory_histories`는 append-only이므로 BaseEntity 미상속, `@CreatedDate`/`@CreatedBy`만 직접 선언.
 
-### 3.2 ApiResponse — 공통 응답 래퍼
+### 3.2 ApiResponse — 공통 응답 래퍼 (`com.sparta.common.dto`)
 
-```java
+```
 @Getter
 public class ApiResponse<T> {
     private final int status;
     private final String message;
     private final T data;
 
-    public static <T> ApiResponse<T> success(T data) { ... }
-    public static <T> ApiResponse<T> created(T data) { ... }
-    public static ApiResponse<Void> success() { ... }
+    public static <T> ApiResponse<T> success(T data) { return new ApiResponse<>(200, "SUCCESS", data); }
+    public static <T> ApiResponse<T> created(T data) { return new ApiResponse<>(201, "SUCCESS", data); }
+    public static ApiResponse<Void> success() { return new ApiResponse<>(200, "SUCCESS", null); }
 }
 ```
 
-### 3.3 GlobalExceptionHandler
+### 3.3 GlobalExceptionHandler (`com.sparta.common.handler`)
 
-```java
+```
 @RestControllerAdvice
 public class GlobalExceptionHandler {
-    @ExceptionHandler(CustomException.class)
-    public ResponseEntity<ApiResponse<?>> handleCustomException(CustomException e) { ... }
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException e) { }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiResponse<?>> handleValidationException(...) { ... }
+    public ResponseEntity<ErrorResponse> handleValidationException(MethodArgumentNotValidException e) { }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
-    public ResponseEntity<ApiResponse<?>> handleOptimisticLock(...) { ... }
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(OptimisticLockingFailureException e) { }
 }
 ```
 
-### 3.4 ErrorCode — 에러 코드 Enum
+### 3.4 BusinessException / ErrorCode (`com.sparta.common.dto`)
 
-```java
-@Getter
-@RequiredArgsConstructor
-public enum ErrorCode {
-    USER_NOT_FOUND(404, "사용자를 찾을 수 없습니다."),
-    APPROVAL_REQUIRED(403, "승인 대기 중인 계정입니다."),
-    INSUFFICIENT_STOCK(409, "재고가 부족합니다."),
-    OPTIMISTIC_LOCK_FAILURE(409, "재고 처리 중 충돌이 발생했습니다. 다시 시도해주세요."),
-    DELIVERY_CANCEL_NOT_ALLOWED(400, "배송 시작 후에는 취소할 수 없습니다."),
-    ...;
+```
+// 서비스별 ErrorCode Enum이 이 인터페이스를 구현
+public interface ErrorCode {
+    HttpStatus getHttpStatus();
+    String getCode();
+    String getMessage();
+}
 
-    private final int status;
-    private final String message;
+// 런타임 예외
+public class BusinessException extends RuntimeException {
+    private final ErrorCode errorCode;
+    public BusinessException(ErrorCode errorCode) { super(errorCode.getMessage()); }
 }
 ```
+
+### 3.5 CustomPreAuthFilter — 게이트웨이 인증 헤더 처리
+
+API Gateway가 Keycloak JWT를 검증한 뒤 사용자 정보를 헤더로 전달한다.
+
+```
+X-User-Id   : UUID (사용자 ID)
+X-User-Role : String (역할 코드)
+```
+
+각 서비스는 `CustomPreAuthFilter`가 해당 헤더를 파싱해 `SecurityContext`에 `CustomUserDetails`를 등록한다.  
+서비스 내부에서는 `SecurityUtil.getCurrentUserId()` 등으로 사용한다.
 
 ---
 
-## 4. 도메인별 주요 클래스
 
-### 4.1 User Service
-
-```java
-// Entity
-@Entity @Table(name = "p_users", schema = "USER")
-public class User extends BaseEntity {
-    @Id @GeneratedValue private UUID userId;
-    private String email;
-    private String password;
-    private String name;
-    private String phone;
-    private String slackId;
-    @Enumerated(EnumType.STRING)
-    private ApprovalStatus approvalStatus;  // PENDING, APPROVED, REJECTED
-    private UUID approvedBy;
-    private LocalDateTime approvedAt;
-    private String rejectedReason;
-
-    public void approve(UUID adminId) { ... }
-    public void reject(String reason) { ... }
-}
-
-@Entity @Table(name = "p_delivery_managers", schema = "USER")
-public class DeliveryManager extends BaseEntity {
-    @Id private UUID userId;
-    @Enumerated(EnumType.STRING)
-    private ManagerType managerType;         // HUB_DELIVERY, COMPANY_DELIVERY
-    private int deliveryOrder;
-    private UUID hubId;
-    private String status;
-    private LocalDateTime lastAssignedAt;
-
-    public void updateStatus(String status) { ... }
-}
-
-// Service
-public class UserService {
-    public UserResponse signup(SignupRequest request) { ... }
-    public TokenResponse login(LoginRequest request) { ... }
-    public void approveUser(UUID userId, UUID adminId) { ... }
-    public void rejectUser(UUID userId, String reason) { ... }
-    public DeliveryManagerResponse assignDeliveryManager(AssignRequest request) { ... }
-}
-```
-
-### 4.2 Company Service
-
-```java
-@Entity @Table(name = "p_companies", schema = "COMPANY")
-public class Company extends BaseEntity {
-    @Id @GeneratedValue private UUID companyId;
-    private String companyName;
-    @Enumerated(EnumType.STRING)
-    private CompanyType companyType;         // PRODUCER, RECEIVER
-    private String businessNumber;
-    private UUID hubId;
-    // PostGIS geometry 컬럼
-    private Point latitude;
-    private Point longitude;
-}
-
-@Entity @Table(name = "p_products", schema = "COMPANY")
-public class Product extends BaseEntity {
-    @Id @GeneratedValue private UUID productId;
-    private UUID companyId;
-    private UUID categoryId;
-    private String name;
-    private BigDecimal price;
-    @Enumerated(EnumType.STRING)
-    private ProductStatus status;            // ON_SALE, SOLD_OUT
-
-    public void changeStatus(ProductStatus status) { ... }
-}
-
-@Entity @Table(name = "p_product_options", schema = "COMPANY")
-public class ProductOption extends BaseEntity {
-    @Id @GeneratedValue private UUID productOptionId;
-    private UUID productId;
-    private String optionsName;
-    private BigDecimal extraPrice;
-    private ProductStatus status;
-    private int displayOrder;
-}
-```
-
-### 4.3 Hub Service
-
-```java
-@Entity @Table(name = "p_warehouse_inventory", schema = "HUB")
-public class WarehouseInventory extends BaseEntity {
-    @Id @GeneratedValue private UUID inventoryId;
-    private UUID warehouseId;
-    private UUID productOptionId;
-    private int quantity;
-    private int reservedQuantity;
-    private int safetyStock;
-    @Version private long version;           // 낙관적 락
-
-    public void reserve(int qty) { ... }     // reserved_quantity 증가
-    public void cancelReservation(int qty) { ... }
-    public void deduct(int qty) { ... }      // quantity, reserved_quantity 감소
-    public int getAvailableQuantity() { return quantity - reservedQuantity; }
-}
-
-@Entity @Table(name = "p_inventory_histories", schema = "HUB")
-public class InventoryHistory {              // append-only: created_at, created_by만 존재
-    @Id @GeneratedValue private UUID historyId;
-    private UUID inventoryId;
-    private int changeQuantity;
-    @Enumerated(EnumType.STRING)
-    private ChangeType changeType;           // INBOUND, OUTBOUND, RESERVED, CANCELLED, ADJUSTED, RETURNED
-    private LocalDateTime createdAt;
-    private String createdBy;
-}
-
-public class HubService {
-    public void reserveStock(ReserveStockRequest request) { ... }
-    public void cancelReservation(UUID inventoryId, int qty) { ... }
-    public void deductStock(UUID inventoryId, int qty) { ... }
-    public List<HubRouteDto> findRoute(UUID fromHub, UUID toHub) { ... }  // 경유 경로 탐색
-}
-```
-
-### 4.4 Order Service
-
-```java
-@Entity @Table(name = "p_orders", schema = "ORDER")
-public class Order extends BaseEntity {
-    @Id @GeneratedValue private UUID orderId;
-    private UUID requesterCompanyId;
-    private UUID receiverCompanyId;
-    private String recipientName;           // 스냅샷
-    private String phone;
-    private String slackId;
-    @Type(JsonType.class)
-    private String address;                 // JSON 스냅샷
-    private LocalDateTime dueDate;
-    private String requestMemo;
-    private BigDecimal totalPrice;
-    private BigDecimal deliveryFee;
-    private BigDecimal finalPrice;
-    @Enumerated(EnumType.STRING)
-    private OrderStatus status;             // PENDING, DELIVERING, COMPLETED, CANCELLED
-
-    public void cancel() { ... }
-    public void complete() { ... }
-}
-
-public class OrderService {
-    private final HubClient hubClient;
-    private final DeliveryClient deliveryClient;
-    private final OperationsClient operationsClient;
-
-    @Transactional
-    public OrderResponse createOrder(CreateOrderRequest request) {
-        // 1. 주문 생성
-        // 2. 재고 예약 (hubClient)
-        // 3. 배송 생성 (deliveryClient)
-        // 4. AI 발송 시한 계산 (operationsClient)
-    }
-
-    @Transactional
-    public void cancelOrder(UUID orderId) {
-        // 1. 주문 취소
-        // 2. 재고 복원 (hubClient)
-    }
-}
-```
-
-### 4.5 Delivery Service
-
-```java
-@Entity @Table(name = "p_deliveries", schema = "DELIVERY")
-public class Delivery extends BaseEntity {
-    @Id @GeneratedValue private UUID deliveryId;
-    private UUID companyOrderId;
-    private String trackingNumber;
-    @Enumerated(EnumType.STRING)
-    private DeliveryStatus status;           // PENDING, SHIPPING, COMPLETED, CANCELLED
-    private UUID departureHubId;
-    private UUID destinationHubId;
-    private String deliveryAddress;
-    private String recipientName;
-    private String recipientSlackId;
-    private UUID deliveryManagerId;
-    private LocalDateTime finalDispatchDeadlineAt;
-    private LocalDateTime startedAt;
-    private LocalDateTime completedAt;
-
-    public void start() { ... }
-    public void complete() { ... }
-    public void cancel() { ... }            // PENDING만 허용
-    public void reassignManager(UUID newManagerId) { ... }
-}
-
-@Entity @Table(name = "p_delivery_routes", schema = "DELIVERY")
-public class DeliveryRoute extends BaseEntity {
-    @Id @GeneratedValue private UUID routeId;
-    private UUID deliveryId;
-    private int sequence;
-    private UUID fromHubId;
-    private UUID toHubId;
-    private BigDecimal estimatedDistance;
-    private LocalDateTime estimatedDuration;
-    private BigDecimal actualDistance;
-    private LocalDateTime actualDuration;
-    @Enumerated(EnumType.STRING)
-    private RouteStatus status;              // PENDING, MOVING, ARRIVED, CANCELLED
-
-    public void startMoving() { ... }
-    public void arrive(BigDecimal actualDist, LocalDateTime actualDur) { ... }
-}
-
-@Entity @Table(name = "p_delivery_log", schema = "DELIVERY")
-public class DeliveryLog {                  // append-only
-    @Id @GeneratedValue private UUID logId;
-    private UUID deliveryId;
-    private UUID routeId;
-    @Enumerated(EnumType.STRING)
-    private EventType eventType;            // MANAGER_ASSIGNED, MANAGER_CHANGED, STATUS_CHANGED, ROUTE_CHANGED, CANCELLED
-    @Type(JsonType.class)
-    private String previousValue;
-    @Type(JsonType.class)
-    private String currentValue;
-    private String reason;
-    private LocalDateTime createdAt;
-    private String createdBy;
-}
-```
-
-### 4.6 Operations Service
-
-```java
-@Entity @Table(name = "p_order_claims", schema = "OPS")
-public class OrderClaim extends BaseEntity {
-    @Id @GeneratedValue private UUID claimId;
-    private UUID orderItemId;
-    @Enumerated(EnumType.STRING)
-    private ClaimType claimType;             // RETURN, EXCHANGE
-    @Enumerated(EnumType.STRING)
-    private ClaimStatus status;              // REQUESTED, PROCESSING, REJECTED, COMPLETED, CANCELLED
-    private String reason;
-    private BigDecimal refundAmount;
-
-    public void startProcessing() { ... }
-    public void complete(BigDecimal refundAmount) { ... }
-    public void reject() { ... }
-}
-
-@Entity @Table(name = "p_ai_requests", schema = "OPS")
-public class AiRequest extends BaseEntity {
-    @Id @GeneratedValue private UUID requestId;
-    private UUID userId;
-    private UUID deliveryId;
-    private String aiModelName;
-    private String promptText;
-    private String responseText;
-    @Enumerated(EnumType.STRING)
-    private AiRequestStatus status;          // PENDING, SUCCESS, FAILED
-    private String errorMessage;
-    private LocalDateTime finalDeadlineAt;
-}
-
-public class AiService {
-    public AiDeadlineResponse predictDeadline(PredictDeadlineRequest request) {
-        // 1. 프롬프트 구성 (상품/수량, 납기, 경로, 근무시간 09~18시)
-        // 2. Gemini API 호출 (Spring AI)
-        // 3. final_deadline_at 파싱 및 저장
-        // 4. 슬랙 발송
-    }
-}
-```
-
----
-
-## 5. FeignClient 인터페이스
-
-```java
-// order-service → hub-service
-@FeignClient(name = "hub-service")
-public interface HubClient {
-    @PostMapping("/internal/inventory/reserve")
-    void reserveStock(@RequestBody ReserveStockRequest request);
-
-    @PostMapping("/internal/inventory/cancel")
-    void cancelReservation(@RequestBody CancelReservationRequest request);
-
-    @PostMapping("/internal/hub-routes/search")
-    List<HubRouteDto> searchRoute(@RequestBody RouteSearchRequest request);
-}
-
-// order-service → delivery-service
-@FeignClient(name = "delivery-service")
-public interface DeliveryClient {
-    @PostMapping("/internal/deliveries")
-    DeliveryResponse createDelivery(@RequestBody CreateDeliveryRequest request);
-}
-
-// delivery-service → user-service
-@FeignClient(name = "user-service")
-public interface UserClient {
-    @PostMapping("/internal/delivery-managers/assign")
-    DeliveryManagerResponse assignManager(@RequestBody AssignManagerRequest request);
-}
-
-// delivery-service → order-service
-@FeignClient(name = "order-service")
-public interface OrderClient {
-    @PatchMapping("/internal/orders/{orderId}/complete")
-    void completeOrder(@PathVariable UUID orderId);
-}
-```
-
----
-
-## 6. 주요 설정 클래스
+## 4. 주요 설정 클래스
 
 ### SecurityConfig (api-gateway)
-- JWT 검증 필터 적용
-- 화이트리스트: `/auth/signup`, `/auth/login`
+- Keycloak에서 발급된 JWT 검증 (`NimbusJwtDecoder`)
+- `anyExchange().permitAll()` — 인가는 각 서비스 레이어에서 처리
+- Gateway는 JWT 검증 후 `X-User-Id`, `X-User-Role` 헤더를 하위 서비스로 전달
+
+### CustomPreAuthFilter (common — 각 서비스 공통 적용)
+- 헤더 `X-User-Id`, `X-User-Role` 파싱 → `CustomUserDetails` → `SecurityContext` 등록
+- 서비스 내부: `SecurityUtil.getCurrentUserId()`, `SecurityUtil.getCurrentUserRole()` 로 사용
 
 ### RedisConfig (hub-service)
-- `@EnableCaching`
-- `RedisCacheManager` 설정 (허브·경로 TTL 설정)
+- `@EnableCaching`, `RedisCacheManager`
+- 허브·경로 캐시 TTL 설정, 수정·삭제 시 `CacheEvict`
 
 ### JpaConfig (각 서비스)
 - `@EnableJpaAuditing`
-- `AuditorAware` 구현으로 `createdBy`, `updatedBy` 자동 주입
+- `AuditorAwareImpl` — `SecurityContext`에서 UUID 추출 → `createdBy`, `updatedBy` 자동 주입
 
-### FeignConfig (공통)
-- 재시도 로직: `Retryer.Default(100, 1000, 3)` (최대 3회)
-- 에러 디코더: FeignClient 오류 → `CustomException` 변환
+### FeignConfig (각 서비스)
+- `Retryer.Default(100, 1000, 3)` — 최대 3회 재시도
+- `GatewayFeignInterceptor` — FeignClient 호출 시 인증 헤더 자동 전달
+
+---
+
+## 5. 아키텍처 테스트 (ArchUnit)
+
+`common` 모듈의 `BaseArchitectureTest`를 각 서비스가 상속해 아키텍처 규칙을 자동 검증한다.
+
+### 적용 서비스
+`company-service`, `hub-service`, `operations-service`, `order-service`
+
+```java
+@AnalyzeClasses(packages = "com.sparta.orderservice", importOptions = ImportOption.DoNotIncludeTests.class)
+public class OrderArchitectureTest extends BaseArchitectureTest {
+    @ArchTest
+    static final ArchRule order_prefix_rule = domain_prefix_naming_rule("Order");
+    @ArchTest
+    static final ArchRule payment_prefix_rule = domain_prefix_naming_rule("Payment");
+    @ArchTest
+    static final ArchRule draft_prefix_rule = domain_prefix_naming_rule("Draft");
+}
+```
+
+### 검증 규칙
+
+| 규칙 | 내용 |
+|---|---|
+| **Presentation 위치** | `Controller`로 끝나는 클래스는 `..presentation.controller..` 패키지에 위치 |
+| **Presentation 어노테이션** | `..presentation.controller..` 클래스는 `@RestController` 필수, `@Controller` 금지 |
+| **Application 위치** | `Service`로 끝나는 클래스는 `..application.service..` 패키지에 위치 |
+| **Application 어노테이션** | `Service`로 끝나는 클래스는 `@Service` 필수 |
+| **Domain Entity 위치** | `@Entity` 클래스는 `..domain.core..` 패키지에 위치 |
+| **Domain Enum 위치** | `..domain..` 패키지의 Enum은 `..domain.core..`에 위치 |
+| **Domain Repository 위치** | `Repository`로 끝나는 순수 인터페이스(Jpa 제외)는 `..domain.repository..`에 위치 |
+| **Infra JpaRepository 위치** | `JpaRepository`로 끝나는 인터페이스는 `..infrastructure..`에 위치 |
+| **Infra RepositoryImpl 위치** | `RepositoryImpl`로 끝나는 클래스는 `..infrastructure..`에 위치 |
+| **@Transactional 금지** | `..presentation..` 패키지에서 `@Transactional` 사용 금지 |
+| **4계층 의존성** | Presentation → Application → Domain ← Infrastructure (역방향 금지) |
+| **도메인 Prefix** | 각 도메인 클래스명에 도메인 키워드 포함 필수 (e.g. `OrderController`, `OrderService`) |
+
+### 의존성 규칙 상세
+
+```
+Presentation  → Application (가능)
+Application   → Domain      (가능)
+Infrastructure → Domain     (가능, DIP)
+Infrastructure → Application (가능, DIP 구현체)
+
+Presentation  → Domain      (금지 — DTO 경유)
+Presentation  → Infrastructure (금지)
+Application   → Infrastructure (금지 — 인터페이스 경유)
+```
+
+> `ALLOW_EMPTY = false` 설정으로 조건에 매칭되는 클래스가 없을 때도 테스트 실패 처리.
+
+---
+
+## 6. 코드 컨벤션 (Checkstyle)
+
+루트 `build.gradle`에 전 서비스 공통으로 Checkstyle이 적용된다.
+
+### 설정 (`config/checkstyle/checkstyle.xml`)
+
+| 규칙 | 내용 |
+|---|---|
+| **AvoidStarImport** | 와일드카드 import 금지 (`import java.util.*`, `import static ....*`) |
+
+### 빌드 설정
+
+```groovy
+checkstyle {
+    maxWarnings = 0           // 경고 0개 초과 시 빌드 실패
+    ignoreFailures = false    // 위반 시 빌드 중단
+    toolVersion = "10.12.5"
+}
+
+// 모든 JavaCompile 전에 checkstyleMain 강제 실행
+tasks.withType(JavaCompile) {
+    dependsOn 'checkstyleMain'
+}
+```
+
+> 위반 시 HTML 리포트 생성 (`build/reports/checkstyle/`), 콘솔에 위반 내용 출력.

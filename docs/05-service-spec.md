@@ -33,45 +33,64 @@
 
 ## 2. 주문 및 출고 프로세스
 
-**관여 서비스**: Order Service → Hub Service → Delivery Service → Operations Service
+**관여 서비스**: Order Service → Company Service → Hub Service → Delivery Service → Operations Service
+
+> **Saga 오케스트레이션 패턴 적용**: 각 외부 호출은 독립 트랜잭션. 실패 시 보상 스택(LIFO)으로 역순 보상 실행.  
+> 권한: COMPANY_MANAGER만 주문 생성 가능 (서비스 레이어에서 검증)
 
 ```
 1. 임시 주문
    - COMPANY_MANAGER가 POST /drafts 로 품목 담기
    - p_order_drafts에 저장
 
-2. 주문 생성
+2. 주문 생성 (TX 없음 — 도메인 객체 빌드)
    - POST /orders 호출
-   - p_orders 생성 (status = PENDING)
-   - 업체별 p_company_orders 분할 생성 (status = ORDERED)
+   - Order + CompanyOrder + OrderItem 도메인 객체 구성
+   - p_orders.orderId는 저장 전 미리 생성
 
-3. 재고 예약 [Hub Service FeignClient 호출]
-   - 상품 옵션(SKU)별 quantity - reserved_quantity 검증
-   - 가용 재고 충분 → reserved_quantity 증가
-   - p_inventory_histories 기록 (change_type = RESERVED)
-   - 재고 부족 → 주문 실패, 전체 롤백
+2-0. Hub ID 일괄 조회 [Company Service FeignClient, TX 없음]
+   - 수령업체 + 전체 공급업체 companyId를 단일 배치 호출로 일괄 조회
+   - POST /internal/companies/hub-mapping
+   - 반환: { companyId: hubId } 매핑 Map
+   - destinationHubId = 수령업체의 hubId
+   - 실패 시 주문 생성 중단 (보상 불필요, DB 미변경)
 
-4. 결제 처리
-   - POST /payments/ready → POST /payments/confirm
-   - p_payments.status = COMPLETED
+2-1. 재고 예약 [Hub Service FeignClient, TX 없음]
+   - 보상을 먼저 스택에 push: cancelStock(orderId)
+   - POST /internal/inventory/reserve
+   - reserved_quantity 증가, p_inventory_histories (change_type = RESERVED)
+   - 재고 부족 → 보상 실행 후 주문 생성 중단
 
-5. 출고 준비 (허브 관리자 확인)
-   - HUB_MANAGER가 p_company_orders.status → PREPARING
+2-2. 배송·배송경로 생성 [Delivery Service FeignClient, TX 없음]
+   - POST /internal/deliveries
+   - p_deliveries + p_delivery_routes 일괄 생성 (status = PENDING)
+   - 배송 생성 성공 시 OrderItem에 deliveryId 할당
+   - 보상을 스택에 push: cancelDeliveries(companyOrderIds)
+   - 실패 시 보상 실행: cancelDeliveries → cancelStock → 중단
 
-6. 배송 생성 [Delivery Service FeignClient 호출]
-   - POST /deliveries 내부 호출
-   - p_deliveries 생성 + 전체 경로(p_delivery_routes) 일괄 생성
-   - p_company_orders.status → SHIPPED
+2-3. 주문·결제 확정 [OrderWriter 독립 TX]
+   - p_orders + p_company_orders + p_order_items DB 저장
+   - OrderCreatedEvent 발행 → PaymentEventHandler (같은 TX)
+     → p_payments 생성 (status = COMPLETED) — 선결제 즉시 확정
+   - DB 저장 실패 시 보상 실행: cancelDeliveries → cancelStock → 중단
 
-7. AI 발송 시한 계산 [Operations Service FeignClient 호출]
-   - POST /ai/predict-deadline 내부 호출
+3. 출고 준비 [HUB_MANAGER 액션 → Hub Service → Order Service 내부 API]
+   - PATCH /inventory/company-orders/{companyOrderId}/prepare
+   - Order Service: PATCH /internal/orders/company/{companyOrderId}/preparing
+   - p_company_orders.status → PREPARING
+
+4. 출고 [HUB_MANAGER 액션 → Hub Service → Order Service 내부 API]
+   - PATCH /inventory/company-orders/{companyOrderId}/ship
+   - Hub Service: 실재고 차감 (deductStock)
+   - Order Service: PATCH /internal/orders/company/{companyOrderId}/shipped
+   - p_company_orders.status → SHIPPED, p_orders.status → DELIVERING
+
+5. AI 발송 시한 계산 [Operations Service FeignClient 호출]
+   - POST /ai/generate 호출
    - Gemini API로 final_deadline_at 계산
-   - p_ai_requests에 요청/응답 전문 저장
 
-8. 슬랙 알림 발송
-   - POST /slack/send 내부 호출
-   - 허브 담당자에게 발송 시한 포함 메시지 전송
-   - p_slack_messages 이력 저장
+6. 슬랙 알림 발송 [Operations Service]
+   - 허브 담당자에게 최종 발송 시한 포함 메시지 전송
 ```
 
 ### Saga 구현의 한계 및 향후 과제
@@ -109,11 +128,35 @@
    - 낙관적 락(version) 적용 → 충돌 시 재시도
 ```
 
-### 주문 취소 시
+### 주문 전체 취소 시 (COMPANY_MANAGER 또는 MASTER, PENDING 상태만 가능)
 ```
-1. 예약 취소 [Hub Service FeignClient 호출]
-   - reserved_quantity -= 취소 수량
-   - p_inventory_histories (change_type = CANCELLED)
+1. 주문·서브주문 취소 [Order Service 내부 TX]
+   - p_orders.status → CANCELLED
+   - p_company_orders.status → CANCELLED (이미 CANCELLED인 건 건너뜀)
+
+2. 재고 예약 전체 취소 [Hub Service FeignClient]
+   - POST /internal/inventory/cancel (orderId 기준 일괄 취소)
+   - reserved_quantity 감소, p_inventory_histories (change_type = CANCELLED)
+
+3. 배송 일괄 취소 [Delivery Service FeignClient]
+   - POST /internal/deliveries/cancel (companyOrderIds 기준)
+
+4. 결제 취소 [이벤트 발행]
+   - OrderCancelledEvent → PaymentEventHandler (같은 TX)
+   - p_payments.status → CANCELLED
+```
+
+### 서브 주문 부분 취소 시 (companyOrderId 기준)
+```
+1. 서브 주문 취소 [Order Service 내부 TX]
+   - p_company_orders.status → CANCELLED
+   - 모든 서브 주문 터미널 상태 시 p_orders.status 자동 갱신
+
+2. 재고 예약 부분 취소 [Hub Service FeignClient]
+   - POST /internal/inventory/cancel/company (companyOrderId 기준)
+
+3. 전체 취소된 경우 결제 취소 [이벤트 발행]
+   - p_orders → CANCELLED 시 OrderCancelledEvent → p_payments.status → CANCELLED
 ```
 
 ### 출고 처리 시
@@ -152,9 +195,10 @@
 
 4. 완료 처리
    - 마지막 구간 ARRIVED 시
-     - p_deliveries.status → COMPLETED, completed_at 기록
-     - Order Service FeignClient 호출로 p_orders.status → COMPLETED
-     - p_company_orders.status → DELIVERED
+     - p_deliveries.status → DELIVERED, completed_at 기록
+     - Order Service FeignClient 호출로 p_company_orders.status → DELIVERED
+       PATCH /api/v1/internal/orders/company/{company_order_id}/delivered
+     - 모든 CompanyOrder DELIVERED/CANCELLED 시 p_orders.status 자동 갱신
 ```
 
 **담당자 재배정 시**

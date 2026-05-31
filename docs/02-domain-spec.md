@@ -50,9 +50,11 @@ CANCELLED (주문 취소, 어느 단계에서나 가능)
 
 ```
 PENDING (배송 대기)
-  └─ SHIPPING (배송 중)
-       └─ COMPLETED (배송 완료)
-CANCELLED (배송 취소 — PENDING 단계에서만 허용)
+  └─ PREPARING (출고 준비 중)
+       └─ SHIPPED (배송 출발)
+            └─ DELIVERED (배송 완료)
+CANCELLED (배송 취소)
+DELETED (관리자 삭제)
 ```
 
 ### 2.5 배송 경로 상태 흐름 (Delivery — p_delivery_routes)
@@ -93,7 +95,7 @@ PENDING (발송 전)
 ### 2.9 배송담당자 근무 상태 (User — p_delivery_managers)
 
 ```
-대기 → 배송 중 → 근무 중지
+WAITING (대기) → DELIVERING (배송 중) → INACTIVE (근무 중지)
 ```
 
 ---
@@ -141,6 +143,7 @@ PENDING (발송 전)
 
 ```
 Order Service
+  ├─→ Company Service   : Hub ID 조회 (fromHubId / toHubId 도출)
   ├─→ Hub Service       : 재고 예약/취소/차감
   ├─→ Delivery Service  : 배송 생성
   └─→ Operations Service: AI 발송 시한 계산 요청
@@ -148,36 +151,51 @@ Order Service
 Delivery Service
   ├─→ Hub Service       : 허브 경로 탐색
   ├─→ User Service      : 배송담당자 순번 배정
-  └─→ Order Service     : 배송 완료 시 주문 상태 COMPLETED 갱신
+  └─→ Order Service     : 배송 완료(DELIVERED) 시 company_order 상태 갱신
 
 Operations Service
   ├─→ Hub Service       : 클레임 반품 승인 시 재고 복원
   └─→ Order Service     : 클레임 반품 승인 시 주문 CANCELLED 처리
 ```
 
-### 4.2 주요 엔티티 연관 관계
+---
+
+### 4.2 서비스별 내부 엔티티 관계
+
+> DB가 서비스별로 물리적으로 분리되어 있으므로 서비스 경계를 넘는 참조는 UUID만 존재 (실제 FK 없음).
+> 아래는 서비스 내부의 물리 FK 관계만 표기한다.
 
 ```
+[user-service]
 p_users ──1:1── p_admins
-p_users ──1:1── p_hub_managers ──N:1── p_logistics_hubs
-p_users ──1:1── p_delivery_managers ──N:1── p_logistics_hubs
-p_users ──1:1── p_company_managers ──N:1── p_companies
+p_users ──1:1── p_hub_managers
+p_users ──1:1── p_delivery_managers
+p_users ──1:1── p_company_managers
 
-p_companies ──N:1── p_logistics_hubs
-p_companies ──1:N── p_products ──1:N── p_product_options
+[company-service]
+p_product_categories ──1:N── p_products ──1:N── p_product_options
+p_companies ──1:N── p_products
 p_companies ──1:N── p_delivery_addresses
 
-p_logistics_hubs ──1:1── p_warehouses ──1:N── p_warehouse_inventory
-p_warehouse_inventory ──1:N── p_inventory_histories
-p_logistics_hubs ──1:N── p_hub_routes (from/to)
+[hub-service]
+p_logistics_hubs ──1:N── p_hub_routes (from_hub_id / to_hub_id)
+p_logistics_hubs ──1:1── p_warehouses ──1:N── p_warehouse_inventory ──1:N── p_inventory_histories
 
+[order-service]
 p_orders ──1:N── p_company_orders ──1:N── p_order_items
 p_orders ──1:1── p_payments
-p_company_orders ──1:1── p_deliveries ──1:N── p_delivery_routes
+
+[delivery-service]
+p_deliveries ──1:N── p_delivery_routes
 p_deliveries ──1:N── p_delivery_log
 
-p_order_items ──1:N── p_order_claims
+[operations-service]
+p_order_claims  (company_order_id: UUID 참조만)
+p_slack_messages (receiver_user_id: UUID 참조만)
+p_ai_requests   (delivery_id: UUID 참조만)
 ```
+
+---
 
 ### 4.3 스키마 분리
 
