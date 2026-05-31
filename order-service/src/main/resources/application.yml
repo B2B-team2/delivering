@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: order-service
+  config:
+    import: optional:configserver:http://config-server:8888
+  jpa:
+    properties:
+      hibernate:
+        default_batch_fetch_size: 100  # LAZY 컬렉션 N+1 방지: IN 절로 일괄 로딩 (도메인 오염 없이 전역 적용)

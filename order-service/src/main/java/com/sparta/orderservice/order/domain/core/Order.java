@@ -1,0 +1,168 @@
+package com.sparta.orderservice.order.domain.core;
+
+import com.sparta.common.entity.BaseEntity;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.Version;
+import org.springframework.data.domain.Persistable;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+@Entity
+@Table(name = "p_orders")
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Order extends BaseEntity implements Persistable<UUID> {
+
+    @Id
+    @Column(name = "order_id")
+    private UUID orderId = UUID.randomUUID(); // 미리 생성 — save() 이전에도 사용 가능
+
+    @Column(name = "receiver_company_id", nullable = false)
+    private UUID receiverCompanyId;         // 수령업체(주문자 COMPANY_MANAGER의 소속 업체)
+
+    // 수령인 정보 스냅샷
+    @Column(name = "recipient_name", nullable = false, length = 100)
+    private String recipientName;           // 수령인 실명
+
+    @Column(name = "phone", nullable = false, length = 20)
+    private String phone;                   // 수령인 연락처
+
+    @Column(name = "slack_id", length = 36)
+    private String slackId;                 // 수령인 Slack ID (nullable)
+
+    // 배송 주소 JSON 스냅샷
+    @Column(name = "address", nullable = false, columnDefinition = "jsonb")
+    private String address;               // {"address": "기본주소", "address_detail": "상세주소"}
+
+    @Column(name = "due_date", nullable = false)
+    private LocalDateTime dueDate;          // 납품 기한
+
+    @Column(name = "request_memo", columnDefinition = "TEXT")
+    private String requestMemo;             // 요청 사항 (nullable)
+
+    @Column(name = "total_price", nullable = false, precision = 12, scale = 2)
+    private BigDecimal totalPrice;          // 상품 합계 금액
+
+    @Column(name = "delivery_fee", precision = 8, scale = 2)
+    private BigDecimal deliveryFee = BigDecimal.ZERO;   // 총 배송비
+
+    @Column(name = "final_price", nullable = false, precision = 12, scale = 2)
+    private BigDecimal finalPrice;          // 최종 결제 금액
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false, length = 30)
+    private OrderStatus status = OrderStatus.PENDING;
+
+    @Version
+    @Column(name = "version", nullable = false)
+    private Long version;                            // 낙관적 락 — 동시 상태 전환 충돌 감지
+
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL)
+    private List<CompanyOrder> companyOrders = new ArrayList<>();
+
+    public static Order of(
+            UUID receiverCompanyId,
+            String recipientName,
+            String phone,
+            String slackId,
+            String address,
+            LocalDateTime dueDate,
+            String requestMemo,
+            BigDecimal totalPrice,
+            BigDecimal deliveryFee,
+            BigDecimal finalPrice
+    ) {
+        Order order = new Order();
+        order.receiverCompanyId = receiverCompanyId;
+        order.recipientName = recipientName;
+        order.phone = phone;
+        order.slackId = slackId;
+        order.address = address;
+        order.dueDate = dueDate;
+        order.requestMemo = requestMemo;
+        order.totalPrice = totalPrice;
+        order.deliveryFee = deliveryFee != null ? deliveryFee : BigDecimal.ZERO;
+        order.finalPrice = finalPrice;
+        return order;
+    }
+
+    // Persistable: Spring Data JPA가 save() 시 persist/merge 여부 판단에 사용
+    // version == null → 한 번도 저장되지 않은 새 엔티티 → persist (INSERT)
+    // version != null → 이미 저장된 엔티티 → merge (UPDATE)
+    @Override
+    public UUID getId() { return orderId; }
+
+    @Override
+    public boolean isNew() { return version == null; }
+
+    // CompanyOrder 추가 -> 도메인 메서드를 통해 캡슐화
+    public void addCompanyOrder(CompanyOrder companyOrder) {
+        this.companyOrders.add(companyOrder);
+    }
+
+    /**
+     * 주문 취소 가능 여부 — PENDING 상태이고 출고(SHIPPED)/수령(DELIVERED)된 서브주문이 없어야 함
+     */
+    public boolean isCancellable() {
+        if (this.status != OrderStatus.PENDING) return false;
+        return this.companyOrders.stream()
+                .noneMatch(co -> co.getStatus() == CompanyOrderStatus.SHIPPED
+                        || co.getStatus() == CompanyOrderStatus.DELIVERED);
+    }
+
+    public void startDelivery() {
+        this.status = OrderStatus.DELIVERING;
+    }
+
+    public void complete() {
+        this.status = OrderStatus.COMPLETED;
+    }
+
+    public void cancel(UUID deletedBy) {
+        this.status = OrderStatus.CANCELLED;
+        this.softDelete(deletedBy);
+    }
+
+    /**
+     * 모든 CompanyOrder가 terminal(DELIVERED 또는 CANCELLED) 상태이면 Order 상태 업데이트
+     * - 하나라도 DELIVERED가 있으면 -> COMPLETED
+     * - 전체가 CANCELLED이면 -> CANCELLED & Soft Delete
+     *
+     * COMPLETED/CANCELLED는 재전환 방지: COMPLETED 상태에서 claim-cancel이 들어와도 결제 재취소 이벤트 발행하지 않음
+     */
+    public void updateStatus(UUID deletedBy) {
+        if (this.status == OrderStatus.COMPLETED || this.status == OrderStatus.CANCELLED) {
+            return;
+        }
+
+        boolean hasActive = this.companyOrders.stream()
+                .anyMatch(co -> co.getStatus() != CompanyOrderStatus.DELIVERED
+                        && co.getStatus() != CompanyOrderStatus.CANCELLED);
+        if (hasActive) {
+            return;
+        }
+
+        boolean hasDelivered = this.companyOrders.stream()
+                .anyMatch(co -> co.getStatus() == CompanyOrderStatus.DELIVERED);
+
+        if (hasDelivered) {
+            this.complete();
+        } else {
+            this.cancel(deletedBy);
+        }
+    }
+}

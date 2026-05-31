@@ -1,0 +1,36 @@
+name: PR Notify
+
+on:
+  pull_request:
+    types: [opened, closed]
+    branches: [main, develop]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: PR opened
+        if: github.event.action == 'opened'
+        uses: ./.github/actions/discord-notify
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "PR 오픈"
+          color: 16776960
+          message: ${{ github.event.pull_request.title }}
+          branch: "${{ github.head_ref }} → ${{ github.base_ref }}"
+          sha: ${{ github.event.pull_request.head.sha }}
+
+      - name: PR merged
+        if: github.event.action == 'closed' && github.event.pull_request.merged == true
+        uses: ./.github/actions/discord-notify
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "PR 머지"
+          color: 10181046
+          message: ${{ github.event.pull_request.title }}
+          branch: "${{ github.head_ref }} → ${{ github.base_ref }}"
+          sha: ${{ github.event.pull_request.head.sha }}

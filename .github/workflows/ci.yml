@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    env:
+      COMMIT_MSG: ${{ github.event.pull_request.title || github.event.head_commit.message || 'no message' }}
+      BRANCH: ${{ github.head_ref || github.ref_name }}
+      COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Notify start
+        uses: ./.github/actions/discord-notify
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "CI 시작"
+          color: 3447003
+          message: ${{ env.COMMIT_MSG }}
+          branch: ${{ env.BRANCH }}
+          sha: ${{ env.COMMIT_SHA }}
+
+      - name: Build
+        run: ./gradlew clean build
+
+      - name: Notify success
+        if: success()
+        uses: ./.github/actions/discord-notify
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "CI 성공"
+          color: 5763719
+          message: ${{ env.COMMIT_MSG }}
+          branch: ${{ env.BRANCH }}
+          sha: ${{ env.COMMIT_SHA }}
+
+      - name: Notify failure
+        if: failure()
+        uses: ./.github/actions/discord-notify
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "CI 실패"
+          color: 15548997
+          message: ${{ env.COMMIT_MSG }}
+          branch: ${{ env.BRANCH }}
+          sha: ${{ env.COMMIT_SHA }}

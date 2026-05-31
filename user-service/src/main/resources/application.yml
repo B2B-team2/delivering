@@ -1,0 +1,8 @@
+spring:
+  application:
+    name: user-service         # config-server에서 user-service.yml 파일을 찾는 기준
+  config:
+    import: optional:configserver:http://config-server:8888
+logging:
+  level:
+    zipkin2: ERROR

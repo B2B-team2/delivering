@@ -1,0 +1,268 @@
+package com.sparta.companyservice.product.presentation.controller;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sparta.companyservice.global.exception.GlobalExceptionHandler;
+import com.sparta.companyservice.product.application.dto.ProductCreateCommand;
+import com.sparta.companyservice.product.application.dto.ProductDto;
+import com.sparta.companyservice.product.application.dto.ProductUpdateCommand;
+import com.sparta.companyservice.product.application.service.ProductService;
+import com.sparta.companyservice.product.domain.core.ProductStatusEnum;
+import com.sparta.companyservice.product.presentation.dto.ProductCreateRequest;
+import com.sparta.companyservice.product.presentation.dto.ProductUpdateRequest;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(ProductController.class)
+@Import(GlobalExceptionHandler.class)
+class ProductControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @MockBean
+    private ProductService productService;
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 생성 API 성공 검증")
+    void createProductSuccessTest() throws Exception {
+        // given
+        ProductCreateRequest request = ProductCreateRequest.builder()
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .description("테스트 설명")
+                .thumbnailUrl("http://test.com/image.png")
+                .build();
+
+        ProductDto responseDto = ProductDto.builder()
+                .productId(UUID.randomUUID())
+                .companyId(request.getCompanyId())
+                .categoryId(request.getCategoryId())
+                .name(request.getName())
+                .price(request.getPrice())
+                .status(ProductStatusEnum.ON_SALE.name())
+                .build();
+
+        when(productService.createProduct(any(ProductCreateCommand.class))).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/products")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.status").value(201))
+                .andExpect(jsonPath("$.message").value("CREATED"))
+                .andExpect(jsonPath("$.data.name").value(request.getName()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 생성 API 실패 검증: 필수 파라미터 누락")
+    void createProductFailTest() throws Exception {
+        // given
+        ProductCreateRequest request = ProductCreateRequest.builder()
+                .name("") // NotBlank 위반
+                .build();
+
+        // when & then
+        mockMvc.perform(post("/api/v1/products")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 상세 조회 API 성공 검증")
+    void getProductSuccessTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        ProductDto responseDto = ProductDto.builder()
+                .productId(productId)
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .status(ProductStatusEnum.ON_SALE.name())
+                .build();
+
+        when(productService.getProduct(productId)).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/products/{productId}", productId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.data.name").value("테스트 상품"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 목록 조회 API 성공 검증")
+    void getProductsSuccessTest() throws Exception {
+        // given
+        ProductDto responseDto = ProductDto.builder()
+                .productId(UUID.randomUUID())
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("테스트 상품")
+                .price(BigDecimal.valueOf(10000))
+                .status(ProductStatusEnum.ON_SALE.name())
+                .build();
+
+        Page<ProductDto> productPage = new PageImpl<>(List.of(responseDto), PageRequest.of(0, 10), 1);
+        when(productService.getProducts(any(Pageable.class))).thenReturn(productPage);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/products")
+                        .param("page", "0")
+                        .param("size", "10")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.content[0].name").value("테스트 상품"))
+                .andExpect(jsonPath("$.data.totalElements").value(1));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 수정 API 성공 검증")
+    void patchProductSuccessTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        ProductUpdateRequest request = ProductUpdateRequest.builder()
+                .companyId(UUID.randomUUID())
+                .categoryId(UUID.randomUUID())
+                .name("수정된 상품")
+                .price(BigDecimal.valueOf(20000))
+                .description("수정된 설명")
+                .status(ProductStatusEnum.SOLD_OUT.name())
+                .build();
+
+        ProductDto responseDto = ProductDto.builder()
+                .productId(productId)
+                .companyId(request.getCompanyId())
+                .categoryId(request.getCategoryId())
+                .name(request.getName())
+                .price(request.getPrice())
+                .description(request.getDescription())
+                .status(request.getStatus())
+                .build();
+
+        when(productService.updateProduct(eq(productId), any(ProductUpdateCommand.class))).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/products/{productId}", productId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.data.name").value(request.getName()))
+                .andExpect(jsonPath("$.data.status").value(request.getStatus()));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 수정 API 실패 검증: @Valid 유효성 검사 실패")
+    void patchProductFailTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        ProductUpdateRequest request = ProductUpdateRequest.builder()
+                .name("") // NotBlank 위반
+                .price(BigDecimal.valueOf(-1000)) // PositiveOrZero 위반
+                .status(ProductStatusEnum.SOLD_OUT.name())
+                .build();
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/products/{productId}", productId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 판매상태 변경 API 성공 검증")
+    void patchProductStatusSuccessTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        Map<String, String> request = new HashMap<>();
+        request.put("status", "SOLD_OUT");
+
+        ProductDto responseDto = ProductDto.builder()
+                .productId(productId)
+                .status("SOLD_OUT")
+                .build();
+
+        when(productService.updateProductStatus(eq(productId), any())).thenReturn(responseDto);
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/products/{productId}/status", productId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value(200))
+                .andExpect(jsonPath("$.message").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.data.status").value("SOLD_OUT"));
+    }
+
+    @Test
+    @WithMockUser
+    @DisplayName("상품 판매상태 변경 API 실패 검증: 상태 누락")
+    void patchProductStatusFailTest() throws Exception {
+        // given
+        UUID productId = UUID.randomUUID();
+        Map<String, String> request = new HashMap<>();
+        request.put("status", ""); // NotBlank 위반
+
+        // when & then
+        mockMvc.perform(patch("/api/v1/products/{productId}/status", productId)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+}

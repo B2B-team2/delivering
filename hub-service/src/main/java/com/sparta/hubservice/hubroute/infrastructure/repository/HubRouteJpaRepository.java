@@ -1,0 +1,23 @@
+package com.sparta.hubservice.hubroute.infrastructure.repository;
+
+import com.sparta.hubservice.hubroute.domain.core.HubRoute;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public interface HubRouteJpaRepository extends JpaRepository<HubRoute, UUID> {
+
+    Optional<HubRoute> findByRouteIdAndDeletedAtIsNull(UUID routeId);
+
+    Optional<HubRoute> findByFromHubIdAndToHubIdAndDeletedAtIsNull(UUID fromHubId, UUID toHubId);
+
+    List<HubRoute> findAllByFromHubIdAndDeletedAtIsNull(UUID fromHubId);
+
+    List<HubRoute> findAllByDeletedAtIsNull();
+
+    Page<HubRoute> findAllByDeletedAtIsNull(Pageable pageable);
+}

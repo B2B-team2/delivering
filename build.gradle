@@ -13,6 +13,7 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'checkstyle'
 
     java {
         toolchain {
@@ -27,15 +28,46 @@ subprojects {
     dependencyManagement {
         imports {
             mavenBom "org.springframework.cloud:spring-cloud-dependencies:2023.0.3"
+            mavenBom "org.testcontainers:testcontainers-bom:1.20.4"
         }
     }
 
     dependencies {
+        implementation 'org.springframework.boot:spring-boot-starter-validation'
         compileOnly 'org.projectlombok:lombok'
         annotationProcessor 'org.projectlombok:lombok'
         testCompileOnly 'org.projectlombok:lombok'
         testAnnotationProcessor 'org.projectlombok:lombok'
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        testImplementation 'org.springframework.boot:spring-boot-starter-test'
+        implementation 'com.tngtech.archunit:archunit-junit5:1.4.2'
+
+
+    }
+
+    checkstyle {
+        maxWarnings = 0
+        configFile = rootProject.file('config/checkstyle/checkstyle.xml')
+        toolVersion = "10.12.5"
+        ignoreFailures = false
+        showViolations = true
+    }
+
+    // Checkstyle 결과가 콘솔에 명확하게 찍히도록 설정
+    tasks.withType(Checkstyle) {
+        // AvoidStarImport 같은 소스 수준 검사에는 클래스패스가 필요 없으므로
+        // 빈 파일 목록을 설정하여 컴파일 태스크와의 순환 참조(Circular Dependency)를 완전히 차단합니다.
+        classpath = files()
+        
+        reports {
+            xml.required = false
+            html.required = true
+        }
+    }
+
+    // 모든 자바 컴파일 전에 체크스타일 실행 강제 (가장 강력한 수단)
+    tasks.withType(JavaCompile) {
+        dependsOn 'checkstyleMain'
     }
 
     tasks.named('test') {
