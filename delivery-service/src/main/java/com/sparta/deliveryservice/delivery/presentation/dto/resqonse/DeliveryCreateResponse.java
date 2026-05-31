@@ -24,9 +24,7 @@ public class DeliveryCreateResponse {
     private String trackingNumber;
     private String status;
     private UUID departureHubId;
-    private String departureHubName;
     private UUID destinationHubId;
-    private String destinationHubName;
     private DeliveryAddress deliveryAddress;
     private String recipientName;
     private String phone;
@@ -51,6 +49,8 @@ public class DeliveryCreateResponse {
         private Integer sequence;
         private UUID fromHubId;
         private UUID toHubId;
+        private String departureHubName;
+        private String destinationHubName;
         private BigDecimal estimatedDistance;
         private Time estimatedDuration;
         private String status;
