@@ -2,6 +2,7 @@ package com.sparta.deliveryservice;
 
 import com.sparta.common.dto.BusinessException;
 import com.sparta.deliveryservice.delivery.application.service.DeliveryService;
+import com.sparta.deliveryservice.delivery.application.service.DeliverySlackNotificationService;
 import com.sparta.deliveryservice.delivery.domain.core.Delivery;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryAddress;
 import com.sparta.deliveryservice.delivery.domain.core.DeliveryStatus;
@@ -90,6 +91,9 @@ class DeliveryServiceTests {
     private DeliveryAiServiceClient deliveryAiServiceClient;
 
     @Mock
+    private DeliverySlackNotificationService deliverySlackNotificationService;
+
+    @Mock
     private SecurityUtils securityUtils;
 
     @Test
@@ -173,6 +177,9 @@ class DeliveryServiceTests {
 
         // verify 추가: AI 서비스가 호출되었는지 검증
         verify(deliveryAiServiceClient, times(1)).generateAiDescription(any(DeliveryAiCreateRequest.class));
+
+        verify(deliverySlackNotificationService, times(1))
+                .sendSlackNotificationAsync(any(Delivery.class), any(DeliveryCreateClientRequest.class));
     }
 
     @Test

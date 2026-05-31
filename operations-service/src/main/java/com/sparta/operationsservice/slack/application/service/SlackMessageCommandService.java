@@ -23,7 +23,7 @@ public class SlackMessageCommandService {
     public SlackMessageSendResponse createSlackMessage(SlackMessageSendRequest request) {
 
         SlackMessage slackMessage = SlackMessage.builder()
-                .receiverSlackId(request.getReceiverSlackId())
+                .receiverUserId(request.getReceiverUserId())
                 .receiverSlackId(request.getReceiverSlackId())
                 .messageContent(request.getMessageContent())
                 .referenceType(request.getReferenceType())

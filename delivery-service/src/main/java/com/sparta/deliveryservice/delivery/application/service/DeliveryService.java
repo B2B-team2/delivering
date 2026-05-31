@@ -11,12 +11,14 @@ import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryAiServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryOrderServiceClient;
+import com.sparta.deliveryservice.delivery.infrastructure.client.DeliverySlackServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryAiCreateRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryHubRouteSearchRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCancelRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCompleteRequest;
+import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.SlackMessageSendRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryAiResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryHubRouteSearchResponse;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.response.DeliveryManagerResponse;
@@ -45,6 +47,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -71,6 +74,7 @@ public class DeliveryService {
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
     private final SecurityUtils securityUtils;
+    private final DeliverySlackNotificationService deliverySlackNotificationService;
 
     @Transactional
     public DeliveryCreateResponse createSingleDelivery(DeliveryCreateClientRequest request) {
@@ -119,13 +123,13 @@ public class DeliveryService {
 
         DeliveryAiResponse aiResponse = deliveryAiServiceClient.generateAiDescription(aiRequest);
 
-        // AI가 계산한 최종 마감 시한을 배송 엔티티에 업데이트
         if ("SUCCESS".equals(aiResponse.getStatus())) {
             savedDelivery.updateFinalDeadline(aiResponse.getFinalDeadlineAt());
         }
         savedDelivery.assignDeliveryManager(managerInfo.getDeliveryManagerId(), managerInfo.getDeliverySlackId(), managerInfo.getManagerName(), managerInfo.getManagerPhone());
 
-        // 4. 경로 저장
+        deliverySlackNotificationService.sendSlackNotificationAsync(savedDelivery, request);
+
         List<DeliveryCreateResponse.DeliveryRouteResponseDto> routeResponse = new ArrayList<>();
 
         if (hubClientResponse != null && hubClientResponse.getRoutes() != null) {
@@ -562,7 +566,7 @@ public class DeliveryService {
         deliveryOrderServiceClient.companyOrderDelivered(delivery.getCompanyOrderId(), userId, request);
 
         DeliveryAddress addressObj = delivery.getDeliveryAddress();
-        String flatAddress =addressObj.getAddress();
+        String flatAddress = addressObj.getAddress();
         String flatAddressDetail = addressObj.getAddressDetail();
 
         return DeliveryStatusResponse.builder()
