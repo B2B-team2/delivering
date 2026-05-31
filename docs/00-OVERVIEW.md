@@ -34,7 +34,8 @@
 | [04-api-spec.md](04-api-spec.md) | 공통 규약, 도메인별 엔드포인트, 요청/응답 예시, 에러 코드 |
 | [05-service-spec.md](05-service-spec.md) | 서비스 로직 명세, 주요 유스케이스 핵심 흐름 |
 | [06-infra-spec.md](06-infra-spec.md) | 인프라 구성도, 기술 스택, CI 흐름 |
-| [07-code-design.md](07-code-design.md) | 패키지 구조, 공통 모듈, 도메인별 주요 클래스 |
+| [07-code-design.md](07-code-design.md) | 멀티 모듈 구조, common 모듈, 도메인별 핵심 엔티티, FeignClient, ArchUnit, Checkstyle |
+| [08-api-test-pipeline.md](08-api-test-pipeline.md) | OpenAPI 명세 생성 및 Postman 동기화 가이드 |
 
 ---
 
@@ -56,8 +57,8 @@
 ## 4. 핵심 규약 요약
 
 ### 공통 응답 형식
-```json
-{ "status": 200, "message": "SUCCESS", "data": { ... } }
+```
+{ "status": 200, "message": "SUCCESS", "data": { } }
 ```
 
 ### 페이지네이션
@@ -72,6 +73,7 @@
 - FeignClient 기반 REST 동기 호출
 - 실패 시 재시도 로직 적용
 - 서비스 간 내부 호출 시 `X-Gateway-Secret` 헤더로 신뢰 검증
+- Saga 오케스트레이션 패턴 적용 (보상 트랜잭션)
 
 ### 동시성 제어
 - 재고 처리 시 낙관적 락 (`version` 컬럼) 적용
@@ -83,13 +85,13 @@
 ### 브랜치 전략
 
 ```
-main ← dev ← dev/[이름]
+main ← develop ← dev/[이름]
 ```
 
 | 브랜치 | 역할 |
 |---|---|
 | `main` | 최종 배포용 (직접 작업 금지) |
-| `dev` | 개발 통합 브랜치 |
+| `develop` | 개발 통합 브랜치 |
 | `dev/[이름]` | 개인 작업 브랜치 |
 
 ### 커밋 메시지 형식
@@ -113,5 +115,5 @@ main ← dev ← dev/[이름]
 
 ### PR 규칙
 - PR 제목: 커밋 메시지 형식과 동일
-- 최소 **1명 이상의 팀원 승인(approve)** 후 `dev` 병합
+- 최소 **1명 이상의 팀원 승인(approve)** 후 `develop` 병합
 - Discord 알림 자동 연동
