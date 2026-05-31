@@ -32,6 +32,13 @@ spring:
       port: ${REDIS_PORT}
       password: ${REDIS_PASSWORD}
 
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 3000
+        readTimeout: 5000
+
 springdoc:
   api-docs:
     enabled: true

@@ -56,8 +56,7 @@
 
 ## 배포 주소
 
-- **API Gateway** : `http://:8080`(수정예정)
-- **Swagger** : `http://:8080/swagger-ui.html`(수정예정)
+- **API Gateway** : `http://<서버IP>:8080` (배포 중단 예정 2026-06-01)
 
 ---
 
@@ -77,8 +76,7 @@
 |:---------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Backend  | ![Java](https://img.shields.io/badge/Java_17-ED8B00?style=flat&logo=openjdk&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring_Boot_3.3.5-6DB33F?style=flat&logo=springboot&logoColor=white) ![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?style=flat&logo=springsecurity&logoColor=white) ![Spring Cloud Gateway](https://img.shields.io/badge/Spring_Cloud_Gateway-6DB33F?style=flat&logo=spring&logoColor=white) ![Netflix Eureka](https://img.shields.io/badge/Netflix_Eureka-6DB33F?style=flat&logo=spring&logoColor=white) ![OpenFeign](https://img.shields.io/badge/OpenFeign-6DB33F?style=flat&logo=spring&logoColor=white) ![Spring Data JPA](https://img.shields.io/badge/Spring_Data_JPA-6DB33F?style=flat&logo=spring&logoColor=white) |
 | Auth     | ![Keycloak](https://img.shields.io/badge/Keycloak-4D4D4D?style=flat&logo=keycloak&logoColor=white) ![JWT](https://img.shields.io/badge/JWT-000000?style=flat&logo=jsonwebtokens&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Database | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white) ![PostGIS](https://img.shields.io/badge/PostGIS-4169E1?style=flat&logo=postgresql&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-FF4438?style=flat&logo=redis&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Message  | ![Kafka](https://img.shields.io/badge/Apache_Kafka-231F20?style=flat&logo=apachekafka&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| Database | ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=flat&logo=postgresql&logoColor=white) ![PostGIS](https://img.shields.io/badge/PostGIS-4169E1?style=flat&logo=postgresql&logoColor=white) ![Redis](https://img.shields.io/badge/Redis-FF4438?style=flat&logo=redis&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        | |
 | AI       | ![Gemini](https://img.shields.io/badge/Google_Gemini-8E75B2?style=flat&logo=googlegemini&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Infra    | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) ![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=flat&logo=docker&logoColor=white) ![Vultr](https://img.shields.io/badge/Vultr-007BFC?style=flat&logo=vultr&logoColor=white) ![Zipkin](https://img.shields.io/badge/Zipkin-FE5F50?style=flat)                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Tools    | ![Swagger](https://img.shields.io/badge/Swagger-85EA2D?style=flat&logo=swagger&logoColor=black) ![Slack](https://img.shields.io/badge/Slack-4A154B?style=flat&logo=slack&logoColor=white) ![Discord](https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
@@ -272,6 +270,23 @@ PENDING(대기) → MOVING(이동중) → ARRIVED(도착완료)
 6. 슬랙 알림     Operations Service → 허브 담당자에게 발송 시한 전송
 ```
 
+### Saga 구현의 한계 및 향후 과제
+
+현재 Saga 보상 스택은 JVM 메모리(`ArrayDeque`)에만 존재합니다.
+재고 예약 성공 직후 `order-service`가 비정상 종료되면 보상 스택이 유실되어
+예약된 재고를 롤백할 방법이 없습니다.
+
+**현재 한계**
+- Saga 진행 상태가 DB에 영속화되지 않음
+- 보상 트랜잭션 실패 시 수동 복구 로그만 남김
+- 서비스 재시작 후 미완료 Saga를 재개할 수단 없음
+
+**향후 개선 방향**
+- Outbox 패턴 도입: DB 변경과 이벤트 발행을 하나의 트랜잭션으로 묶어 메시지 유실 방지
+- Saga 상태 영속화: 각 단계별 진행 상태를 DB에 기록하여 장애 복구 가능하도록 개선
+- Kafka 기반 비동기 전환: 현재 동기 FeignClient 체인을 이벤트 기반으로 전환하여 서비스 간 결합도 감소
+- 멱등성 키 적용: 재고 예약·배송 생성 호출 시 중복 처리 방지
+
 ### AI 발송 시한 계산
 
 Gemini API에 아래 정보를 전달해 `final_deadline_at`을 산출합니다.
@@ -460,6 +475,10 @@ REDIS_PASSWORD=your_redis_password
 
 # Gateway
 GATEWAY_SECRET=your_gateway_secret
+
+# Gemini
+GEMINI_URL=your_gemini_url
+GEMINI_API_KEY=your_gemini_api_key
 ```
 
 ### Compose 파일 분리 구조
@@ -492,7 +511,7 @@ docker compose -f docker-compose.infra.yml up -d
 docker compose up -d --build
 
 # 6. 기동 순서 (healthcheck 기반 자동 관리)
-# 1단계: zookeeper, kafka, zipkin
+# 1단계: zipkin
 # 2단계: config-server (healthcheck 통과 후)
 # 3단계: eureka-server (healthcheck 통과 후)
 # 4단계: api-gateway + 마이크로서비스 6개
@@ -509,4 +528,5 @@ docker compose -f docker-compose.infra.yml down
 | API Gateway          | http://localhost:8080                 |
 | Eureka Dashboard     | http://localhost:8761                 |
 | Zipkin               | http://localhost:9411                 |
+| Keycloak             | http://localhost:18080                |
 | Swagger (Gateway 통합) | http://localhost:8080/swagger-ui.html |
