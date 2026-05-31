@@ -27,6 +27,7 @@
                                     ──► Gemini API
                                     └──► Slack Webhook
 
+[PostgreSQL + PostGIS] ← 스키마 분리 (6개)
 [Keycloak  :18080] ← JWT 발급·비밀번호 암호화
 [Redis     :26379] ← 허브/경로 캐싱
 [Zipkin    :9411]  ← 분산 추적
@@ -55,6 +56,7 @@
 | Framework | Spring Boot | 3.3.5 | |
 | Security | Spring Security + JWT | Keycloak | Keycloak: JWT 발급·비밀번호 암호화 / Spring Security: 권한 검증 |
 | ORM | JPA / Hibernate | | |
+| Database | PostgreSQL + PostGIS | 16 | 서비스별 물리적 분리 (독립 컨테이너), 지리 데이터 처리 |
 | Database | PostgreSQL + PostGIS | 15+ | 서비스별 독립 인스턴스 물리적 분리, 지리 데이터 처리 |
 | Cache | Redis | | 허브·경로 캐싱 (Cache-Aside) |
 | Service Discovery | Spring Cloud Eureka | | |
@@ -71,7 +73,7 @@
 
 ---
 
-## 3. 서비스별 포트 및 스키마
+## 3. 서비스별 포트 및 DB 구성
 
 | 서비스 | 앱 포트 | DB 컨테이너 | DB 호스트 포트 |
 |---|:---:|---|:---:|
@@ -137,25 +139,47 @@ Operations Service ──FeignClient──► Order Service (클레임 주문 �
 
 **장애 처리**: 실패 시 재시도 로직 적용, 주요 흐름은 Saga 보상 트랜잭션으로 일관성 유지
 
+### 내부 서비스 인증 (X-Gateway-Secret)
+- FeignClient 호출 시 `GatewayFeignInterceptor`가 `X-Gateway-Secret` 헤더를 자동 주입
+- 각 서비스의 `CustomPreAuthFilter`가 해당 헤더를 검증하여 직접 접근 차단
+- 시크릿 값은 환경변수 `GATEWAY_SECRET`으로 관리
 
 ---
 
 ## 6. 데이터베이스 구성
 
-### PostgreSQL + PostGIS
-- 서비스별 **독립 PostgreSQL 인스턴스** (물리적 분리)
-- hub-service, company-service는 PostGIS 확장 적용 (지리 데이터 처리)
-- 지리 데이터(위도/경도): `GEOMETRY(Point, 4326)` 단일 컬럼 (`location`)
+### 물리적 분리 (서비스별 독립 컨테이너)
+각 마이크로서비스는 **독립된 PostgreSQL 컨테이너**를 가집니다.
+서비스 간 DB 직접 접근이 구조적으로 불가능하며, 지리 데이터가 필요한 서비스(hub, company)는 PostGIS 이미지를 사용합니다.
 
-### DB 구조
 ```
-docker-compose.infra.yml
-├── user-service       → my-postgres         (postgres:16-alpine,  :25432)
-├── order-service      → order_service_db    (postgres:16-alpine,  :25433)
-├── hub-service        → hub_service_db      (postgis/postgis:16-3.4, :25434)
-├── company-service    → company_service_db  (postgis/postgis:16-3.4, :25435)
-├── delivery-service   → delivery_service_db (postgres:16-alpine,  :25436)
-└── operations-service → operations_service_db (postgres:16-alpine, :25437)
+[my-postgres         :25432] ← user-service    (postgres:16-alpine)
+[order_service_db    :25433] ← order-service   (postgres:16-alpine)
+[hub_service_db      :25434] ← hub-service     (postgis:16-3.4)
+[company_service_db  :25435] ← company-service (postgis:16-3.4)
+[delivery_service_db :25436] ← delivery-service(postgres:16-alpine)
+[operations_service_db:25437]← operations-service(postgres:16-alpine)
+```
+
+### 주요 테이블 구성
+```
+user-service (my-postgres / postgres:16-alpine)
+  └── p_users, p_admins, p_hub_managers, p_delivery_managers, p_company_managers
+
+company-service (company_service_db / postgis:16-3.4)
+  └── p_companies, p_product_categories, p_products, p_product_options, p_delivery_addresses
+
+hub-service (hub_service_db / postgis:16-3.4)
+  └── p_logistics_hubs, p_hub_routes, p_warehouses, p_warehouse_inventory, p_inventory_histories
+
+order-service (order_service_db / postgres:16-alpine)
+  └── p_orders, p_company_orders, p_order_items, p_order_drafts, p_payments
+
+delivery-service (delivery_service_db / postgres:16-alpine)
+  └── p_deliveries, p_delivery_routes, p_delivery_log
+
+operations-service (operations_service_db / postgres:16-alpine)
+  └── p_order_claims, p_slack_messages, p_ai_requests
 ```
 
 ---
@@ -208,3 +232,42 @@ docker-compose.infra.yml
 - `main`, `develop` 브랜치 직접 push 금지
 - `develop` 브랜치 force push 차단
 - PR 최소 1명 Approve 필수
+
+---
+
+## 8. 로컬 환경 실행
+
+Docker Compose로 전체 인프라 일괄 실행
+
+인프라와 앱 서비스를 두 파일로 분리하여 관리합니다.
+
+```yaml
+# docker-compose.infra.yml — 인프라 (DB / Redis / Keycloak)
+services:
+  my-postgres:    # PostgreSQL (user-service 전용)
+  company_service_db:  # PostgreSQL + PostGIS
+  hub_service_db:      # PostgreSQL + PostGIS
+  order_service_db:    # PostgreSQL
+  delivery_service_db: # PostgreSQL
+  operations_service_db: # PostgreSQL
+  msa-redis:      # Redis
+  my-keycloak:    # Keycloak (JWT 발급)
+  zipkin:         # 분산 추적
+
+# docker-compose.yml — 앱 서비스
+services:
+  config-server:  # Spring Cloud Config
+  eureka-server:  # 서비스 디스커버리
+  api-gateway:    # API Gateway
+  user-service:
+  company-service:
+  hub-service:
+  order-service:
+  delivery-service:
+  operations-service:
+```
+
+**실행 순서**
+1. `docker compose -f docker-compose.infra.yml up -d` (DB, Redis, Keycloak, Zipkin)
+2. `docker compose up -d --build` (앱 서비스)
+3. config-server → eureka-server → 나머지 서비스 순으로 healthcheck 기반 자동 기동

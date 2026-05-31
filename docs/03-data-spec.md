@@ -23,6 +23,7 @@
 
 ### 1.2 ID 규칙
 - 모든 PK는 **UUID** 타입 사용
+- `p_delivery_addresses.address_id`는 예외적으로 `VARCHAR(36)`
 
 ### 1.3 논리적 삭제
 - 조회 시 `deleted_at IS NULL` 조건 필수 적용
@@ -332,6 +333,12 @@ erDiagram
     p_deliveries ||--o{ p_delivery_routes : "has routes"
     p_deliveries ||--o{ p_delivery_log : "logs"
     p_delivery_routes ||--o{ p_delivery_log : "route logs"
+
+    %% ── Relations: OPS ──
+    p_company_orders ||--o{ p_order_claims : "claimed"
+    p_users ||--o{ p_slack_messages : "receives message"
+    p_users ||--o{ p_ai_requests : "requests AI"
+    p_deliveries ||--o{ p_ai_requests : "AI analyzed"
 ```
 
 ---
@@ -457,7 +464,7 @@ erDiagram
 | `name` | VARCHAR(100) | Not Null | 허브명 |
 | `hub_type` | VARCHAR(30) | - | REGIONAL / CENTRAL |
 | `address` | TEXT | Not Null | 주소 |
-| `location` | GEOMETRY(Point,4326) | Not Null | 위경도 좌표 (PostGIS Point — longitude=X, latitude=Y) |
+| `location` | GEOMETRY(Point,4326) | Not Null | 위치 좌표 (위도/경도) |
 | `contact_phone` | VARCHAR(20) | - | 연락처 |
 | `status` | VARCHAR(30) | Default 'ACTIVE' | ACTIVE / INACTIVE / MAINTENANCE |
 
@@ -523,7 +530,7 @@ erDiagram
 | `from_hub_id` | UUID | FK, Not Null | 출발 허브 |
 | `to_hub_id` | UUID | FK, Not Null | 도착 허브 |
 | `duration` | INTEGER | Not Null | 소요 시간(분) |
-| `distance` | NUMERIC(8,2) | Not Null | 이동 거리(km) |
+| `distance` | NUMERIC(10,2) | Not Null | 이동 거리(km) |
 
 #### p_warehouses (물류 창고)
 
@@ -544,10 +551,10 @@ erDiagram
 | `inventory_id` | UUID | PK, Not Null | 재고 기록 식별자 |
 | `warehouse_id` | UUID | FK, Not Null | 창고 참조 |
 | `product_option_id` | UUID | FK, Not Null | 상품 옵션(SKU) 참조 |
-| `company_id` | UUID | nullable | 공급업체 참조 (재고 소유 업체) |
 | `quantity` | INTEGER | Default 0, Not Null | 실제 출고 가능한 가용 재고 |
 | `reserved_quantity` | INTEGER | Default 0, Not Null | 결제 대기 중인 예약 재고 |
 | `safety_stock` | INTEGER | Default 0, Not Null | 최소 안전 재고 (발주 기준점) |
+| `company_id` | UUID | - | 소속 업체 ID |
 | `version` | BIGINT | Default 0 | 낙관적 락용 버전 (`@Version`) |
 
 #### p_inventory_histories (재고 변동 이력 — append-only)
@@ -556,11 +563,11 @@ erDiagram
 |---|---|---|---|
 | `history_id` | UUID | PK, Not Null | 이력 식별자 |
 | `inventory_id` | UUID | FK, Not Null | 대상 재고 참조 |
-| `order_id` | UUID | nullable | 연관 주문 ID |
-| `company_order_id` | UUID | nullable | 연관 업체별 주문 ID |
 | `change_quantity` | INTEGER | Not Null | 수량 변동 (+/-) |
-| `change_type` | VARCHAR(30) | Default 'INBOUND' | INBOUND / OUTBOUND / RESERVED / CANCELLED / ADJUSTED / RETURNED |
+| `order_id` | UUID | - | 연관 주문 ID |
 | `reason` | VARCHAR(255) | - | 변동 사유 |
+| `company_order_id` | UUID | - | 연관 업체별 주문 ID |
+| `change_type` | VARCHAR(30) | Default 'INBOUND' | INBOUND / OUTBOUND / RESERVED / CANCELLED / ADJUSTED / RETURNED |
 
 ---
 
@@ -570,7 +577,7 @@ erDiagram
 
 | 컬럼명 | 타입 | 제약 | 설명 |
 |---|---|---|---|
-| `order_id` | UUID | PK, Not Null | 주문 식별자 (미리 생성 후 저장) |
+| `order_id` | UUID | PK, Not Null | 주문 식별자 |
 | `receiver_company_id` | UUID | FK, Not Null | 수령업체 |
 | `recipient_name` | VARCHAR(100) | Not Null | 수령인 실명 (스냅샷) |
 | `phone` | VARCHAR(20) | Not Null | 수령인 연락처 (스냅샷) |
@@ -626,13 +633,11 @@ erDiagram
 |---|---|---|---|
 | `payment_id` | UUID | PK, Not Null | 결제 식별자 |
 | `order_id` | UUID | FK, Not Null | 주문 참조 |
-| `receiver_company_id` | UUID | Not Null | 수령업체 참조 |
 | `payment_method` | VARCHAR(30) | Not Null, Default 'CARD' | 결제 방식 (CARD만 허용) |
 | `amount` | NUMERIC(12,2) | - | 결제 금액 |
-| `status` | VARCHAR(30) | Not Null, Default 'COMPLETED' | COMPLETED / CANCELLED |
-| `pg_transaction_id` | VARCHAR(255) | - | PG사 거래 고유번호 (mock UUID 자동 생성) |
-
-> 선결제 모델: 주문 생성과 동시에 COMPLETED 상태로 결제 확정. `pg_transaction_id`는 실제 PG 연동 없이 mock UUID 자동 생성.
+| `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / COMPLETED / CANCELLED |
+| `pg_transaction_id` | VARCHAR(255) | - | PG사 거래 고유번호 |
+| `receiver_company_id` | UUID | Not Null | 수령업체 ID (반정규화) |
 
 ---
 
@@ -646,22 +651,24 @@ erDiagram
 | `company_order_id` | UUID | Not Null | 업체별 주문 참조 |
 | `company_receive_id` | UUID | Not Null | 수령업체 ID |
 | `tracking_number` | VARCHAR(100) | - | 송장 번호 |
-| `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / PREPARING / SHIPPED / DELIVERED / CANCELLED / DELETED |
+| `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / SHIPPING / COMPLETED / CANCELLED |
+| `postal_code` | VARCHAR(5) | Not Null | 우편번호 |
 | `memo` | TEXT | - | 배송 메모 |
 | `departure_hub_id` | UUID | Not Null | 출발 허브 |
 | `destination_hub_id` | UUID | Not Null | 도착 허브 |
 | `delivery_address` | VARCHAR(255) | Not Null | 최종 도착지 주소 (JSON: address + address_detail 등) |
 | `recipient_name` | VARCHAR(100) | Not Null | 수령인 실명 |
 | `phone` | VARCHAR(20) | Not Null | 수령인 연락처 |
-| `postal_code` | VARCHAR(5) | Not Null | 우편번호 |
 | `recipient_slack_id` | VARCHAR(100) | - | 수령인 슬랙 ID |
-| `delivery_manager_id` | UUID | - | 배송 담당자 ID |
-| `manager_name` | VARCHAR(100) | - | 배송 담당자 실명 (스냅샷) |
-| `manager_phone` | VARCHAR(20) | - | 배송 담당자 연락처 (스냅샷) |
-| `delivery_slack_id` | VARCHAR(100) | - | 배송 담당자 슬랙 ID |
+| `company_receive_id` | UUID | - | 수령업체 ID |
+| `delivery_manager_id` | UUID | FK, Not Null | 배송 담당자 |
+| `manager_name` | VARCHAR(100) | - | 배송담당자명 (스냅샷) |
+| `manager_phone` | VARCHAR(20) | - | 배송담당자 연락처 (스냅샷) |
+| `delivery_slack_id` | VARCHAR(100) | - | 배송담당자 Slack ID |
 | `final_dispatch_deadline_at` | TIMESTAMP | - | AI 응답 기반 최종 발송 시한 |
 | `started_at` | TIMESTAMP | - | 배송 시작 시간 |
 | `completed_at` | TIMESTAMP | - | 배송 완료 시간 |
+| `is_deleted` | BOOLEAN | Not Null, Default false | 삭제 플래그 (Soft Delete) |
 
 #### p_delivery_routes (배송 경로)
 
@@ -674,6 +681,8 @@ erDiagram
 | `to_hub_id` | UUID | FK, Not Null | 도착 허브 |
 | `estimated_distance` | NUMERIC(8,2) | - | 예상 거리 (km) |
 | `estimated_duration` | TIME | - | 예상 소요시간 |
+| `from_hub_name` | VARCHAR(100) | - | 출발 허브명 (캐시용 스냅샷) |
+| `to_hub_name` | VARCHAR(100) | - | 도착 허브명 (캐시용 스냅샷) |
 | `actual_distance` | NUMERIC(8,2) | - | 실제 거리 |
 | `actual_duration` | TIME | - | 실제 소요시간 |
 | `status` | VARCHAR(30) | Not Null, Default 'PENDING' | PENDING / MOVING / ARRIVED / CANCELLED |
