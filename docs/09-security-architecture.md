@@ -16,6 +16,7 @@
 - **`CustomUserDetails`**: 게이트웨이가 전달한 `X-User-Id`, `X-User-Role`, `X-Company-Id`를 담는 인증 주체 객체입니다.
 - **`CustomPreAuthFilter`**: HTTP 헤더를 파싱하여 `SecurityContext`에 인증 정보를 주입하는 서블릿 필터입니다.
     - 역할(Role) 앞에 자동으로 `ROLE_` 접두사를 붙여 스프링 시큐리티 표준(`hasRole`)과 호환되게 합니다.
+    - `X-Gateway-Secret` 헤더 검증을 통해 Gateway를 거치지 않은 직접 접근을 차단합니다.
 
 ### 2.2 서비스별 보안 설정 (`SecurityConfig`)
 각 서비스는 `common`의 필터를 등록하여 보안을 활성화합니다.
@@ -23,7 +24,25 @@
 - `@EnableMethodSecurity`: 메서드 수준 보안(`@PreAuthorize`)을 활성화합니다.
 - `SecurityFilterChain`: Swagger 등 공개 경로를 제외한 모든 요청에 인증을 강제합니다.
 
-### 2.3 소유권 검증 (`AuthService`)
+### 2.3 서비스 간 내부 통신 인증 (`GatewayFeignInterceptor`)
+FeignClient를 통한 서비스 간 내부 호출 시 보안을 보장합니다.
+
+- **`GatewayFeignInterceptor`**: Feign 요청마다 `X-Gateway-Secret` 헤더를 자동 주입합니다. (각 서비스 `global/config` 패키지에 위치)
+- **검증 흐름**: `CustomPreAuthFilter`가 수신 요청의 `X-Gateway-Secret`을 환경변수 `GATEWAY_SECRET`과 비교하여 불일치 시 `403 Forbidden` 반환.
+- **내부 API 경로** (`/api/v1/internal/**`): 사용자 인증 컨텍스트 없이도 통과 가능하도록 `SecurityConfig`에서 `permitAll` 처리.
+
+**Gateway가 전달하는 헤더 전체 목록**
+
+| 헤더 | 설명 |
+|---|---|
+| `X-Gateway-Secret` | 서비스 간 신뢰 검증용 시크릿 |
+| `X-User-Id` | 인증된 사용자 UUID |
+| `X-User-Email` | 사용자 이메일 |
+| `X-User-Role` | 사용자 역할 (MASTER, HUB_MANAGER 등) |
+| `X-Company-Id` | 업체 ID (COMPANY_MANAGER인 경우) |
+| `X-Hub-Id` | 허브 ID (HUB_MANAGER인 경우) |
+
+### 2.4 소유권 검증 (`AuthService`)
 단순 역할 체크를 넘어, 리소스의 실제 소유주인지 확인하는 비즈니스 보안 로직입니다.
 
 - 각 서비스의 `global.application.service` 패키지에 위치합니다.
