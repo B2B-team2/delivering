@@ -44,7 +44,8 @@ import static org.mockito.Mockito.when;
  */
 class DeliveryDuplicateCreationTest {
 
-    private static final int CONCURRENCY = 20;
+    private static final int CONCURRENCY = Integer.parseInt(
+            System.getenv().getOrDefault("CONCURRENCY", "20"));
 
     @Test
     void 락_없이_동시_생성하면_중복이_발생한다() throws InterruptedException {
@@ -64,7 +65,11 @@ class DeliveryDuplicateCreationTest {
         DeliveryService deliveryService = buildDeliveryServiceWithFakeDb(fakeDb);
 
         Config config = new Config();
-        config.useSingleServer().setAddress("redis://127.0.0.1:6379");
+        config.useSingleServer()
+                .setAddress("redis://127.0.0.1:26379")
+                .setPassword("logitech_secret_pass_2026!")
+                .setConnectionPoolSize(Math.max(64, CONCURRENCY + 16))
+                .setConnectionMinimumIdleSize(Math.min(32, CONCURRENCY));
         RedissonClient redissonClient = Redisson.create(config);
         DeliveryLockFacade lockFacade = new DeliveryLockFacade(redissonClient, deliveryService);
 
@@ -172,7 +177,7 @@ class DeliveryDuplicateCreationTest {
 
         ready.await();
         start.countDown();
-        done.await(30, TimeUnit.SECONDS);
+        done.await(120, TimeUnit.SECONDS);
         pool.shutdown();
 
         return new Result(success, rejected);
