@@ -1,6 +1,7 @@
 package com.sparta.deliveryservice.delivery.presentation.controller;
 
 import com.sparta.common.dto.ApiResponse;
+import com.sparta.deliveryservice.delivery.application.service.DeliveryLockFacade;
 import com.sparta.deliveryservice.delivery.application.service.DeliveryService;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryCreateClientRequest;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryOrderCancelRequest;
@@ -24,11 +25,12 @@ import java.util.UUID;
 public class DeliveryInternalController {
 
     private final DeliveryService deliveryService;
+    private final DeliveryLockFacade deliveryLockFacade;
 
     @PostMapping("/deliveries")
     public ResponseEntity<ApiResponse<List<DeliveryCreateResponse>>> createInternalDelivery(
             @RequestBody List<DeliveryCreateClientRequest> requests) {
-        List<DeliveryCreateResponse> response = deliveryService.createDelivery(requests);
+        List<DeliveryCreateResponse> response = deliveryLockFacade.createDeliveriesWithLock(requests);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 

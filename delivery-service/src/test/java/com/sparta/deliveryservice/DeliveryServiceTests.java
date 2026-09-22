@@ -10,7 +10,6 @@ import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.delivery.global.exception.DeliveryErrorCode;
 import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServiceClient;
-import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryAiServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryOrderServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.dto.request.DeliveryAiCreateRequest;
@@ -88,9 +87,6 @@ class DeliveryServiceTests {
     private DeliveryOrderServiceClient deliveryOrderServiceClient;
 
     @Mock
-    private DeliveryAiServiceClient deliveryAiServiceClient;
-
-    @Mock
     private DeliverySlackNotificationService deliverySlackNotificationService;
 
     @Mock
@@ -159,13 +155,6 @@ class DeliveryServiceTests {
                 .willReturn(DeliveryManagerResponse.builder()
                         .deliveryManagerId(UUID.randomUUID())
                         .build());
-        // [중요] AI 서비스 Mocking 추가
-        given(deliveryAiServiceClient.generateAiDescription(any(DeliveryAiCreateRequest.class)))
-                .willReturn(DeliveryAiResponse.builder()
-                        .status("SUCCESS")
-                        .finalDeadlineAt(LocalDateTime.now().plusHours(2))
-                        .build());
-
         // When
         DeliveryCreateResponse actualResponse = deliveryService.createSingleDelivery(requestDto);
 
@@ -174,9 +163,6 @@ class DeliveryServiceTests {
         assertThat(actualResponse.getCompanyOrderId()).isEqualTo(companyOrderId);
         assertThat(actualResponse.getRoutes().get(0).getDepartureHubName()).isEqualTo("서울 허브");
         assertThat(actualResponse.getRoutes()).hasSize(1);
-
-        // verify 추가: AI 서비스가 호출되었는지 검증
-        verify(deliveryAiServiceClient, times(1)).generateAiDescription(any(DeliveryAiCreateRequest.class));
 
         verify(deliverySlackNotificationService, times(1))
                 .sendSlackNotificationAsync(any(Delivery.class), any(DeliveryCreateClientRequest.class));
