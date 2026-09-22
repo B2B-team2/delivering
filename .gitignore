@@ -43,3 +43,6 @@ out/
 # Local Plan
 plan.md
 GEMINI.md
+
+# Personal files (resumes, cover letters) — never commit
+Claude outputs/

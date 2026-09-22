@@ -9,7 +9,6 @@ import com.sparta.deliveryservice.delivery.domain.repository.DeliveryRepository;
 import com.sparta.deliveryservice.delivery.global.exception.DeliveryErrorCode;
 import com.sparta.deliveryservice.delivery.global.security.SecurityUtils;
 import com.sparta.deliveryservice.delivery.infrastructure.client.CachedHubServiceClient;
-import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryAiServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryOrderServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliverySlackServiceClient;
 import com.sparta.deliveryservice.delivery.infrastructure.client.DeliveryUserServiceClient;
@@ -70,7 +69,6 @@ public class DeliveryService {
     private final CachedHubServiceClient cachedHubServiceClient;
     private final DeliveryUserServiceClient deliveryUserServiceClient;
     private final DeliveryOrderServiceClient deliveryOrderServiceClient;
-    private final DeliveryAiServiceClient deliveryAiServiceClient;
     private final ObjectMapper objectMapper;
     private final CacheManager cacheManager;
     private final SecurityUtils securityUtils;
@@ -121,11 +119,7 @@ public class DeliveryService {
                 .promptText("배송 마감 시한 계산 요청")
                 .build();
 
-        DeliveryAiResponse aiResponse = deliveryAiServiceClient.generateAiDescription(aiRequest);
 
-        if ("SUCCESS".equals(aiResponse.getStatus())) {
-            savedDelivery.updateFinalDeadline(aiResponse.getFinalDeadlineAt());
-        }
         savedDelivery.assignDeliveryManager(managerInfo.getDeliveryManagerId(), managerInfo.getDeliverySlackId(), managerInfo.getManagerName(), managerInfo.getManagerPhone());
 
         deliverySlackNotificationService.sendSlackNotificationAsync(savedDelivery, request);

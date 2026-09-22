@@ -15,9 +15,9 @@ public class RedissonConfig {
     private final String redisPassword;
 
     public RedissonConfig(
-            @Value("${REDIS_HOST}") String redisHost,
-            @Value("${REDIS_PORT}") int redisPort,
-            @Value("${REDIS_PASSWORD}") String redisPassword) {
+            @Value("${spring.data.redis.host:localhost}") String redisHost,
+            @Value("${spring.data.redis.port:6379}") int redisPort,
+            @Value("${spring.data.redis.password:}") String redisPassword) {
         this.redisHost = redisHost;
         this.redisPort = redisPort;
         this.redisPassword = redisPassword;
@@ -26,9 +26,14 @@ public class RedissonConfig {
     @Bean
     public RedissonClient redissonClient() {
         Config config = new Config();
-        config.useSingleServer()
-                .setAddress("redis://" + redisHost + ":" + redisPort)
-                .setPassword(redisPassword);
+        var serverConfig = config.useSingleServer()
+                .setAddress("redis://" + redisHost + ":" + redisPort);
+
+        // 비밀번호가 있을 때만 설정
+        if (redisPassword != null && !redisPassword.isEmpty()) {
+            serverConfig.setPassword(redisPassword);
+        }
+
         return Redisson.create(config);
     }
 }
